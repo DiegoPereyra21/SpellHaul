@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Game.Core.Items
 {
@@ -18,16 +19,20 @@ namespace Game.Core.Items
         }
 
         [System.Serializable]
-        public struct BackpackEntry
+        public struct StartingItemEntry
         {
             public ItemSO Item;
             [Min(1)] public int Quantity;
         }
 
         [SerializeField] private List<EquipEntry> _equipment = new List<EquipEntry>();
-        [SerializeField] private List<BackpackEntry> _backpack = new List<BackpackEntry>();
+
+        // FormerlySerializedAs preserva los datos ya guardados en StartingKit_Basic.asset
+        // (hoy serializados bajo "_backpack") aunque el campo cambie de nombre acá.
+        [FormerlySerializedAs("_backpack")]
+        [SerializeField] private List<StartingItemEntry> _startingItems = new List<StartingItemEntry>();
 
         public IReadOnlyList<EquipEntry> Equipment => _equipment;
-        public IReadOnlyList<BackpackEntry> Backpack => _backpack;
+        public IReadOnlyList<StartingItemEntry> StartingItems => _startingItems;
     }
 }

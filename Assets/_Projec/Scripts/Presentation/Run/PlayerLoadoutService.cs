@@ -152,7 +152,7 @@ namespace Game.Presentation.Run
                 // Los items sueltos del kit arrancan en Pocket L. Si el kit trae más items de
                 // los que la capacidad real termine permitiendo, RunInventory los rescata/dropea
                 // igual que hoy hace con la mochila (misma lógica de RebuildBackpackCapacity).
-                foreach (var b in kit.Backpack)
+                foreach (var b in kit.StartingItems)
                     if (b.Item != null)
                         snap.PocketL.Add(new ItemStack(b.Item.ItemId, b.Quantity, 1f));
             }
