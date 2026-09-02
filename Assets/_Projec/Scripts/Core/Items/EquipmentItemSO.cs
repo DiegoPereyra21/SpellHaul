@@ -26,5 +26,20 @@ namespace Game.Core.Items
         public int PocketSlots => _pocketSlots;
 
         public override bool IsEquipment => true;
+
+        private static ItemCategory ExpectedCategoryFor(EquipmentSlot slot)
+        {
+            // Boots/Hat/Robe/Pockets comparten la categoría genérica Equipment; Catalyst es
+            // la única excepción con categoría propia. Si se suma otro slot con categoría
+            // dedicada (ej. cuando Catalyst pase a ser Glove), hay que sumarlo acá también.
+            return slot == EquipmentSlot.Catalyst ? ItemCategory.Catalyst : ItemCategory.Equipment;
+        }
+
+        private void OnValidate()
+        {
+            ItemCategory expected = ExpectedCategoryFor(_slot);
+            if (Category != expected)
+                Debug.LogWarning($"[{name}] Slot={_slot} normalmente va con Category={expected}, pero tiene Category={Category}. Revisar si es a propósito.", this);
+        }
     }
 }

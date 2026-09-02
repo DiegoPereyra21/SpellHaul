@@ -15,13 +15,15 @@ MonoBehaviour:
   _itemId: basic_boot
   _displayName: Basic Boot
   _category: 2
+  _rarity: 0
   _icon: {fileID: 0}
   _description: 
   _isStackable: 0
   _maxStack: 1
+  WorldPrefab: {fileID: 0}
   _slot: 0
   _modifiers:
   - Stat: 1
     Operation: 0
     Value: 3
-  _backpackSlots: 0
+  _pocketSlots: 0
