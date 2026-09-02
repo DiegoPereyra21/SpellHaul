@@ -4,7 +4,7 @@ namespace Game.Core.Items
 {
     /// <summary>
     /// Definición base de un item (compartida entre todas sus instancias). El estado único
-    /// de cada item concreto vive en ItemInstance, no acá.
+    /// de cada item concreto (cantidad, durabilidad) vive en ItemStack, no acá.
     /// </summary>
     
     [CreateAssetMenu(menuName = "Game/Items/Basic Item", fileName = "Item_")]

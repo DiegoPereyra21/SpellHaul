@@ -4,9 +4,10 @@ using FishNet.Serializing;
 namespace Game.Core.Items
 {
     /// <summary>
-    /// Versión serializable-por-red de un ItemInstance. Por la red viaja el id del item
-    /// (string) + estado (cantidad, durabilidad); el cliente reconstruye la definición
-    /// desde el ItemDatabase. Un stack vacío se representa con ItemId nulo/vacío.
+    /// Estado de una instancia de item, apto para viajar por red (struct liviano, sin
+    /// referencias a ScriptableObject). Por la red viaja el id del item (string) + estado
+    /// (cantidad, durabilidad); el cliente reconstruye la definición desde el ItemDatabase.
+    /// Un stack vacío se representa con ItemId nulo/vacío.
     /// </summary>
     [Serializable]
     public struct ItemStack

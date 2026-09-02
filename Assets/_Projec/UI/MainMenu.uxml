@@ -16,7 +16,7 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:Label text="v0.4.2 · Vertical Slice" class="version-tag" />
+        <ui:Label text="Diego2K_Dev" class="version-tag" />
 
         <!-- Panel de búsqueda de partida (oculto por defecto) -->
         <ui:VisualElement name="search-panel" class="lobby-panel">
