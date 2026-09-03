@@ -364,7 +364,7 @@ namespace Game.Presentation.UI
                     case EquipmentSlot.Boots: return "accent-green";
                     case EquipmentSlot.Hat: return "accent-cyan";
                     case EquipmentSlot.Robe: return "accent-violet";
-                    case EquipmentSlot.Catalyst: return "accent-gold";
+                    case EquipmentSlot.Glove: return "accent-gold";
                     case EquipmentSlot.PocketL:
                     case EquipmentSlot.PocketR:
                         return "accent-amber";

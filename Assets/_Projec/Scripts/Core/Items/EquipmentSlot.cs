@@ -5,7 +5,7 @@ namespace Game.Core.Items
         Boots,
         Hat,
         Robe,
-        Catalyst,
+        Glove,
         PocketL,
         PocketR
     }

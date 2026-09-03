@@ -29,10 +29,9 @@ namespace Game.Core.Items
 
         private static ItemCategory ExpectedCategoryFor(EquipmentSlot slot)
         {
-            // Boots/Hat/Robe/Pockets comparten la categoría genérica Equipment; Catalyst es
-            // la única excepción con categoría propia. Si se suma otro slot con categoría
-            // dedicada (ej. cuando Catalyst pase a ser Glove), hay que sumarlo acá también.
-            return slot == EquipmentSlot.Catalyst ? ItemCategory.Catalyst : ItemCategory.Equipment;
+            // Boots/Hat/Robe/Pockets comparten la categoría genérica Equipment; Glove es
+            // la única excepción con categoría propia.
+            return slot == EquipmentSlot.Glove ? ItemCategory.Glove : ItemCategory.Equipment;
         }
 
         private void OnValidate()

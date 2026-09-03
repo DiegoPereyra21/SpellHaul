@@ -9,7 +9,7 @@ namespace Game.Core.Items
         Material,     // apilables comunes (madera negra, polvo mágico)
         Resource,     // recursos raros / valiosos, no apilables
         Equipment,    // vestimenta (botas, sombrero, túnica, pantalón)
-        Catalyst,     // varitas, bastones, libros
+        Glove,        // guantes: Swift, Heavy, Focus
         Consumable,   // pociones, pergaminos de un uso (a futuro)
         Misc          // cualquier otra cosa
     }

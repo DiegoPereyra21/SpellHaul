@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 696254234f6ab8a48b3a338d19b6b061, type: 3}
+  m_Name: heavy_boots_rare
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.EquipmentItemSO
+  _itemId: heavy_boots_rare
+  _displayName: Rare Heavy Boots
+  _category: 2
+  _rarity: 1
+  _icon: {fileID: 0}
+  _description: 
+  _isStackable: 0
+  _maxStack: 1
+  WorldPrefab: {fileID: 0}
+  _slot: 0
+  _modifiers:
+  - Stat: 2
+    Value: -0.8
+  - Stat: 3
+    Value: 0.12
+  _pocketSlots: 0
