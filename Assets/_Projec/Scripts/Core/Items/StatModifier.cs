@@ -8,7 +8,6 @@ namespace Game.Core.Items
     public struct StatModifier
     {
         public StatType Stat;
-        public ModifierOperation Operation;
         public float Value;
     }
 }

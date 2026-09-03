@@ -26,6 +26,11 @@ namespace Game.Presentation.Combat
         [Header("Protección")]
         [SerializeField, Range(0f, 0.9f)] private float _protectionCap = 0.6f; // techo de reducción
 
+        [Header("Pisos de seguridad (evitan que equipo negativo rompa un stat)")]
+        [SerializeField] private float _minDamageMultiplier = 0.1f;
+        [SerializeField] private float _minCastSpeedMultiplier = 0.1f;
+        [SerializeField] private float _minMoveSpeed = 0.5f;
+
         private RunInventory _inventory;
 
         // Stats finales calculados.
@@ -67,7 +72,6 @@ namespace Game.Presentation.Combat
 
         private void Recalculate()
         {
-            // Acumuladores: aditivos suman, multiplicativos multiplican sobre la base.
             float manaRegen = _baseManaRegen;
             float jump = _baseJumpForce;
             float move = _baseMoveSpeed;
@@ -85,26 +89,29 @@ namespace Game.Presentation.Combat
                     switch (mod.Stat)
                     {
                         case StatType.ManaRegen:
-                            manaRegen += Apply(mod); break;
+                            manaRegen += mod.Value; break;
                         case StatType.JumpForce:
-                            jump += Apply(mod); break;
+                            jump += mod.Value; break;
                         case StatType.MoveSpeed:
-                            move += Apply(mod); break;
+                            move += mod.Value; break;
                         case StatType.DamageMultiplier:
-                            dmgMul += Apply(mod); break;
+                            dmgMul += mod.Value; break;
                         case StatType.CastSpeedMultiplier:
-                            castMul += Apply(mod); break;
+                            castMul += mod.Value; break;
                         case StatType.Protection:
                             protectionSum += mod.Value; break; // protección: suma de %
                     }
                 }
             }
 
-            ManaRegen = manaRegen;
-            JumpForce = jump;
-            MoveSpeed = move;
-            DamageMultiplier = dmgMul;
-            CastSpeedMultiplier = castMul;
+            // Pisos de seguridad: sin esto, suficiente equipo negativo podría llevar un stat
+            // a 0 o negativo. Es especialmente grave en DamageMultiplier — negativo
+            // convertiría una habilidad ofensiva en curación para el objetivo.
+            ManaRegen = Mathf.Max(0f, manaRegen);
+            JumpForce = Mathf.Max(0f, jump);
+            MoveSpeed = Mathf.Max(_minMoveSpeed, move);
+            DamageMultiplier = Mathf.Max(_minDamageMultiplier, dmgMul);
+            CastSpeedMultiplier = Mathf.Max(_minCastSpeedMultiplier, castMul);
             ProtectionPercent = Mathf.Clamp(protectionSum, 0f, _protectionCap);
 
             OnStatsChanged?.Invoke();
@@ -112,10 +119,7 @@ namespace Game.Presentation.Combat
 
         // Para aditivo devuelve el valor; para multiplicativo, lo convierte a delta sobre la base.
         // Simplificación: tratamos ambos como contribución sumable al acumulador.
-        private float Apply(StatModifier mod)
-        {
-            return mod.Value;
-        }
+
         /// <summary>
         /// Diferencias contra los valores base, listas para mostrar en UI. Solo devuelve
         /// stats que realmente cambiaron (equipo vacío = lista vacía). label ya viene

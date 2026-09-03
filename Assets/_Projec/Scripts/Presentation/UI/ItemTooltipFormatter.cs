@@ -47,21 +47,10 @@ namespace Game.Presentation.UI
         private static StatLine FormatModifier(StatModifier mod)
         {
             string statName = StatDisplayName(mod.Stat);
-            float displayValue;
-            bool isPercent;
 
-            if (mod.Operation == ModifierOperation.Multiplicative)
-            {
-                displayValue = (mod.Value - 1f) * 100f;
-                isPercent = true;
-            }
-            else
-            {
-                // Protection se guarda como fracción (0..1) en el resto del código; el resto de
-                // los stats aditivos son valores planos.
-                isPercent = mod.Stat == StatType.Protection;
-                displayValue = isPercent ? mod.Value * 100f : mod.Value;
-            }
+            // Protection se guarda como fracción (0..1); el resto de los stats son valores planos.
+            bool isPercent = mod.Stat == StatType.Protection;
+            float displayValue = isPercent ? mod.Value * 100f : mod.Value;
 
             string sign = displayValue >= 0 ? "+" : "";
             string text = $"{sign}{displayValue:0.#}{(isPercent ? "%" : "")} {statName}";

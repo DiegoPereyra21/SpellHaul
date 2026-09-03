@@ -10,11 +10,4 @@ namespace Game.Core.Items
         DamageMultiplier,  // afecta habilidades (catalizador)
         CastSpeedMultiplier
     }
-
-    /// <summary>Cómo se aplica el valor del modificador.</summary>
-    public enum ModifierOperation
-    {
-        Additive,       // suma plana (ej. +2 regen de maná)
-        Multiplicative  // factor (ej. ×1.2 daño)
-    }
 }
