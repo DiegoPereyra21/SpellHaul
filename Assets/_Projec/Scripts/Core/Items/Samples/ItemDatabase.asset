@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: ItemDatabase
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.ItemDatabase
   _items:
-  - {fileID: 11400000, guid: cc430c4ed9dc7af468a23137d83ab9fc, type: 2}
   - {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
   - {fileID: 11400000, guid: eb5543d02fca8a34eaf64c6858a03946, type: 2}
   - {fileID: 11400000, guid: 7752094ace82e27438c0eb6a1887c3d7, type: 2}
@@ -43,9 +42,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9b48f05b0335ef5449e6e6007245a44f, type: 2}
   - {fileID: 11400000, guid: 5f931db816594734aa8f131c2885c692, type: 2}
   - {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
-  - {fileID: 11400000, guid: f351658965e9ec3418d6280c00a81cb0, type: 2}
-  - {fileID: 11400000, guid: 03115d7b9c95871469b14e671519d10f, type: 2}
-  - {fileID: 11400000, guid: e9c62420b06a06a4881ad36f6d4474ce, type: 2}
   - {fileID: 11400000, guid: 4ffcef274f6d0b2489cef6e6a396162f, type: 2}
   - {fileID: 11400000, guid: 29c905c4d2e73484d97fa6a7efd00753, type: 2}
   - {fileID: 11400000, guid: 70e60bdcecdb6004fb9a7b66c41cec84, type: 2}
@@ -58,4 +54,3 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ce7b4bceb00881d47bdeeedd1ce06cef, type: 2}
   - {fileID: 11400000, guid: 7c75c9e2cf2740d479b29b0d7f472989, type: 2}
   - {fileID: 11400000, guid: d96d848bf68f08545855cdcb4f9055ee, type: 2}
-  - {fileID: 11400000, guid: c4ea9ce28285afc4cb3dbe9e8b0de257, type: 2}
