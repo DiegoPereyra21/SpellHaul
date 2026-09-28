@@ -14,6 +14,7 @@ namespace Game.Presentation.Run
     public static class StashService
     {
         private const int MaxSaveRetries = 3;
+        private const int MaxLoadRetries = 3;
 
         /// <summary>Backend activo. Cambiar esto es todo lo que hace falta para migrar de storage.</summary>
         public static IStashStorage Storage { get; set; } = new LocalStashStorage();
@@ -21,6 +22,7 @@ namespace Game.Presentation.Run
         private static StashData _stash;
         private static bool _initialized;
         private static bool _pendingSync;
+        private static Task<bool> _initTask;
 
         /// <summary>El stash actual (cache en memoria). Null si todavía no se inicializó.</summary>
         public static StashData Stash => _stash;
@@ -30,25 +32,47 @@ namespace Game.Presentation.Run
 
         /// <summary>
         /// Carga desde el storage si nunca se inicializó en este proceso; si no hay nada guardado
-        /// (jugador nuevo), arranca con un stash vacío. Llamar una vez, del lado cliente, antes
-        /// de necesitar Stash (al abrir la pantalla del menú).
+        /// (jugador nuevo), arranca con un stash vacío. Llamar del lado cliente antes de necesitar
+        /// Stash (al abrir la pantalla del menú). Devuelve false si el storage no se pudo leer tras
+        /// reintentar: en ese caso NO se inicializa (un stash vacío guardado después pisaría el real).
+        /// Se puede volver a llamar.
         /// </summary>
-        public static async Task EnsureInitializedAsync()
+        public static Task<bool> EnsureInitializedAsync()
         {
-            if (_initialized) return;
+            if (_initialized) return Task.FromResult(true);
 
+            if (_initTask == null || _initTask.IsCompleted)
+                _initTask = InitializeAsync();
+            return _initTask;
+        }
+
+        private static async Task<bool> InitializeAsync()
+        {
             StashData loaded = null;
-            try
+            bool loadedOk = false;
+
+            for (int attempt = 1; attempt <= MaxLoadRetries && !loadedOk; attempt++)
             {
-                loaded = await Storage.LoadAsync();
+                try
+                {
+                    loaded = await Storage.LoadAsync();
+                    loadedOk = true;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[StashService] Falló la carga (intento {attempt}/{MaxLoadRetries}): {e.Message}");
+                    if (attempt < MaxLoadRetries) await Task.Delay(500 * attempt);
+                }
             }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[StashService] Falló la carga inicial, arranco con stash vacío: {e.Message}");
-            }
+
+            if (!loadedOk) return false;
+
+            // Un Save() pudo haber llegado mientras se cargaba: ese estado es más nuevo, no pisarlo.
+            if (_initialized) return true;
 
             _stash = loaded ?? new StashData();
             _initialized = true;
+            return true;
         }
 
         /// <summary>Guarda el estado actual del stash. Cache instantáneo + persistencia en background.</summary>

@@ -34,7 +34,7 @@ namespace Game.Presentation.UI
             var root = _document.rootVisualElement;
 
             root.Q<Button>("find-match-button").clicked += OnFindMatchClicked;
-            root.Q<Button>("stash-button").clicked += () => { if (_stashScreen != null) _stashScreen.Show(); };
+            root.Q<Button>("stash-button").clicked += OnStashClicked;
             root.Q<Button>("quit-button").clicked += () => Application.Quit();
             root.Q<Button>("search-cancel").clicked += OnCancelSearchClicked;
 
@@ -96,20 +96,44 @@ namespace Game.Presentation.UI
 
         // ---------- Matchmaking ----------
 
-        private void OnFindMatchClicked()
+        private async void OnStashClicked()
+        {
+            if (_stashScreen == null) return;
+            if (!await _stashScreen.TryShowAsync())
+                ShowNotice(InventoryLoadFailedMessage);
+        }
+
+        private const string InventoryLoadFailedMessage = "Could not load your inventory. Please try again.";
+
+        private async void OnFindMatchClicked()
         {
             if (_matchmaking == null)
             {
                 Debug.LogError("[MainMenu] Falta asignar el MatchmakingService en el inspector.");
                 return;
             }
+            if (_stashScreen == null)
+            {
+                Debug.LogError("[MainMenu] Falta asignar el StashScreenController en el inspector.");
+                return;
+            }
 
             _searchStartTime = Time.time;
             _searching = true;
-            _searchStatus.text = "Entering the queue...";
+            _searchStatus.text = "Loading your inventory...";
             _searchTimer.text = "0:00";
             SetSearchPanel(true);
 
+            // El loadout tiene que estar leído antes de entrar: al extraer o morir se persiste
+            // encima, y sin la lectura previa se pisaría el loadout real.
+            if (!await _stashScreen.EnsureLoadoutLoadedAsync())
+            {
+                ShowNotice(InventoryLoadFailedMessage);
+                return;
+            }
+            if (!_searching) return; // canceló mientras cargaba
+
+            _searchStatus.text = "Entering the queue...";
             _matchmaking.StartSearch();
         }
 

@@ -3,6 +3,7 @@ using Game.Presentation.Run;
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Game.Presentation.UI
 {
@@ -76,12 +77,20 @@ namespace Game.Presentation.UI
             _root.RegisterCallback<PointerUpEvent>(_ => { if (_isDragging) CancelDrag(); });
         }
 
-        public async void Show()
+        /// <summary>Asegura el loadout persistente leído (el kit inicial vive acá). False si no se
+        /// pudo leer: quien llama no debe seguir (ni entrar a una run ni guardar nada).</summary>
+        public Task<bool> EnsureLoadoutLoadedAsync() => PlayerLoadoutService.EnsureInitializedAsync(_startingKit);
+
+        /// <summary>Abre la pantalla. False (y no abre) si el loadout o el stash no se pudieron leer:
+        /// mostrar datos vacíos y guardarlos pisaría los reales.</summary>
+        public async Task<bool> TryShowAsync()
         {
-            await PlayerLoadoutService.EnsureInitializedAsync(_startingKit);
-            await StashService.EnsureInitializedAsync();
+            if (!await EnsureLoadoutLoadedAsync()) return false;
+            if (!await StashService.EnsureInitializedAsync()) return false;
+
             _root.style.display = DisplayStyle.Flex;
             Redraw();
+            return true;
         }
 
         public void Hide() => _root.style.display = DisplayStyle.None;

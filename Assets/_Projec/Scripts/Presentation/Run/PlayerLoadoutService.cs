@@ -15,6 +15,7 @@ namespace Game.Presentation.Run
     public static class PlayerLoadoutService
     {
         private const int MaxSaveRetries = 3;
+        private const int MaxLoadRetries = 3;
 
         /// <summary>Backend activo. Cambiar esto es todo lo que hace falta para migrar de storage.</summary>
         public static IPlayerLoadoutStorage Storage { get; set; } = new LocalPlayerLoadoutStorage();
@@ -22,6 +23,7 @@ namespace Game.Presentation.Run
         private static InventorySnapshot _snapshot;
         private static bool _initialized;
         private static bool _pendingSync;
+        private static Task<bool> _initTask;
 
         /// <summary>El inventario propio persistente actual (cache en memoria). Null si nunca se inicializó.</summary>
         public static InventorySnapshot Current => _snapshot;
@@ -33,33 +35,57 @@ namespace Game.Presentation.Run
 
         /// <summary>
         /// Carga desde el storage si nunca se inicializó en este proceso; si no hay nada guardado
-        /// (jugador nuevo), arma el kit inicial y lo persiste. Llamar una vez, del lado cliente,
-        /// antes de necesitar Current (menú / al conectar a una run).
+        /// (jugador nuevo), arma el kit inicial y lo persiste. Llamar del lado cliente antes de
+        /// necesitar Current (menú / al conectar a una run). Devuelve false si el storage no se
+        /// pudo leer tras reintentar: en ese caso NO se inicializa ni se persiste nada (persistir el
+        /// kit pisaría el loadout real del jugador por un corte puntual). Se puede volver a llamar.
         /// </summary>
-        public static async Task EnsureInitializedAsync(StartingKitSO kit)
+        public static Task<bool> EnsureInitializedAsync(StartingKitSO kit)
         {
-            if (_initialized) return;
+            if (_initialized) return Task.FromResult(true);
 
+            // Una sola carga en vuelo: dos llamadas concurrentes (ej. stash + buscar partida)
+            // otorgarían el kit dos veces.
+            if (_initTask == null || _initTask.IsCompleted)
+                _initTask = InitializeAsync(kit);
+            return _initTask;
+        }
+
+        private static async Task<bool> InitializeAsync(StartingKitSO kit)
+        {
             InventorySnapshot loaded = null;
-            try
+            bool loadedOk = false;
+
+            for (int attempt = 1; attempt <= MaxLoadRetries && !loadedOk; attempt++)
             {
-                loaded = await Storage.LoadAsync();
+                try
+                {
+                    loaded = await Storage.LoadAsync();
+                    loadedOk = true;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[PlayerLoadoutService] Falló la carga (intento {attempt}/{MaxLoadRetries}): {e.Message}");
+                    if (attempt < MaxLoadRetries) await Task.Delay(500 * attempt);
+                }
             }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[PlayerLoadoutService] Falló la carga inicial, arranco con kit por defecto: {e.Message}");
-            }
+
+            if (!loadedOk) return false;
+
+            // Un Save() pudo haber llegado mientras se cargaba: ese estado es más nuevo, no pisarlo.
+            if (_initialized) return true;
 
             if (loaded != null)
             {
                 _snapshot = loaded;
                 _initialized = true;
-                return;
+                return true;
             }
 
             _snapshot = BuildSnapshotWithKit(kit);
             _initialized = true;
-            await PersistAsync(_snapshot); // primera vez: persistir el kit recién otorgado
+            await PersistAsync(_snapshot); // primera vez (lectura OK y vacía): persistir el kit
+            return true;
         }
 
         /// <summary>Guarda una foto nueva (al extraer / al gestionar en el menú). Cache instantáneo + persistencia en background.</summary>
