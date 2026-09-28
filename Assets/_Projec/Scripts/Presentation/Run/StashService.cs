@@ -8,12 +8,11 @@ namespace Game.Presentation.Run
 {
     /// <summary>
     /// Persiste el stash del jugador (30 slots) entre sesiones. Stash es una cache en memoria de
-    /// lectura instantánea; el guardado real se delega a IStashStorage (local por defecto,
-    /// PlayFab más adelante — cambiar de backend es reasignar Storage, nada más se entera).
+    /// lectura instantánea. La lectura va por IStashStorage (local hasta que PlayFabSession activa
+    /// el de PlayFab); la escritura la hace ProfileSaveQueue, junto con el loadout.
     /// </summary>
     public static class StashService
     {
-        private const int MaxSaveRetries = 3;
         private const int MaxLoadRetries = 3;
 
         /// <summary>Backend activo. Cambiar esto es todo lo que hace falta para migrar de storage.</summary>
@@ -21,14 +20,13 @@ namespace Game.Presentation.Run
 
         private static StashData _stash;
         private static bool _initialized;
-        private static bool _pendingSync;
         private static Task<bool> _initTask;
 
         /// <summary>El stash actual (cache en memoria). Null si todavía no se inicializó.</summary>
         public static StashData Stash => _stash;
 
-        /// <summary>True si el último guardado falló tras agotar reintentos y todavía no se resincronizó.</summary>
-        public static bool PendingSync => _pendingSync;
+        /// <summary>True mientras quede un guardado sin confirmar (ver ProfileSaveQueue).</summary>
+        public static bool PendingSync => ProfileSaveQueue.PendingSync;
 
         /// <summary>
         /// Carga desde el storage si nunca se inicializó en este proceso; si no hay nada guardado
@@ -80,63 +78,7 @@ namespace Game.Presentation.Run
         {
             _stash = stash;
             _initialized = true;
-            _ = PersistAsync(stash);
-        }
-
-        /// <summary>Reintenta persistir el estado actual si el último guardado había fallado (ej. al recuperar conexión).</summary>
-        public static Task RetrySyncAsync() => PersistAsync(_stash);
-
-        private static bool _retryLoopRunning;
-
-        private static async Task PersistAsync(StashData stash)
-        {
-            for (int attempt = 1; attempt <= MaxSaveRetries; attempt++)
-            {
-                try
-                {
-                    await Storage.SaveAsync(stash);
-                    _pendingSync = false;
-                    return;
-                }
-                catch (Exception e)
-                {
-                    if (attempt == MaxSaveRetries)
-                    {
-                        _pendingSync = true;
-                        Debug.LogWarning($"[StashService] No se pudo persistir tras {MaxSaveRetries} intentos, reintentando en background: {e.Message}");
-                        if (!_retryLoopRunning) _ = BackgroundRetryLoopAsync();
-                        return;
-                    }
-                    await Task.Delay(500 * attempt);
-                }
-            }
-        }
-
-        /// <summary>Mientras quede un guardado pendiente, reintenta cada 5s hasta resincronizar.</summary>
-        private static async Task BackgroundRetryLoopAsync()
-        {
-            _retryLoopRunning = true;
-            try
-            {
-                while (_pendingSync)
-                {
-                    await Task.Delay(5000);
-                    if (!_pendingSync) break;
-                    try
-                    {
-                        await Storage.SaveAsync(_stash);
-                        _pendingSync = false;
-                    }
-                    catch
-                    {
-                        // sigue pendiente, el while vuelve a intentar
-                    }
-                }
-            }
-            finally
-            {
-                _retryLoopRunning = false;
-            }
+            ProfileSaveQueue.EnqueueStash(stash);
         }
     }
 }
