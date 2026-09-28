@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: focus_robe_epic
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.EquipmentItemSO
   _itemId: focus_robe_epic
-  _displayName: Epic Focus Robe
+  _displayName: Focus Robe
   _category: 2
   _rarity: 2
   _icon: {fileID: 0}

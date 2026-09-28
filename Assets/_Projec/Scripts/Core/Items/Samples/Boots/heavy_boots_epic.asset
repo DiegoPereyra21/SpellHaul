@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: heavy_boots_epic
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.EquipmentItemSO
   _itemId: heavy_boots_epic
-  _displayName: Epic Heavy Boots
+  _displayName: Heavy Boots
   _category: 2
   _rarity: 2
   _icon: {fileID: 0}

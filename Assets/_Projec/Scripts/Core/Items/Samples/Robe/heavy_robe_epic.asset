@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: heavy_robe_epic
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.EquipmentItemSO
   _itemId: heavy_robe_epic
-  _displayName: Epic Heavy Robe
+  _displayName: Heavy Robe
   _category: 2
   _rarity: 2
   _icon: {fileID: 0}

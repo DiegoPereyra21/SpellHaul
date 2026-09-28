@@ -118,7 +118,8 @@ namespace Game.EditorTools.Items
                         Slot = slot,
                         GloveType = gloveType,
                         ItemId = $"{idPrefix}_{rarity.ToString().ToLowerInvariant()}",
-                        DisplayName = $"{rarity} {namePrefix}",
+                        // Sin la rareza en el nombre: la rareza ya se lee por el color de la celda/texto.
+                        DisplayName = namePrefix,
                         Rarity = rarity,
                         Modifiers = mods
                     });

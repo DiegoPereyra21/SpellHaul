@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: heavy_boots_rare
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.EquipmentItemSO
   _itemId: heavy_boots_rare
-  _displayName: Rare Heavy Boots
+  _displayName: Heavy Boots
   _category: 2
   _rarity: 1
   _icon: {fileID: 0}

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: swift_boots_common
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.EquipmentItemSO
   _itemId: swift_boots_common
-  _displayName: Common Swift Boots
+  _displayName: Swift Boots
   _category: 2
   _rarity: 0
   _icon: {fileID: 0}
