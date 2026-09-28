@@ -57,7 +57,14 @@ namespace Game.Presentation.Combat
         /// y se lo empuja al servidor para que arme el inventario de esta run.</summary>
         private async System.Threading.Tasks.Task ClientPushLoadoutAsync()
         {
-            await Game.Presentation.Run.PlayerLoadoutService.EnsureInitializedAsync(_startingKit);
+            if (!await Game.Presentation.Run.PlayerLoadoutService.EnsureInitializedAsync(_startingKit))
+            {
+                // Sin loadout leído no se puede jugar la run: al extraer/morir se persistiría encima
+                // del real. El menú ya lo precarga antes de buscar partida; esto es la red de seguridad.
+                Debug.LogError("[RunInventory] No se pudo cargar el loadout persistente; se abandona la run.");
+                InstanceFinder.ClientManager.StopConnection();
+                return;
+            }
             SubmitLoadoutServerRpc(Game.Presentation.Run.PlayerLoadoutService.Current);
         }
 

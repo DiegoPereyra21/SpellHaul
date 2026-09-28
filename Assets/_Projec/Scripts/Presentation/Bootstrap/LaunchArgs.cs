@@ -74,9 +74,13 @@ namespace Game.Presentation.Bootstrap
                     case "-client":
                         _role = NetworkRole.Client;
                         break;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    // Solo desarrollo: host (servidor + cliente en el mismo proceso) para iterar con
+                    // Multiplayer Play Mode. En builds de release no existe el modo host.
                     case "-host":
                         _role = NetworkRole.Host;
                         break;
+#endif
                     case "-address":
                         if (i + 1 < args.Length) _address = args[i + 1];
                         break;
