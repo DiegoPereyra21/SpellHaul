@@ -71,7 +71,80 @@ namespace Game.Presentation.Combat
         [ServerRpc]
         private void SubmitLoadoutServerRpc(Game.Core.Items.InventorySnapshot snapshot)
         {
-            ApplySnapshot(snapshot);
+            // Una sola vez por run, al entrar: si se aceptara en cualquier momento, un cliente podía
+            // "restaurar" su equipo a mitad de run o después de morir (duplicar lo que ya soltó).
+            if (_loadoutSubmitted)
+            {
+                Debug.LogWarning($"[RunInventory] Cliente {base.Owner.ClientId} reenvió su loadout; se ignora.");
+                return;
+            }
+            _loadoutSubmitted = true;
+
+            ApplySnapshot(SanitizeSnapshot(snapshot));
+        }
+
+        private bool _loadoutSubmitted;
+
+        // Tope de entradas por pocket en un snapshot: la capacidad máxima de cualquier pocket.
+        private const int MaxSnapshotPocketEntries = 12;
+
+        /// <summary>
+        /// Server-only. El loadout lo manda el cliente (la persistencia es suya, ver GDD), así que
+        /// antes de aplicarlo se descarta todo lo que no podría existir: ids desconocidos, items de
+        /// equipo en un slot que no les corresponde, cantidades fuera de [1, MaxStack], durabilidad
+        /// fuera de [0, 1] y listas más largas de lo posible. No impide editar los datos de PlayFab
+        /// con items válidos; eso requiere que el servidor sea dueño de la persistencia.
+        /// </summary>
+        private InventorySnapshot SanitizeSnapshot(InventorySnapshot snap)
+        {
+            var clean = new InventorySnapshot();
+            if (snap == null) return clean;
+
+            int dropped = 0;
+
+            if (snap.Equipment != null)
+            {
+                for (int i = 0; i < snap.Equipment.Count && i < _equipment.Count; i++)
+                {
+                    ItemStack s = snap.Equipment[i];
+                    bool valid = !s.IsEmpty
+                                 && _database.GetById(s.ItemId) is EquipmentItemSO equip
+                                 && ValidEquipTarget(equip, i);
+                    if (!s.IsEmpty && !valid) dropped++;
+                    clean.Equipment.Add(valid ? new ItemStack(s.ItemId, 1, Mathf.Clamp01(s.Durability)) : ItemStack.Empty);
+                }
+                if (snap.Equipment.Count > _equipment.Count) dropped += snap.Equipment.Count - _equipment.Count;
+            }
+
+            dropped += SanitizePocket(snap.PocketL, clean.PocketL);
+            dropped += SanitizePocket(snap.PocketR, clean.PocketR);
+
+            if (dropped > 0)
+                Debug.LogWarning($"[RunInventory] Loadout del cliente {base.Owner.ClientId} con {dropped} entradas inválidas: descartadas.");
+
+            return clean;
+        }
+
+        private int SanitizePocket(List<ItemStack> source, List<ItemStack> target)
+        {
+            if (source == null) return 0;
+            int dropped = 0;
+
+            foreach (ItemStack s in source)
+            {
+                if (s.IsEmpty) continue;
+                ItemSO def = _database.GetById(s.ItemId);
+                if (def == null || target.Count >= MaxSnapshotPocketEntries)
+                {
+                    dropped++;
+                    continue;
+                }
+
+                int qty = Mathf.Clamp(s.Quantity, 1, def.MaxStack);
+                if (qty != s.Quantity) dropped++;
+                target.Add(new ItemStack(s.ItemId, qty, Mathf.Clamp01(s.Durability)));
+            }
+            return dropped;
         }
 
         // ---------- Capacidad de pockets ----------
