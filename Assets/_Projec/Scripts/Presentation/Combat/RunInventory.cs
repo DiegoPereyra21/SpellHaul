@@ -290,19 +290,7 @@ namespace Game.Presentation.Combat
             if (stack.IsEmpty) return false;
             if (_database.GetById(stack.ItemId) is not EquipmentItemSO equip) return false;
 
-            int slotIndex;
-            if (equip.Slot.IsPocket())
-            {
-                int lIdx = (int)EquipmentSlot.PocketL;
-                int rIdx = (int)EquipmentSlot.PocketR;
-                if (_equipment[lIdx].IsEmpty) slotIndex = lIdx;
-                else if (_equipment[rIdx].IsEmpty) slotIndex = rIdx;
-                else return false; // las dos posiciones de pocket ya ocupadas
-            }
-            else
-            {
-                slotIndex = (int)equip.Slot;
-            }
+            int slotIndex = ChooseEquipSlot(equip);
 
             if (!_equipment[slotIndex].IsEmpty)
             {
@@ -315,6 +303,62 @@ namespace Game.Presentation.Combat
             }
 
             _equipment[slotIndex] = new ItemStack(stack.ItemId, 1, stack.Durability);
+
+            if (((EquipmentSlot)slotIndex).IsPocket())
+                RebuildAllPocketCapacities();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Slot donde va un item al auto-equiparlo (shift+clic). Pockets: el primer lado vacío; si
+        /// los dos están ocupados, reemplaza el de menor capacidad (empate: L). Antes, con los dos
+        /// ocupados, el shift+clic no hacía nada.
+        /// </summary>
+        private int ChooseEquipSlot(EquipmentItemSO equip)
+        {
+            if (!equip.Slot.IsPocket()) return (int)equip.Slot;
+
+            int lIdx = (int)EquipmentSlot.PocketL;
+            int rIdx = (int)EquipmentSlot.PocketR;
+            if (_equipment[lIdx].IsEmpty) return lIdx;
+            if (_equipment[rIdx].IsEmpty) return rIdx;
+            return PocketCapacity(EquipmentSlot.PocketL) <= PocketCapacity(EquipmentSlot.PocketR) ? lIdx : rIdx;
+        }
+
+        /// <summary>
+        /// Server-only. Equipa directo un item de un LootContainer (shift+clic en la columna del
+        /// contenedor), aunque los pockets estén llenos. Lo que estaba equipado va al primer lugar
+        /// libre de los pockets o, si no hay, queda en el contenedor en el lugar del item tomado
+        /// (un intercambio). El que llama valida alcance y estado del jugador.
+        /// </summary>
+        [Server]
+        public bool TryEquipFromContainer(LootContainer container, int index)
+        {
+            if (container == null || index < 0 || index >= container.Contents.Count) return false;
+
+            ItemStack stack = container.Contents[index];
+            if (stack.IsEmpty) return false;
+            if (_database.GetById(stack.ItemId) is not EquipmentItemSO equip) return false;
+
+            int slotIndex = ChooseEquipSlot(equip);
+            ItemStack displaced = _equipment[slotIndex];
+
+            // Sacar el item del contenedor: si era un stack de más de 1 (no debería), queda el resto.
+            container.ServerUpdateAt(index, stack.Quantity > 1
+                ? new ItemStack(stack.ItemId, stack.Quantity - 1, stack.Durability)
+                : ItemStack.Empty);
+
+            _equipment[slotIndex] = new ItemStack(stack.ItemId, 1, stack.Durability);
+
+            if (!displaced.IsEmpty)
+            {
+                // Un pocket reemplazado vuelve al contenedor: meterlo en los pockets justo cuando
+                // cambia su capacidad podía dejarlo en un slot que desaparece.
+                var (freeZone, freeIndex) = ((EquipmentSlot)slotIndex).IsPocket() ? (-1, -1) : FindFreePocketSlot();
+                if (freeZone >= 0) SetSlot(freeZone, freeIndex, displaced);
+                else container.ServerDeposit(displaced, _database.GetById(displaced.ItemId));
+            }
 
             if (((EquipmentSlot)slotIndex).IsPocket())
                 RebuildAllPocketCapacities();

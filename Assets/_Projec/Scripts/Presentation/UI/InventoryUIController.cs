@@ -326,7 +326,18 @@ namespace Game.Presentation.UI
                 {
                     if (_dragMoved) { _dragMoved = false; return; }
                     if (evt.ctrlKey)  { DropItemServerRpc((int)zone, index); return; }
-                    if (evt.shiftKey) { QuickEquipServerRpc((int)zone, index); return; }
+                    if (evt.shiftKey)
+                    {
+                        if (zone == SlotZone.Container)
+                        {
+                            if (_openContainer != null) QuickEquipFromContainerServerRpc(_openContainer, index);
+                        }
+                        else
+                        {
+                            QuickEquipServerRpc((int)zone, index);
+                        }
+                        return;
+                    }
                     onClick?.Invoke();
                 });
 
@@ -586,6 +597,13 @@ namespace Game.Presentation.UI
         {
             if (!ServerCanAct()) return;
             _inventory.TryDropToWorld(zone, index, transform.position);
+        }
+
+        [ServerRpc]
+        private void QuickEquipFromContainerServerRpc(LootContainer container, int index)
+        {
+            if (!ServerCanUseContainer(container)) return;
+            _inventory.TryEquipFromContainer(container, index);
         }
 
         [ServerRpc]
