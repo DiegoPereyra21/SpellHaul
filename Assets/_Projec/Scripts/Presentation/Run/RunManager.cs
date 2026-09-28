@@ -41,6 +41,19 @@ namespace Game.Presentation.Run
         /// una run ya vencida.</summary>
         private bool _runStarted;
 
+        /// <summary>Solo servidor. True desde que se registró el primer jugador.</summary>
+        public bool HasRunStarted => _runStarted;
+
+        [Header("Fin de la run")]
+        [Tooltip("Segundos desde el primer jugador registrado durante los cuales la run NO puede terminar aunque no quede nadie vivo: da tiempo a que conecten los demás del match. Se corta antes si ya se registraron todos los esperados (GSDK InitialPlayers). Sin ese dato (conexión directa) aplica solo este tiempo.")]
+        [SerializeField] private float _endGraceSeconds = 75f;
+
+        private System.Func<int> _expectedPlayersProvider;
+        private int _everRegistered;      // registros totales: no baja al desconectarse
+        private float _firstRegisterTime;
+        private bool _endGateOpen;        // una vez abierta, la run ya puede terminar
+        private bool _endBlocked;
+
         private readonly SyncVar<float> _timeRemaining = new SyncVar<float>();
         public float TimeRemaining => _timeRemaining.Value;
         /// <summary>Solo servidor. Se dispara al entrar en la fase de peligro (timer a 0).</summary>
@@ -68,6 +81,9 @@ namespace Game.Presentation.Run
         public override void OnStartServer()
         {
             _statuses.Clear();
+            _everRegistered = 0;
+            _endGateOpen = false;
+            _endBlocked = false;
             _timeRemaining.Value = _runDuration;
             _phase.Value = RunPhase.InProgress;
             _runStarted = false;
@@ -86,6 +102,11 @@ namespace Game.Presentation.Run
         {
             if (!base.IsServerInitialized) return;
             if (!_runStarted) return; // esperando al primer jugador
+
+            // Si la run quedó sin vivos mientras el fin estaba bloqueado, termina apenas se abre.
+            // Solo se consulta tras un intento bloqueado (el provider del GSDK aloca una lista).
+            if (_endBlocked && !_endGateOpen && _phase.Value != RunPhase.Ended && CanEnd())
+                CheckRunEnd();
 
             if (_phase.Value == RunPhase.InProgress)
             {
@@ -143,7 +164,35 @@ namespace Game.Presentation.Run
             //       hunters cerca de cada jugador vivo, como escalada sobre este daño ambiental
             //       (que se queda como piso mínimo de presión, no se reemplaza).
         }
-        /// <summary>Server-only. Registra un jugador como vivo al entrar a la run.</summary>
+        /// <summary>Server-only. Fuente de "cuántos jugadores tiene el match" (GSDK InitialPlayers,
+        /// la inyecta NetworkBootstrap). Se lee en cada chequeo; 0 o sin provider = sin dato.</summary>
+        public void SetExpectedPlayersProvider(System.Func<int> provider) => _expectedPlayersProvider = provider;
+
+        /// <summary>
+        /// Server-only. La run solo puede terminar cuando ya se registraron todos los esperados o
+        /// venció la gracia desde el primer registro (lo que ocurra primero). Evita que el primero
+        /// en entrar, si muere/extrae/se va enseguida, cierre el proceso antes de que conecte el
+        /// resto del match. No toca el timer de la run ni la fase de peligro.
+        /// </summary>
+        private bool CanEnd()
+        {
+            if (_endGateOpen) return true;
+            if (!_runStarted) return false;
+
+            int expected = _expectedPlayersProvider?.Invoke() ?? 0;
+            bool allArrived = expected > 0 && _everRegistered >= expected;
+            bool graceOver = Time.time - _firstRegisterTime >= _endGraceSeconds;
+
+            if (allArrived || graceOver)
+            {
+                _endGateOpen = true;
+                Debug.Log(allArrived
+                    ? $"[RunManager] Llegaron los {expected} jugadores esperados: la run ya puede terminar."
+                    : $"[RunManager] Venció la gracia de {_endGraceSeconds:0}s: la run ya puede terminar.");
+            }
+            return _endGateOpen;
+        }
+
         /// <summary>Server-only. Registra un jugador como vivo al entrar a la run.</summary>
         public void RegisterPlayer(int playerObjectId)
         {
@@ -151,10 +200,12 @@ namespace Game.Presentation.Run
             if (_statuses.ContainsKey(playerObjectId)) return;
 
             _statuses[playerObjectId] = PlayerRunStatus.Alive;
+            _everRegistered++;
 
             if (!_runStarted)
             {
                 _runStarted = true;
+                _firstRegisterTime = Time.time;
                 _timeRemaining.Value = _runDuration;
                 Debug.Log("[RunManager] Primer jugador en la run: arranca el timer.");
             }
@@ -232,6 +283,17 @@ namespace Game.Presentation.Run
             // Si ya no queda nadie registrado (todos se desconectaron), la run también terminó.
             if (_statuses.Count == 0 || _aliveCount.Value <= 0)
             {
+                if (!CanEnd())
+                {
+                    if (!_endBlocked)
+                    {
+                        _endBlocked = true;
+                        int expected = _expectedPlayersProvider?.Invoke() ?? 0;
+                        Debug.Log($"[RunManager] Fin bloqueado: {_everRegistered}/{(expected > 0 ? expected.ToString() : "?")} registrados; se espera al resto o a que venza la gracia de {_endGraceSeconds:0}s.");
+                    }
+                    return;
+                }
+
                 _phase.Value = RunPhase.Ended;
                 OnRunEnded?.Invoke();
             }
