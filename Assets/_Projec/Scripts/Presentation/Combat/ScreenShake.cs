@@ -16,6 +16,12 @@ namespace Game.Presentation.Combat
         /// </summary>
         public static void ClaimAsLocal(ScreenShake instance) => _instance = instance;
 
+        // Posición de reposo, tomada una sola vez. Si se tomara al inicio de cada shake, un shake
+        // cortado a la mitad por otro (StopAllCoroutines) dejaría el offset como nuevo "reposo" y
+        // la cámara se iría corriendo con cada golpe seguido.
+        private Vector3 _restLocalPosition;
+
+        private void Awake() => _restLocalPosition = transform.localPosition;
 
         public static void Shake(float force = 1f, float duration = 0.2f)
         {
@@ -26,7 +32,7 @@ namespace Game.Presentation.Combat
 
         private IEnumerator DoShake(float force, float duration)
         {
-            Vector3 originalPos = transform.localPosition;
+            Vector3 originalPos = _restLocalPosition;
             float elapsed = 0f;
 
             while (elapsed < duration)

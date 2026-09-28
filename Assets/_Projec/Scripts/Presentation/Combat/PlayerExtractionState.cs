@@ -22,6 +22,18 @@ namespace Game.Presentation.Combat
         public float ExtractionProgress => _extractionProgress.Value;
         public bool IsExtracted => _isExtracted.Value;
 
+        private Health _health;
+
+        /// <summary>True si todavía puede extraer: ni extraído ni muerto. Al morir se apaga el
+        /// CharacterController y Unity no dispara OnTriggerExit, así que la zona no se entera
+        /// sola de que el jugador ya no está: lo tiene que preguntar acá.</summary>
+        public bool CanExtract => !_isExtracted.Value && (_health == null || !_health.IsDead);
+
+        private void Awake()
+        {
+            _health = GetComponent<Health>();
+        }
+
         public override void OnStartServer()
         {
             TryRegisterInRunManager();
@@ -73,7 +85,7 @@ namespace Game.Presentation.Combat
         public void ServerCompleteExtraction()
         {
             if (!base.IsServerInitialized) return;
-            if (_isExtracted.Value) return;
+            if (!CanExtract) return;
 
             _isExtracted.Value = true;
             if (Game.Presentation.Run.RunManager.Instance != null)
