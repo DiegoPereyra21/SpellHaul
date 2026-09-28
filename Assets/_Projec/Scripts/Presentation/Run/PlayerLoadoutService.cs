@@ -8,13 +8,12 @@ namespace Game.Presentation.Run
 {
     /// <summary>
     /// Persiste el inventario propio del jugador (snapshot) entre runs. Current es una cache en
-    /// memoria de lectura instantánea; el guardado real se delega a IPlayerLoadoutStorage (local
-    /// por defecto, PlayFab más adelante — cambiar de backend es reasignar Storage, nada más se
-    /// entera). Provee el kit inicial la primera vez que no hay nada guardado.
+    /// memoria de lectura instantánea. La lectura va por IPlayerLoadoutStorage (local hasta que
+    /// PlayFabSession activa el de PlayFab); la escritura la hace ProfileSaveQueue, junto con el
+    /// stash. Provee el kit inicial la primera vez que no hay nada guardado.
     /// </summary>
     public static class PlayerLoadoutService
     {
-        private const int MaxSaveRetries = 3;
         private const int MaxLoadRetries = 3;
 
         /// <summary>Backend activo. Cambiar esto es todo lo que hace falta para migrar de storage.</summary>
@@ -22,7 +21,6 @@ namespace Game.Presentation.Run
 
         private static InventorySnapshot _snapshot;
         private static bool _initialized;
-        private static bool _pendingSync;
         private static Task<bool> _initTask;
 
         /// <summary>El inventario propio persistente actual (cache en memoria). Null si nunca se inicializó.</summary>
@@ -30,8 +28,8 @@ namespace Game.Presentation.Run
 
         public static bool HasSnapshot => _initialized && _snapshot != null;
 
-        /// <summary>True si el último guardado falló tras agotar reintentos y todavía no se resincronizó.</summary>
-        public static bool PendingSync => _pendingSync;
+        /// <summary>True mientras quede un guardado sin confirmar (ver ProfileSaveQueue).</summary>
+        public static bool PendingSync => ProfileSaveQueue.PendingSync;
 
         /// <summary>
         /// Carga desde el storage si nunca se inicializó en este proceso; si no hay nada guardado
@@ -84,7 +82,7 @@ namespace Game.Presentation.Run
 
             _snapshot = BuildSnapshotWithKit(kit);
             _initialized = true;
-            await PersistAsync(_snapshot); // primera vez (lectura OK y vacía): persistir el kit
+            ProfileSaveQueue.EnqueueLoadout(_snapshot); // primera vez (lectura OK y vacía): persistir el kit
             return true;
         }
 
@@ -93,7 +91,7 @@ namespace Game.Presentation.Run
         {
             _snapshot = snapshot;
             _initialized = true;
-            _ = PersistAsync(snapshot);
+            ProfileSaveQueue.EnqueueLoadout(snapshot);
         }
 
         /// <summary>Vacía el inventario propio (al morir: volvés desnudo, pero con los slots de equipo visibles).</summary>
@@ -101,63 +99,7 @@ namespace Game.Presentation.Run
         {
             _snapshot = BuildEmptySnapshot();
             _initialized = true;
-            _ = PersistAsync(_snapshot);
-        }
-
-        /// <summary>Reintenta persistir el estado actual si el último guardado había fallado (ej. al recuperar conexión).</summary>
-        public static Task RetrySyncAsync() => PersistAsync(_snapshot);
-
-        private static bool _retryLoopRunning;
-
-        private static async Task PersistAsync(InventorySnapshot snapshot)
-        {
-            for (int attempt = 1; attempt <= MaxSaveRetries; attempt++)
-            {
-                try
-                {
-                    await Storage.SaveAsync(snapshot);
-                    _pendingSync = false;
-                    return;
-                }
-                catch (Exception e)
-                {
-                    if (attempt == MaxSaveRetries)
-                    {
-                        _pendingSync = true;
-                        Debug.LogWarning($"[PlayerLoadoutService] No se pudo persistir tras {MaxSaveRetries} intentos, reintentando en background: {e.Message}");
-                        if (!_retryLoopRunning) _ = BackgroundRetryLoopAsync();
-                        return;
-                    }
-                    await Task.Delay(500 * attempt);
-                }
-            }
-        }
-
-        /// <summary>Mientras quede un guardado pendiente, reintenta cada 5s hasta resincronizar.</summary>
-        private static async Task BackgroundRetryLoopAsync()
-        {
-            _retryLoopRunning = true;
-            try
-            {
-                while (_pendingSync)
-                {
-                    await Task.Delay(5000);
-                    if (!_pendingSync) break;
-                    try
-                    {
-                        await Storage.SaveAsync(_snapshot);
-                        _pendingSync = false;
-                    }
-                    catch
-                    {
-                        // sigue pendiente, el while vuelve a intentar
-                    }
-                }
-            }
-            finally
-            {
-                _retryLoopRunning = false;
-            }
+            ProfileSaveQueue.EnqueueLoadout(_snapshot);
         }
 
         private static InventorySnapshot BuildSnapshotWithKit(StartingKitSO kit)

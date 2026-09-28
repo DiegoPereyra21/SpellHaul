@@ -15,7 +15,7 @@ namespace Game.Presentation.Run
     /// </summary>
     public class PlayFabStashStorage : IStashStorage
     {
-        private const string DataKey = "Stash";
+        public const string DataKey = "Stash";
 
         public Task<StashData> LoadAsync()
         {
@@ -41,20 +41,6 @@ namespace Game.Presentation.Run
         }
 
         public Task SaveAsync(StashData stash)
-        {
-            var tcs = new TaskCompletionSource<bool>();
-            string json = JsonUtility.ToJson(stash);
-
-            PlayFabClientAPI.UpdateUserData(
-                new UpdateUserDataRequest
-                {
-                    Data = new Dictionary<string, string> { { DataKey, json } },
-                    Permission = UserDataPermission.Private
-                },
-                _ => tcs.SetResult(true),
-                error => tcs.SetException(new Exception(error.GenerateErrorReport())));
-
-            return tcs.Task;
-        }
+            => PlayFabUserData.UpdateAsync(new Dictionary<string, string> { { DataKey, JsonUtility.ToJson(stash) } });
     }
 }

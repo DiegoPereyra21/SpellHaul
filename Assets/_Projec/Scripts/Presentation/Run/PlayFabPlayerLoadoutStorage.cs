@@ -15,7 +15,7 @@ namespace Game.Presentation.Run
     /// </summary>
     public class PlayFabPlayerLoadoutStorage : IPlayerLoadoutStorage
     {
-        private const string DataKey = "PlayerLoadout";
+        public const string DataKey = "PlayerLoadout";
 
         public Task<InventorySnapshot> LoadAsync()
         {
@@ -41,20 +41,6 @@ namespace Game.Presentation.Run
         }
 
         public Task SaveAsync(InventorySnapshot snapshot)
-        {
-            var tcs = new TaskCompletionSource<bool>();
-            string json = JsonUtility.ToJson(snapshot);
-
-            PlayFabClientAPI.UpdateUserData(
-                new UpdateUserDataRequest
-                {
-                    Data = new Dictionary<string, string> { { DataKey, json } },
-                    Permission = UserDataPermission.Private
-                },
-                _ => tcs.SetResult(true),
-                error => tcs.SetException(new Exception(error.GenerateErrorReport())));
-
-            return tcs.Task;
-        }
+            => PlayFabUserData.UpdateAsync(new Dictionary<string, string> { { DataKey, JsonUtility.ToJson(snapshot) } });
     }
 }
