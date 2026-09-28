@@ -35,6 +35,9 @@ namespace Game.Presentation.UI
         /// <summary>Muestra la pantalla con el resultado. extracted=true si extrajo, false si murió.</summary>
         public void Show(bool extracted)
         {
+            // Desde acá, que el servidor corte la conexión (fin de la run) es lo esperado.
+            NetworkDisconnectHandler.NotifyLocalRunFinished();
+
             _root.style.display = DisplayStyle.Flex;
 
             _title.RemoveFromClassList("extracted");

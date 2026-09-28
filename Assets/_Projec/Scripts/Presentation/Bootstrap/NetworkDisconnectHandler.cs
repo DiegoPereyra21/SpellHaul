@@ -27,11 +27,17 @@ namespace Game.Presentation.Bootstrap
         public static event Action<string> OnUnexpectedDisconnect;
 
         private static bool _intentionalDisconnect;
+        private static bool _localRunFinished;
         private bool _wasConnected;
 
         /// <summary>Avisar ANTES de cortar la conexión a propósito (volver al menú desde la
         /// pantalla de resultados, salir del juego, etc.).</summary>
         public static void NotifyIntentionalDisconnect() => _intentionalDisconnect = true;
+
+        /// <summary>Avisar cuando el jugador local terminó su participación (murió o extrajo).
+        /// Si después el servidor cierra la conexión (fin de la run: el proceso se apaga solo),
+        /// no es una caída: se vuelve al menú con un aviso normal en vez de "Connection lost".</summary>
+        public static void NotifyLocalRunFinished() => _localRunFinished = true;
 
         /// <summary>Marca el mensaje como ya mostrado.</summary>
         public static void ConsumeDisconnectMessage() => LastDisconnectMessage = null;
@@ -53,6 +59,7 @@ namespace Game.Presentation.Bootstrap
             if (args.ConnectionState == LocalConnectionState.Started)
             {
                 _wasConnected = true;
+                _localRunFinished = false;
                 return;
             }
 
@@ -67,11 +74,21 @@ namespace Game.Presentation.Bootstrap
                 return;
             }
 
-            LastDisconnectMessage = hadConnected
-                ? "Connection to the run was lost."
-                : "Could not reach the run server.";
+            bool runFinished = _localRunFinished;
+            _localRunFinished = false;
 
-            Debug.LogWarning($"[Disconnect] {LastDisconnectMessage}");
+            if (runFinished)
+            {
+                LastDisconnectMessage = "The run has ended.";
+                Debug.Log($"[Disconnect] {LastDisconnectMessage}");
+            }
+            else
+            {
+                LastDisconnectMessage = hadConnected
+                    ? "Connection to the run was lost."
+                    : "Could not reach the run server.";
+                Debug.LogWarning($"[Disconnect] {LastDisconnectMessage}");
+            }
 
             // Si seguimos en el menú (falló la conexión inicial), no hay que navegar: basta con
             // avisarle a la pantalla que ya está en pantalla.
