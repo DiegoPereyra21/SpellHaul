@@ -40,6 +40,8 @@ namespace Game.Presentation.Bootstrap
         [Header("PlayFab MPS")]
         [Tooltip("Nombre del puerto declarado en la configuración del Build de PlayFab. Debe coincidir exactamente.")]
         [SerializeField] private string _gamePortName = "game_port";
+        [Tooltip("Segundos desde que PlayFab pasa el servidor a Active sin que se registre ningún jugador antes de cerrar el proceso (ej. el match se armó pero nadie llegó a conectar). Evita instancias Active vacías para siempre.")]
+        [SerializeField] private float _noPlayersShutdownSeconds = 120f;
 
         private const string GsdkConfigEnvVar = "GSDK_CONFIG_FILE";
 
@@ -187,6 +189,10 @@ namespace Game.Presentation.Bootstrap
             if (Game.Presentation.Run.RunManager.Instance != null)
             {
                 Game.Presentation.Run.RunManager.Instance.OnRunEnded += HandleRunEndedOnDedicatedServer;
+                // Cuántos jugadores trae el match: el RunManager no deja terminar la run hasta que
+                // lleguen todos (o venza su gracia). Se lee cuando hace falta: se completa al pasar a Active.
+                Game.Presentation.Run.RunManager.Instance.SetExpectedPlayersProvider(
+                    () => PlayFabMultiplayerAgentAPI.GetInitialPlayers().Count);
                 Debug.Log("[NetworkBootstrap] Suscripto a OnRunEnded: el proceso se cerrará al terminar la run.");
             }
             else
@@ -218,7 +224,23 @@ namespace Game.Presentation.Bootstrap
         /// <summary>PlayFab pasó el servidor a Active: ya hay jugadores asignados en camino.</summary>
         private void OnGsdkServerActive()
         {
-            Debug.Log("[NetworkBootstrap] Servidor Active: aceptando jugadores.");
+            Debug.Log($"[NetworkBootstrap] Servidor Active: aceptando jugadores ({PlayFabMultiplayerAgentAPI.GetInitialPlayers().Count} esperados).");
+            StartCoroutine(ShutdownIfNobodyJoins());
+        }
+
+        /// <summary>Watchdog: si después de pasar a Active no se registra ningún jugador en
+        /// _noPlayersShutdownSeconds, el proceso se cierra (PlayFab nunca devuelve solo un servidor
+        /// Active a StandingBy). No toca el timer de la run ni el cierre normal por OnRunEnded.</summary>
+        private IEnumerator ShutdownIfNobodyJoins()
+        {
+            yield return new WaitForSeconds(_noPlayersShutdownSeconds);
+
+            var run = Game.Presentation.Run.RunManager.Instance;
+            if (run != null && run.HasRunStarted) yield break;
+
+            Debug.LogWarning($"[NetworkBootstrap] Ningún jugador entró en {_noPlayersShutdownSeconds:0}s desde Active. Cerrando el proceso.");
+            InstanceFinder.ServerManager.StopConnection(true);
+            Application.Quit();
         }
 
         /// <summary>PlayFab pide terminar. Hay que cerrar el proceso o la plataforma lo marca como
