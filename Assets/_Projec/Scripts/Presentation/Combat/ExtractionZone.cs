@@ -21,7 +21,7 @@ namespace Game.Presentation.Combat
         {
             if (!base.IsServerInitialized) return;
 
-            if (other.TryGetComponent(out PlayerExtractionState ext) && !ext.IsExtracted)
+            if (other.TryGetComponent(out PlayerExtractionState ext) && ext.CanExtract)
             {
                 if (!_channeling.ContainsKey(ext))
                     _channeling[ext] = 0f;
@@ -48,9 +48,11 @@ namespace Game.Presentation.Combat
             var players = new List<PlayerExtractionState>(_channeling.Keys);
             foreach (var ext in players)
             {
-                if (ext == null || ext.IsExtracted)
+                if (ext == null || !ext.CanExtract)
                 {
                     _channeling.Remove(ext);
+                    // Murió canalizando: la barra vuelve a 0 (si ya extrajo, la deja llena).
+                    if (ext != null && !ext.IsExtracted) ext.ServerSetProgress(0f);
                     continue;
                 }
 
