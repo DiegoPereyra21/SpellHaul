@@ -180,7 +180,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 2
+  <PrefabId>k__BackingField: 3
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 6228444354029513994
   SceneId: 0
@@ -200,6 +200,7 @@ MonoBehaviour:
   - {fileID: 4297230460876061587}
   - {fileID: 3771095809241588230}
   - {fileID: -7344314472633128359}
+  - {fileID: 8444895048984694296}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -210,7 +211,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584151169676541707
+  _initializedTimestamp: -8584109863416407386
 --- !u!114 &4297230460876061587
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -329,9 +330,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.LootDropper
   _componentIndexCache: 3
-  _addedNetworkObject: {fileID: 2819803591878320542, guid: daee69e68059f2f4ba75c6cac16d5cae, type: 3}
+  _addedNetworkObject: {fileID: 3536709759041560106}
   _networkObjectCache: {fileID: 3536709759041560106}
-  _lootTable: {fileID: 11400000, guid: c76f1cd9d97f13e48b4731c4af082371, type: 2}
+  _lootTable: {fileID: 11400000, guid: 52f30ae39165d3147919147a7d3230ea, type: 2}
   _lootContainerPrefab: {fileID: 2764254699792074859, guid: 3d07cbfe898310a45a89d7f2119ba857, type: 3}
 --- !u!114 &6910067746919599885
 MonoBehaviour:
@@ -366,9 +367,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01a271dd97d875347b0cea860df29a9d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.ColliderRollback.ColliderRollback
-  _componentIndexCache: 255
+  _componentIndexCache: 4
   _addedNetworkObject: {fileID: 3536709759041560106}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 3536709759041560106}
   _boundingBox: 0
   _physicsType: 1
   _boundingBoxSize: {x: 3, y: 3, z: 3}

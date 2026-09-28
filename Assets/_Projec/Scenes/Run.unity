@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d7689ee1be73884284aecfc2b946d5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.ChestSpawnPoint
-  _lootTable: {fileID: 11400000, guid: c76f1cd9d97f13e48b4731c4af082371, type: 2}
+  _lootTable: {fileID: 11400000, guid: b4db4a14529edcc44a08f1e7c777a226, type: 2}
 --- !u!1 &183603917
 GameObject:
   m_ObjectHideFlags: 0
@@ -235,6 +235,7 @@ MonoBehaviour:
   _runDuration: 120
   _dangerPhaseDamagePerTick: 12
   _dangerPhaseTickInterval: 1
+  _endGraceSeconds: 75
 --- !u!114 &273250573
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -652,7 +653,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d7689ee1be73884284aecfc2b946d5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.ChestSpawnPoint
-  _lootTable: {fileID: 11400000, guid: c76f1cd9d97f13e48b4731c4af082371, type: 2}
+  _lootTable: {fileID: 11400000, guid: b4db4a14529edcc44a08f1e7c777a226, type: 2}
 --- !u!1 &716664647
 GameObject:
   m_ObjectHideFlags: 0
@@ -794,7 +795,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d7689ee1be73884284aecfc2b946d5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.ChestSpawnPoint
-  _lootTable: {fileID: 11400000, guid: c76f1cd9d97f13e48b4731c4af082371, type: 2}
+  _lootTable: {fileID: 11400000, guid: b4db4a14529edcc44a08f1e7c777a226, type: 2}
 --- !u!1 &875887963
 GameObject:
   m_ObjectHideFlags: 0
@@ -908,7 +909,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d7689ee1be73884284aecfc2b946d5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.ChestSpawnPoint
-  _lootTable: {fileID: 11400000, guid: c76f1cd9d97f13e48b4731c4af082371, type: 2}
+  _lootTable: {fileID: 11400000, guid: b4db4a14529edcc44a08f1e7c777a226, type: 2}
 --- !u!1 &930107192
 GameObject:
   m_ObjectHideFlags: 0
