@@ -7,7 +7,15 @@ namespace Game.Presentation.Combat
     {
         private static ScreenShake _instance;
 
-        private void Awake() => _instance = this;
+        /// <summary>
+        /// Se registra explícitamente como el shake activo — nunca se auto-asigna en Awake.
+        /// En multijugador cada jugador instancia su propia cámara (la mayoría inactivas hasta
+        /// que OnStartClient las desactiva), así que "el último Awake gana" podía terminar
+        /// apuntando a la cámara de otro jugador. Lo llama el dueño real desde
+        /// PlayerMovementController.OnStartClient().
+        /// </summary>
+        public static void ClaimAsLocal(ScreenShake instance) => _instance = instance;
+
 
         public static void Shake(float force = 1f, float duration = 0.2f)
         {

@@ -158,6 +158,12 @@ namespace Game.Presentation.Player
                 if (_cameraRoot != null) _cameraRoot.SetActive(false);
                 enabled = false;
             }
+            else if (_cameraRoot != null)
+            {
+                var shake = _cameraRoot.GetComponentInChildren<Game.Presentation.Combat.ScreenShake>(true);
+                if (shake != null)
+                    Game.Presentation.Combat.ScreenShake.ClaimAsLocal(shake);
+            }
         }
 
         private void Update()
