@@ -627,7 +627,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Bootstrap.DevConnectionStarter
   _runSceneName: Run
-  _editorRole: 0
+  _editorRole: 3
   _editorAddress: 127.0.0.1
   _editorPort: 7770
   _gamePortName: game_port
