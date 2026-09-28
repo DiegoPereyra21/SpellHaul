@@ -54,19 +54,41 @@ namespace Game.Presentation.Combat
             return true;
         }
 
-        /// <summary>Server-only. Agrega un stack al contenedor. Devuelve lo que no entró (siempre 0 por ahora, lista sin límite).</summary>
+        /// <summary>
+        /// Server-only. Agrega un stack al contenedor (lista sin límite) respetando el apilamiento
+        /// de su definición: solo completa pilas existentes si el item es apilable y hasta MaxStack;
+        /// el resto va en entradas nuevas. Antes mergeaba cualquier item con el mismo id, así dos
+        /// guantes quedaban como "x2" en un slot y al equiparlos se perdía uno.
+        /// def null (id desconocido) = se trata como no apilable.
+        /// </summary>
         [Server]
-        public void ServerDeposit(ItemStack stack)
+        public void ServerDeposit(ItemStack stack, ItemSO def)
         {
             if (stack.IsEmpty) return;
-            for (int i = 0; i < _contents.Count; i++)
+
+            int remaining = stack.Quantity;
+            int maxStack = def != null ? def.MaxStack : 1; // MaxStack ya es 1 si no es apilable
+
+            if (def != null && def.IsStackable)
             {
-                ItemStack s = _contents[i];
-                if (s.ItemId != stack.ItemId) continue;
-                _contents[i] = new ItemStack(s.ItemId, s.Quantity + stack.Quantity, s.Durability);
-                return;
+                for (int i = 0; i < _contents.Count && remaining > 0; i++)
+                {
+                    ItemStack s = _contents[i];
+                    if (s.IsEmpty || s.ItemId != stack.ItemId) continue;
+                    int space = maxStack - s.Quantity;
+                    if (space <= 0) continue;
+                    int add = Mathf.Min(space, remaining);
+                    _contents[i] = new ItemStack(s.ItemId, s.Quantity + add, s.Durability);
+                    remaining -= add;
+                }
             }
-            _contents.Add(stack);
+
+            while (remaining > 0)
+            {
+                int add = Mathf.Min(maxStack, remaining);
+                _contents.Add(new ItemStack(stack.ItemId, add, stack.Durability));
+                remaining -= add;
+            }
         }
 
         /// <summary>Server-only. Reemplaza o elimina un item por índice (para swap con el inventario). Nunca despawnea.</summary>

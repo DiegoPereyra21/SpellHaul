@@ -477,6 +477,7 @@ namespace Game.Presentation.UI
             EndDrag();
 
             if (!moved) return;
+            if (from.Zone == destZone && from.Index == destIndex) return; // soltado sobre sí mismo
 
             if (destZone == SlotZone.Container) return;
 

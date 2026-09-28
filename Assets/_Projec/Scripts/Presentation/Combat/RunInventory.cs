@@ -244,24 +244,36 @@ namespace Game.Presentation.Combat
             // Recalcular capacidad de ambos pockets según lo equipado del snapshot.
             RebuildAllPocketCapacities();
 
-            RestoreIntoList(_pocketL, snap.PocketL);
-            RestoreIntoList(_pocketR, snap.PocketR);
+            var overflow = new List<ItemStack>();
+            RestoreIntoList(_pocketL, snap.PocketL, overflow);
+            RestoreIntoList(_pocketR, snap.PocketR, overflow);
+
+            // Lo que no entró en su pocket prueba en el otro; si tampoco hay lugar, cae al suelo al
+            // lado del jugador (antes se descartaba en silencio y la pérdida se persistía al extraer).
+            foreach (var stack in overflow)
+                if (!TryPlaceInFirstEmpty(_pocketL, stack) && !TryPlaceInFirstEmpty(_pocketR, stack))
+                    SpawnWorldItem(stack);
         }
 
-        private void RestoreIntoList(SyncList<ItemStack> list, List<ItemStack> source)
+        private static void RestoreIntoList(SyncList<ItemStack> list, List<ItemStack> source, List<ItemStack> overflow)
         {
             foreach (var stack in source)
             {
                 if (stack.IsEmpty) continue;
-                for (int i = 0; i < list.Count; i++)
-                {
-                    if (list[i].IsEmpty)
-                    {
-                        list[i] = stack;
-                        break;
-                    }
-                }
+                if (!TryPlaceInFirstEmpty(list, stack))
+                    overflow.Add(stack);
             }
+        }
+
+        private static bool TryPlaceInFirstEmpty(SyncList<ItemStack> list, ItemStack stack)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (!list[i].IsEmpty) continue;
+                list[i] = stack;
+                return true;
+            }
+            return false;
         }
 
         // ---------- Equipar / desequipar ----------
@@ -366,6 +378,12 @@ namespace Game.Presentation.Combat
         [Server]
         public bool TryMoveSlot(int fromZone, int fromIndex, int toZone, int toIndex)
         {
+            // Origen y destino tienen que existir y ser distintos: soltar un stack sobre su propio
+            // slot entraba al merge y lo borraba; un destino inválido vaciaba el origen sin
+            // escribir en ningún lado.
+            if (!IsValidSlot(fromZone, fromIndex) || !IsValidSlot(toZone, toIndex)) return false;
+            if (fromZone == toZone && fromIndex == toIndex) return false;
+
             ItemStack from = GetSlot(fromZone, fromIndex);
             if (from.IsEmpty) return false;
 
@@ -447,6 +465,10 @@ namespace Game.Presentation.Combat
             if (fromContainer && toContainer) return false; // container→container no aplica
             if (!fromContainer && !toContainer) return false; // ambos internos: usar TryMoveSlot
 
+            // El lado propio tiene que ser un slot real: si no, el item salía de un lado y no
+            // entraba en el otro (se perdía).
+            if (fromContainer ? !IsValidSlot(toZone, toIndex) : !IsValidSlot(fromZone, fromIndex)) return false;
+
             if (fromContainer)
             {
                 if (fromIndex < 0 || fromIndex >= container.Contents.Count) return false;
@@ -482,7 +504,7 @@ namespace Game.Presentation.Combat
                 container.ServerUpdateAt(fromIndex, ItemStack.Empty);
                 SetSlot(toZone, toIndex, dragged);
                 if (!existing.IsEmpty)
-                    container.ServerDeposit(existing); // si el contenedor se hubiera despawneado antes, esto se perdía
+                    container.ServerDeposit(existing, _database.GetById(existing.ItemId)); // si el contenedor se hubiera despawneado antes, esto se perdía
 
                 if (toZone == 0) RebuildAllPocketCapacities();
                 return true;
@@ -493,11 +515,23 @@ namespace Game.Presentation.Combat
                 if (dragged.IsEmpty) return false;
 
                 SetSlot(fromZone, fromIndex, ItemStack.Empty);
-                container.ServerDeposit(dragged);
+                container.ServerDeposit(dragged, _database.GetById(dragged.ItemId));
 
                 if (fromZone == 0) RebuildAllPocketCapacities();
                 return true;
             }
+        }
+
+        /// <summary>True si (zone, index) es un slot existente del inventario propio (0 = equipo, 1/2 = pockets).</summary>
+        private bool IsValidSlot(int zone, int index)
+        {
+            return zone switch
+            {
+                0 => index >= 0 && index < _equipment.Count,
+                1 => index >= 0 && index < _pocketL.Count,
+                2 => index >= 0 && index < _pocketR.Count,
+                _ => false
+            };
         }
 
         private ItemStack GetSlot(int zone, int index)
