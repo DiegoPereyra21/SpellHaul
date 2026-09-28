@@ -612,21 +612,5 @@ namespace Game.Presentation.Combat
             for (int i = 0; i < _equipment.Count; i++) _equipment[i] = ItemStack.Empty;
             RebuildAllPocketCapacities();
         }
-
-        // ---------- Debug helper (para InventoryDebugger) ----------
-
-        public void DebugLogContents()
-        {
-            Debug.Log("--- Inventario ---");
-            for (int i = 0; i < _equipment.Count; i++)
-                if (!_equipment[i].IsEmpty)
-                    Debug.Log($"  [Equip {(EquipmentSlot)i}] {_equipment[i].ItemId} (dur {_equipment[i].Durability:0.00})");
-            for (int i = 0; i < _pocketL.Count; i++)
-                if (!_pocketL[i].IsEmpty)
-                    Debug.Log($"  [Pocket L {i}] {_pocketL[i].ItemId} x{_pocketL[i].Quantity}");
-            for (int i = 0; i < _pocketR.Count; i++)
-                if (!_pocketR[i].IsEmpty)
-                    Debug.Log($"  [Pocket R {i}] {_pocketR[i].ItemId} x{_pocketR[i].Quantity}");
-        }
     }
 }
