@@ -37,11 +37,26 @@ namespace Game.Presentation.Player
                     if (c != null) c.enabled = false;
 
             if (_bodyCollider != null) _bodyCollider.enabled = false;
+            DisableHitboxes();
 
             if (_inventoryUI != null)
                 _inventoryUI.DisableInventory();
 
             HideModel();
+        }
+
+        /// <summary>Apaga las hitboxes (colliders en la capa Hitbox). _bodyCollider es solo el
+        /// CharacterController: sin esto, el cuerpo invisible seguía frenando proyectiles y
+        /// explosiones y le daba hitmarker falso al que disparaba. Corre en servidor y clientes
+        /// (el RPC que llama a DisableControl es RunLocally), así que el hit-reg también lo ve.</summary>
+        private void DisableHitboxes()
+        {
+            int hitboxLayer = LayerMask.NameToLayer("Hitbox");
+            if (hitboxLayer < 0) return;
+
+            foreach (var col in GetComponentsInChildren<Collider>(true))
+                if (col != null && col.gameObject.layer == hitboxLayer)
+                    col.enabled = false;
         }
 
         /// <summary>Apaga los renderers en vez del GameObject entero: desactivar el objeto se
