@@ -244,24 +244,36 @@ namespace Game.Presentation.Combat
             // Recalcular capacidad de ambos pockets según lo equipado del snapshot.
             RebuildAllPocketCapacities();
 
-            RestoreIntoList(_pocketL, snap.PocketL);
-            RestoreIntoList(_pocketR, snap.PocketR);
+            var overflow = new List<ItemStack>();
+            RestoreIntoList(_pocketL, snap.PocketL, overflow);
+            RestoreIntoList(_pocketR, snap.PocketR, overflow);
+
+            // Lo que no entró en su pocket prueba en el otro; si tampoco hay lugar, cae al suelo al
+            // lado del jugador (antes se descartaba en silencio y la pérdida se persistía al extraer).
+            foreach (var stack in overflow)
+                if (!TryPlaceInFirstEmpty(_pocketL, stack) && !TryPlaceInFirstEmpty(_pocketR, stack))
+                    SpawnWorldItem(stack);
         }
 
-        private void RestoreIntoList(SyncList<ItemStack> list, List<ItemStack> source)
+        private static void RestoreIntoList(SyncList<ItemStack> list, List<ItemStack> source, List<ItemStack> overflow)
         {
             foreach (var stack in source)
             {
                 if (stack.IsEmpty) continue;
-                for (int i = 0; i < list.Count; i++)
-                {
-                    if (list[i].IsEmpty)
-                    {
-                        list[i] = stack;
-                        break;
-                    }
-                }
+                if (!TryPlaceInFirstEmpty(list, stack))
+                    overflow.Add(stack);
             }
+        }
+
+        private static bool TryPlaceInFirstEmpty(SyncList<ItemStack> list, ItemStack stack)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (!list[i].IsEmpty) continue;
+                list[i] = stack;
+                return true;
+            }
+            return false;
         }
 
         // ---------- Equipar / desequipar ----------

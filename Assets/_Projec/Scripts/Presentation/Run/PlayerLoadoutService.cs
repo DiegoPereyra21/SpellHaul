@@ -175,15 +175,32 @@ namespace Game.Presentation.Run
                         snap.Equipment[slotIndex] = new ItemStack(e.Item.ItemId, 1, 1f);
                 }
 
-                // Los items sueltos del kit arrancan en Pocket L. Si el kit trae más items de
-                // los que la capacidad real termine permitiendo, RunInventory los rescata/dropea
-                // igual que hoy hace con la mochila (misma lógica de RebuildBackpackCapacity).
+                // Los items sueltos se reparten según la capacidad real de cada pocket del kit
+                // (L primero, después R). Si el kit trae más de lo que entra, el sobrante queda en
+                // L: la pantalla de Stash lo manda al stash y RunInventory lo reubica o lo dropea.
+                int capL = KitPocketCapacity(kit, EquipmentSlot.PocketL);
+                int capR = KitPocketCapacity(kit, EquipmentSlot.PocketR);
                 foreach (var b in kit.StartingItems)
-                    if (b.Item != null)
-                        snap.PocketL.Add(new ItemStack(b.Item.ItemId, b.Quantity, 1f));
+                {
+                    if (b.Item == null) continue;
+                    var stack = new ItemStack(b.Item.ItemId, b.Quantity, 1f);
+                    if (snap.PocketL.Count < capL) snap.PocketL.Add(stack);
+                    else if (snap.PocketR.Count < capR) snap.PocketR.Add(stack);
+                    else snap.PocketL.Add(stack);
+                }
             }
 
             return snap;
+        }
+
+        /// <summary>Capacidad del pocket del kit: la que declare el pocket equipado en ese lado, 1
+        /// si no hay ninguno (misma regla que RunInventory.PocketCapacity).</summary>
+        private static int KitPocketCapacity(StartingKitSO kit, EquipmentSlot pocketSlot)
+        {
+            foreach (var e in kit.Equipment)
+                if (e.Slot == pocketSlot && e.Item != null && e.Item.Slot.IsPocket())
+                    return Mathf.Max(e.Item.PocketSlots, 0);
+            return 1;
         }
 
         /// <summary>Snapshot con un slot vacío por cada EquipmentSlot (sin items). Base común de Clear/BuildSnapshotWithKit.</summary>
