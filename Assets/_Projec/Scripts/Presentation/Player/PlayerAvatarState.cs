@@ -20,6 +20,11 @@ namespace Game.Presentation.Player
 
         private bool _controlDisabled;
 
+        /// <summary>True si el avatar ya no participa de la run (murió o extrajo). En el servidor
+        /// se vuelve true en el mismo instante de la muerte/extracción (el RPC es RunLocally), así
+        /// que los ServerRpc lo usan para rechazar acciones de un jugador que ya no está.</summary>
+        public bool IsControlDisabled => _controlDisabled;
+
         /// <summary>
         /// Desactiva todo el control del avatar y lo oculta. Idempotente (llamar dos veces no
         /// hace daño). Corre en todas las instancias (via el RPC del handler que lo llame).
@@ -30,7 +35,13 @@ namespace Game.Presentation.Player
             _controlDisabled = true;
 
             if (_movement != null) _movement.DisableMovement();
-            if (_abilities != null) _abilities.enabled = false;
+            if (_abilities != null)
+            {
+                // enabled = false no frena corrutinas: sin esto un windup en curso disparaba igual.
+                _abilities.CancelActiveCasts();
+                _abilities.enabled = false;
+            }
+            if (TryGetComponent(out ParryHandler parry)) parry.CancelParry();
 
             if (_extraToDisable != null)
                 foreach (var c in _extraToDisable)

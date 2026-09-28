@@ -1,5 +1,6 @@
 using FishNet.Object;
 using Game.Core.Items;
+using Game.Presentation.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -17,6 +18,9 @@ namespace Game.Presentation.Combat
         [SerializeField] private RunInventory _inventory;
         [SerializeField] private ItemDatabase _database;
         [SerializeField] private Game.Presentation.UI.InventoryUIController _inventoryUI;
+        [Tooltip("Margen extra (m) sobre el rango al validar en el servidor: cubre lo que el jugador se movió durante la latencia.")]
+        [SerializeField] private float _serverRangeTolerance = 1.5f;
+        private PlayerAvatarState _avatar;
         private LootContainer _currentContainer;
         private InputAction _interactAction;
         private PlayerControls _controls;
@@ -32,6 +36,20 @@ namespace Game.Presentation.Combat
         {
             _controls = new PlayerControls();
             _interactAction = _controls.Player.Interact;
+            _avatar = GetComponent<PlayerAvatarState>();
+        }
+
+        /// <summary>
+        /// Server-only. True si este jugador sigue en la run y el punto está a su alcance, medido
+        /// desde la posición del servidor (nunca la que diga el cliente). Lo usan la recogida y los
+        /// contenedores: sin esto se podía lootear cualquier cosa del mapa, o hacerlo ya extraído.
+        /// </summary>
+        public bool ServerCanReach(Vector3 point)
+        {
+            if (_avatar != null && _avatar.IsControlDisabled) return false;
+
+            Vector3 origin = _aimOrigin != null ? _aimOrigin.position : transform.position;
+            return Vector3.Distance(origin, point) <= _range + _serverRangeTolerance;
         }
 
         private void OnDestroy()
@@ -91,7 +109,8 @@ namespace Game.Presentation.Combat
         [ServerRpc]
         private void PickupServerRpc(WorldItem item)
         {
-            if (item == null) return;
+            if (item == null || !item.IsSpawned) return;
+            if (!ServerCanReach(item.transform.position)) return;
 
             ItemStack stack = item.ToStack();
             ItemSO def = _database.GetById(stack.ItemId);

@@ -57,8 +57,12 @@ namespace Game.Presentation.UI
         private static readonly Color GhostColorNormal  = new Color(0.16f, 0.16f, 0.24f, 0.95f);
         private static readonly Color GhostColorDrop    = new Color(0.55f, 0.08f, 0.08f, 0.95f);
 
+        private PlayerAvatarState _avatar;
+
         private void Awake()
         {
+            _avatar = GetComponent<PlayerAvatarState>();
+            if (_interaction == null) _interaction = GetComponent<PlayerInteraction>();
             _controls = new PlayerControls();
             _toggleAction = _controls.Player.ToggleInventory;
         }
@@ -518,13 +522,26 @@ namespace Game.Presentation.UI
         }
 
         // ---------- Acciones (server-authoritative) ----------
+        // Desactivar este componente al morir/extraer no bloquea los ServerRpc: cada uno valida
+        // que el jugador siga en la run y, si toca un contenedor, que lo tenga al alcance.
 
-        [ServerRpc] private void UnequipServerRpc(int equipmentSlotIndex) => _inventory.TryUnequip(equipmentSlotIndex);
+        private bool ServerCanAct() => _avatar == null || !_avatar.IsControlDisabled;
+
+        private bool ServerCanUseContainer(LootContainer container)
+            => container != null && container.IsSpawned
+               && _interaction != null && _interaction.ServerCanReach(container.transform.position);
+
+        [ServerRpc]
+        private void UnequipServerRpc(int equipmentSlotIndex)
+        {
+            if (!ServerCanAct()) return;
+            _inventory.TryUnequip(equipmentSlotIndex);
+        }
 
         [ServerRpc]
         private void TakeFromContainerServerRpc(LootContainer container, int index)
         {
-            if (container == null) return;
+            if (!ServerCanUseContainer(container)) return;
             if (!container.ServerTryTake(index, out ItemStack taken)) return;
 
             int notAdded = _inventory.TryAddStack(taken);
@@ -536,30 +553,45 @@ namespace Game.Presentation.UI
 
         [ServerRpc]
         private void MoveSlotServerRpc(int fromZone, int fromIndex, int toZone, int toIndex)
-            => _inventory.TryMoveSlot(fromZone, fromIndex, toZone, toIndex);
+        {
+            if (!ServerCanAct()) return;
+            _inventory.TryMoveSlot(fromZone, fromIndex, toZone, toIndex);
+        }
 
         [ServerRpc]
         private void MoveWithContainerServerRpc(int fromZone, int fromIndex, int toZone, int toIndex, LootContainer container)
-            => _inventory.TryMoveWithContainer(fromZone, fromIndex, toZone, toIndex, container);
+        {
+            if (!ServerCanUseContainer(container)) return;
+            _inventory.TryMoveWithContainer(fromZone, fromIndex, toZone, toIndex, container);
+        }
 
         [ServerRpc]
         private void DropToWorldServerRpc(int zone, int index)
-            => _inventory.TryDropToWorld(zone, index, transform.position);
+        {
+            if (!ServerCanAct()) return;
+            _inventory.TryDropToWorld(zone, index, transform.position);
+        }
 
         [ServerRpc]
         private void DropContainerItemToWorldServerRpc(LootContainer container, int index)
         {
-            if (container == null) return;
+            if (!ServerCanUseContainer(container)) return;
             if (!container.ServerTryTake(index, out ItemStack taken)) return;
             _inventory.SpawnWorldItemPublic(taken, transform.position);
         }
 
         [ServerRpc]
         private void DropItemServerRpc(int zone, int index)
-            => _inventory.TryDropToWorld(zone, index, transform.position);
+        {
+            if (!ServerCanAct()) return;
+            _inventory.TryDropToWorld(zone, index, transform.position);
+        }
 
         [ServerRpc]
         private void QuickEquipServerRpc(int zone, int index)
-            => _inventory.TryEquipFromInventory(zone, index);
+        {
+            if (!ServerCanAct()) return;
+            _inventory.TryEquipFromInventory(zone, index);
+        }
     }
 }
