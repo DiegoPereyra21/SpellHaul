@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: swift_gloves_rare
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.GloveItemSO
   _itemId: swift_gloves_rare
-  _displayName: Rare Swift Gloves
+  _displayName: Swift Gloves
   _category: 3
   _rarity: 1
   _icon: {fileID: 0}

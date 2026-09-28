@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: heavy_gloves_common
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.GloveItemSO
   _itemId: heavy_gloves_common
-  _displayName: Common Heavy Gloves
+  _displayName: Heavy Gloves
   _category: 3
   _rarity: 0
   _icon: {fileID: 0}

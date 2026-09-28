@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: focus_gloves_epic
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.GloveItemSO
   _itemId: focus_gloves_epic
-  _displayName: Epic Focus Gloves
+  _displayName: Focus Gloves
   _category: 3
   _rarity: 2
   _icon: {fileID: 0}

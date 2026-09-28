@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: swift_robe_common
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.EquipmentItemSO
   _itemId: swift_robe_common
-  _displayName: Common Swift Robe
+  _displayName: Swift Robe
   _category: 2
   _rarity: 0
   _icon: {fileID: 0}

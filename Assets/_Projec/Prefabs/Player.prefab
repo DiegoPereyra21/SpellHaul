@@ -21,7 +21,6 @@ GameObject:
   - component: {fileID: 5943440516833520504}
   - component: {fileID: 281249298206178624}
   - component: {fileID: -6873126794131237326}
-  - component: {fileID: 6513846324524779194}
   - component: {fileID: 7481302007928117156}
   - component: {fileID: 8706064901918070629}
   - component: {fileID: 2259917246576972072}
@@ -139,7 +138,7 @@ MonoBehaviour:
   - {fileID: 5943440516833520504}
   - {fileID: 281249298206178624}
   - {fileID: -6873126794131237326}
-  - {fileID: 6513846324524779194}
+  - {fileID: 0}
   - {fileID: 7481302007928117156}
   - {fileID: 8706064901918070629}
   - {fileID: 2259917246576972072}
@@ -330,6 +329,7 @@ MonoBehaviour:
   - {fileID: 7719687377624193090}
   _bodyCollider: {fileID: 8155489654076050703}
   _inventoryUI: {fileID: 2259917246576972072}
+  _modelRoot: {fileID: 0}
 --- !u!114 &281249298206178624
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -365,24 +365,6 @@ MonoBehaviour:
   _lootContainerPrefab: {fileID: 2764254699792074859, guid: 3d07cbfe898310a45a89d7f2119ba857, type: 3}
   _startingKit: {fileID: 11400000, guid: fdfcad62ad451274c9103cfff992f2c4, type: 2}
   _worldItemPrefab: {fileID: 2132299959280697645, guid: 871392e19bc3d75459b2c32fa36490cf, type: 3}
---- !u!114 &6513846324524779194
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 708038747777476914}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 44835dad06f2a42408ad64de909c0d15, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.InventoryDebugger
-  _componentIndexCache: 9
-  _addedNetworkObject: {fileID: 4708353133064893462}
-  _networkObjectCache: {fileID: 4708353133064893462}
-  _inventory: {fileID: -6873126794131237326}
-  _testItemId: wand
-  _testQuantity: 3
 --- !u!114 &7481302007928117156
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -405,6 +387,9 @@ MonoBehaviour:
   _baseDamageMultiplier: 1
   _baseCastSpeedMultiplier: 1
   _protectionCap: 0.6
+  _minDamageMultiplier: 0.1
+  _minCastSpeedMultiplier: 0.1
+  _minMoveSpeed: 0.5
 --- !u!114 &8706064901918070629
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -428,6 +413,7 @@ MonoBehaviour:
   _inventory: {fileID: -6873126794131237326}
   _database: {fileID: 11400000, guid: 102308c18b8226846a202b06693b2687, type: 2}
   _inventoryUI: {fileID: 2259917246576972072}
+  _serverRangeTolerance: 1.5
 --- !u!114 &2259917246576972072
 MonoBehaviour:
   m_ObjectHideFlags: 0

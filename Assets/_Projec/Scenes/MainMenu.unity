@@ -631,6 +631,7 @@ MonoBehaviour:
   _editorAddress: 127.0.0.1
   _editorPort: 7770
   _gamePortName: game_port
+  _noPlayersShutdownSeconds: 120
 --- !u!114 &2001619988
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -825,7 +826,7 @@ MonoBehaviour:
     Rotation: 2
     Scale: 2
   _changeFrameRate: 1
-  _frameRate: 500
+  _frameRate: 60
   _shareIds: 1
   _startOnHeadless: 0
 --- !u!114 &2001619999

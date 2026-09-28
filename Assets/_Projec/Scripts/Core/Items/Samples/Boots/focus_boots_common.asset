@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: focus_boots_common
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.EquipmentItemSO
   _itemId: focus_boots_common
-  _displayName: Common Focus Boots
+  _displayName: Focus Boots
   _category: 2
   _rarity: 0
   _icon: {fileID: 0}

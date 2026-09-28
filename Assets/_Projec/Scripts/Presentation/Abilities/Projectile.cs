@@ -18,6 +18,8 @@ namespace Game.Presentation.Abilities
 
         [Tooltip("Techo de ticks de catch-up (lag comp). A 60 Hz, 12 ≈ 200 ms de ping. Evita teleports enormes.")]
         [SerializeField] private int _maxCatchUpTicks = 12;
+        [Tooltip("Techo de ticks de rewind (lag comp). El tick de disparo lo manda el cliente: sin techo, un cliente podía pedir impactos contra posiciones de hasta 1,25 s atrás (máximo del RollbackManager). A 60 Hz, 20 ≈ 333 ms (latencia + interpolación).")]
+        [SerializeField] private int _maxRewindTicks = 20;
         [Tooltip("Hijo visual (mesh/trail) que se oculta al tirador (él ve su cosmético local).")]
         [SerializeField] private GameObject _visual;
 
@@ -116,11 +118,17 @@ namespace Game.Presentation.Abilities
 
             float tickDelta = (float)base.TimeManager.TickDelta;
 
+            // Acotar el tick que dijo el cliente a [ahora - _maxRewindTicks, ahora].
+            uint now = base.TimeManager.Tick;
+            uint maxRewind = (uint)Mathf.Max(0, _maxRewindTicks);
+            uint oldestAllowed = now > maxRewind ? now - maxRewind : 0u;
+            uint rewindTick = _fireTick < oldestAllowed ? oldestAllowed : (_fireTick > now ? now : _fireTick);
+
             // Rewind único al tick de disparo: overlap en el cañón contra las posiciones históricas.
             RollbackManager rbm = base.NetworkManager != null ? base.NetworkManager.RollbackManager : null;
             if (rbm != null)
             {
-                rbm.Rollback(new PreciseTick(_fireTick), RollbackPhysicsType.Physics, false);
+                rbm.Rollback(new PreciseTick(rewindTick), RollbackPhysicsType.Physics, false);
                 bool hit = TryImpact(transform.position, 0f); // solo overlap (sin sweep)
                 rbm.Return();                                  // SIEMPRE restaurar antes de salir
                 if (hit) return true;
