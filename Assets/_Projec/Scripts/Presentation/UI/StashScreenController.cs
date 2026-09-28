@@ -88,6 +88,13 @@ namespace Game.Presentation.UI
             if (!await EnsureLoadoutLoadedAsync()) return false;
             if (!await StashService.EnsureInitializedAsync()) return false;
 
+            // Datos guardados con otra capacidad de pockets u otra cantidad de slots de equipo
+            // (kit viejo, un EquipmentSlot nuevo al final del enum) se ajustan una vez al abrir.
+            // Si el ajuste no entra en el Stash, se deja todo como estaba (nunca se descarta nada).
+            var backup = TakeBackup();
+            if (!NormalizeInventory()) RestoreBackup(backup);
+            else if (!MatchesBackup(backup)) PersistAll();
+
             _root.style.display = DisplayStyle.Flex;
             Redraw();
             return true;
@@ -103,9 +110,14 @@ namespace Game.Presentation.UI
         /// cualquier mutación de Inv o Stash hecha desde esta pantalla.</summary>
         private void PersistAndRedraw()
         {
+            PersistAll();
+            Redraw();
+        }
+
+        private void PersistAll()
+        {
             PlayerLoadoutService.Save(Inv);
             StashService.Save(Stash);
-            Redraw();
         }
         private void Redraw()
         {
@@ -193,9 +205,6 @@ namespace Game.Presentation.UI
         // ---------- Pockets ----------
         private void DrawPockets()
         {
-            RebuildPocketWithRescue(EquipmentSlot.PocketL);
-            RebuildPocketWithRescue(EquipmentSlot.PocketR);
-
             DrawPocketGrid(_pocketLGrid, _pocketLLabel, "Pocket L", Inv.PocketL, SlotZone.PocketL);
             DrawPocketGrid(_pocketRGrid, _pocketRLabel, "Pocket R", Inv.PocketR, SlotZone.PocketR);
         }
@@ -236,77 +245,47 @@ namespace Game.Presentation.UI
             return DefaultPocketCapacity;
         }
 
+        // ---------- Transacciones (nunca perder items) ----------
+
         /// <summary>
-        /// ¿Cambiar el equipo de `targetEquipSlot` a `newItem` (o a nada, si null) dejaría items
-        /// sin espacio? Si es así, simula si el Stash los absorbería (mergeando en pilas
-        /// existentes primero, después en slots vacíos — mismo algoritmo real de StashData.Add).
-        /// No muta nada — trabaja sobre una copia. Solo informa true/false.
+        /// Ejecuta una mutación de Inv/Stash como transacción: después de la acción se reajustan
+        /// los pockets a su capacidad (el sobrante va al Stash). Si la acción falla o algo no entra,
+        /// se restaura el estado anterior completo y no se guarda nada. Reemplaza la simulación
+        /// previa (CanShrinkPocketSafely), que cubría solo algunos casos y dejaba otros caminos
+        /// que borraban items.
         /// </summary>
-        private bool CanShrinkPocketSafely(EquipmentSlot targetEquipSlot, EquipmentItemSO newItem)
+        private bool TryMutate(System.Func<bool> action)
         {
-            if (!targetEquipSlot.IsPocket()) return true;
-
-            var list = targetEquipSlot == EquipmentSlot.PocketL ? Inv.PocketL : Inv.PocketR;
-
-            int newCap = (newItem != null && newItem.Slot.IsPocket())
-                ? Mathf.Clamp(newItem.PocketSlots, 0, MaxPocketSlots)
-                : DefaultPocketCapacity;
-            if (newCap <= 0) newCap = DefaultPocketCapacity;
-
-            var overflow = new System.Collections.Generic.List<ItemStack>();
-            for (int i = newCap; i < list.Count; i++)
-                if (!list[i].IsEmpty) overflow.Add(list[i]);
-
-            if (overflow.Count == 0) return true;
-
-            // Copia de trabajo del Stash: acá simulamos, no tocamos el real todavía.
-            var simulatedStash = new System.Collections.Generic.List<ItemStack>(Stash.Slots);
-
-            foreach (var item in overflow)
+            var backup = TakeBackup();
+            if (action() && NormalizeInventory())
             {
-                ItemSO def = _database.GetById(item.ItemId);
-                int remaining = item.Quantity;
-
-                // 1. Igual que StashData.Add: mergear en pilas existentes primero.
-                if (def != null && def.IsStackable)
-                {
-                    for (int i = 0; i < simulatedStash.Count && remaining > 0; i++)
-                    {
-                        ItemStack s = simulatedStash[i];
-                        if (s.IsEmpty || s.ItemId != item.ItemId) continue;
-                        int space = def.MaxStack - s.Quantity;
-                        if (space <= 0) continue;
-                        int add = Mathf.Min(space, remaining);
-                        s.Quantity += add;
-                        simulatedStash[i] = s;
-                        remaining -= add;
-                    }
-                }
-
-                // 2. Lo que no mergeó, necesita slots vacíos.
-                while (remaining > 0)
-                {
-                    int freeIndex = simulatedStash.FindIndex(s => s.IsEmpty);
-                    if (freeIndex < 0) return false; // no entra, ni mergeando ni en vacíos
-
-                    int add = (def != null && def.IsStackable) ? Mathf.Min(def.MaxStack, remaining) : 1;
-                    simulatedStash[freeIndex] = new ItemStack(item.ItemId, add, item.Durability);
-                    remaining -= add;
-                }
+                PersistAndRedraw();
+                return true;
             }
 
-            return true;
+            RestoreBackup(backup);
+            Redraw();
+            return false;
         }
 
-        /// <summary>
-        /// Ajusta la lista de un pocket a su capacidad actual: agrega vacíos si creció, y si
-        /// bajó, manda el sobrante al Stash (ya validado antes por CanShrinkPocketSafely — este
-        /// método asume que va a entrar; si por algún motivo no entrara, se descarta en silencio).
-        /// </summary>
-        private void RebuildPocketWithRescue(EquipmentSlot pocketSlot)
+        /// <summary>Deja Inv consistente: un slot de equipo por EquipmentSlot y cada pocket con su
+        /// capacidad actual. Lo que sobra de un pocket va al Stash. False si algo no entra.</summary>
+        private bool NormalizeInventory()
+        {
+            int slotCount = System.Enum.GetValues(typeof(EquipmentSlot)).Length;
+            while (Inv.Equipment.Count < slotCount) Inv.Equipment.Add(ItemStack.Empty);
+
+            return RebuildPocketWithRescue(EquipmentSlot.PocketL)
+                && RebuildPocketWithRescue(EquipmentSlot.PocketR);
+        }
+
+        /// <summary>Ajusta la lista de un pocket a su capacidad: agrega vacíos si creció y, si bajó,
+        /// manda el sobrante al Stash. False si el Stash no tiene lugar para todo.</summary>
+        private bool RebuildPocketWithRescue(EquipmentSlot pocketSlot)
         {
             var list = pocketSlot == EquipmentSlot.PocketL ? Inv.PocketL : Inv.PocketR;
             int cap = PocketCapacity(pocketSlot);
+            bool ok = true;
 
             while (list.Count < cap) list.Add(ItemStack.Empty);
 
@@ -317,9 +296,54 @@ namespace Game.Presentation.UI
                 list.RemoveAt(last);
 
                 if (orphan.IsEmpty) continue;
-                Stash.Add(orphan, id => _database.GetById(id));
+                if (Stash.Add(orphan, Resolve) > 0) ok = false;
             }
+
+            return ok;
         }
+
+        private sealed class Backup
+        {
+            public List<ItemStack> Equipment, PocketL, PocketR, StashSlots;
+        }
+
+        private Backup TakeBackup() => new Backup
+        {
+            Equipment = new List<ItemStack>(Inv.Equipment),
+            PocketL = new List<ItemStack>(Inv.PocketL),
+            PocketR = new List<ItemStack>(Inv.PocketR),
+            StashSlots = new List<ItemStack>(Stash.Slots),
+        };
+
+        // Se restaura el contenido de las mismas listas: PlayerLoadoutService/StashService
+        // cachean esos objetos, reemplazarlos dejaría la cache apuntando a otra cosa.
+        private void RestoreBackup(Backup b)
+        {
+            ReplaceContents(Inv.Equipment, b.Equipment);
+            ReplaceContents(Inv.PocketL, b.PocketL);
+            ReplaceContents(Inv.PocketR, b.PocketR);
+            ReplaceContents(Stash.Slots, b.StashSlots);
+        }
+
+        private bool MatchesBackup(Backup b)
+            => SameStacks(Inv.Equipment, b.Equipment) && SameStacks(Inv.PocketL, b.PocketL)
+               && SameStacks(Inv.PocketR, b.PocketR) && SameStacks(Stash.Slots, b.StashSlots);
+
+        private static void ReplaceContents(List<ItemStack> target, List<ItemStack> source)
+        {
+            target.Clear();
+            target.AddRange(source);
+        }
+
+        private static bool SameStacks(List<ItemStack> a, List<ItemStack> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+                if (!a[i].Equals(b[i])) return false;
+            return true;
+        }
+
+        private ItemSO Resolve(string itemId) => _database.GetById(itemId);
 
         // ---------- Stash ----------
         private void DrawStash()
@@ -492,8 +516,7 @@ namespace Game.Presentation.UI
 
             if (!moved) return;
 
-            MoveItem(from.Zone, from.Index, destZone, destIndex);
-            PersistAndRedraw();
+            TryMutate(() => MoveItem(from.Zone, from.Index, destZone, destIndex));
         }
 
         private void CancelDrag() => EndDrag();
@@ -505,47 +528,47 @@ namespace Game.Presentation.UI
             if (_ghost != null) { _ghost.RemoveFromHierarchy(); _ghost = null; }
         }
 
-        private void MoveItem(SlotZone fromZone, int fromIndex, SlotZone toZone, int toIndex)
+        /// <summary>Mueve o intercambia entre dos slots cualesquiera (equipo, pockets, stash), con
+        /// merge de apilables. No persiste: se llama dentro de TryMutate.</summary>
+        private bool MoveItem(SlotZone fromZone, int fromIndex, SlotZone toZone, int toIndex)
         {
-            if (fromZone == toZone && fromIndex == toIndex) return;
+            if (fromZone == toZone && fromIndex == toIndex) return false;
+            if (!IsValidSlot(fromZone, fromIndex) || !IsValidSlot(toZone, toIndex)) return false;
 
             ItemStack item = GetStack(fromZone, fromIndex);
-            if (item.IsEmpty) return;
+            if (item.IsEmpty) return false;
 
             if (toZone == SlotZone.Equipment)
             {
-                if (_database.GetById(item.ItemId) is not EquipmentItemSO equip) return;
-                if (!ValidEquipTarget(equip, toIndex)) return;
+                if (Resolve(item.ItemId) is not EquipmentItemSO equip) return false;
+                if (!ValidEquipTarget(equip, toIndex)) return false;
             }
 
             ItemStack existing = GetStack(toZone, toIndex);
 
-            // Pre-chequeo (sin mutar todavía): si el destino es un pocket, ¿el sobrante entra en el Stash?
-            if (toZone == SlotZone.Equipment && ((EquipmentSlot)toIndex).IsPocket())
+            // Merge: mismo item apilable.
+            if (!existing.IsEmpty && existing.ItemId == item.ItemId && Resolve(item.ItemId) is ItemSO def && def.IsStackable)
             {
-                EquipmentItemSO incoming = _database.GetById(item.ItemId) as EquipmentItemSO;
-                if (!CanShrinkPocketSafely((EquipmentSlot)toIndex, incoming))
-                    return; // bloquear el cambio entero
+                int space = def.MaxStack - existing.Quantity;
+                if (space <= 0) return false;
+                int move = Mathf.Min(space, item.Quantity);
+                SetStack(toZone, toIndex, new ItemStack(existing.ItemId, existing.Quantity + move, existing.Durability));
+                int remaining = item.Quantity - move;
+                SetStack(fromZone, fromIndex, remaining > 0 ? new ItemStack(item.ItemId, remaining, item.Durability) : ItemStack.Empty);
+                return true;
             }
 
-            // Pre-chequeo: si el origen es un pocket equipado, ¿lo que queda ahí después alcanza?
-            if (fromZone == SlotZone.Equipment && ((EquipmentSlot)fromIndex).IsPocket())
+            // Swap: lo que había en el destino vuelve al origen. Si el origen es un slot de
+            // equipo, tiene que poder ir ahí (antes un material podía terminar en el slot Hat).
+            if (!existing.IsEmpty && fromZone == SlotZone.Equipment)
             {
-                EquipmentItemSO remaining = (!existing.IsEmpty && _database.GetById(existing.ItemId) is EquipmentItemSO exEq) ? exEq : null;
-                if (!CanShrinkPocketSafely((EquipmentSlot)fromIndex, remaining))
-                    return; // bloquear el cambio entero
+                if (Resolve(existing.ItemId) is not EquipmentItemSO exEquip || !ValidEquipTarget(exEquip, fromIndex))
+                    return false;
             }
 
-            SetStack(toZone, toIndex, new ItemStack(item.ItemId, item.Quantity, item.Durability));
-            SetStack(fromZone, fromIndex, ItemStack.Empty);
-
-            if (!existing.IsEmpty)
-                SetStack(fromZone, fromIndex, existing);
-
-            if (toZone == SlotZone.Equipment && ((EquipmentSlot)toIndex).IsPocket())
-                RebuildPocketWithRescue((EquipmentSlot)toIndex);
-            if (fromZone == SlotZone.Equipment && ((EquipmentSlot)fromIndex).IsPocket())
-                RebuildPocketWithRescue((EquipmentSlot)fromIndex);
+            SetStack(toZone, toIndex, item);
+            SetStack(fromZone, fromIndex, existing);
+            return true;
         }
 
         private bool ValidEquipTarget(EquipmentItemSO equip, int toIndex)
@@ -553,6 +576,18 @@ namespace Game.Presentation.UI
             if (equip.Slot.IsPocket())
                 return toIndex == (int)EquipmentSlot.PocketL || toIndex == (int)EquipmentSlot.PocketR;
             return (int)equip.Slot == toIndex;
+        }
+
+        private bool IsValidSlot(SlotZone zone, int index)
+        {
+            switch (zone)
+            {
+                case SlotZone.Equipment: return index >= 0 && index < Inv.Equipment.Count;
+                case SlotZone.PocketL: return index >= 0 && index < Inv.PocketL.Count;
+                case SlotZone.PocketR: return index >= 0 && index < Inv.PocketR.Count;
+                case SlotZone.Stash: return index >= 0 && index < Stash.Slots.Count;
+            }
+            return false;
         }
 
         private ItemStack GetStack(SlotZone zone, int index)
@@ -582,23 +617,23 @@ namespace Game.Presentation.UI
         private void EquipFromPocket(SlotZone zone, int index)
         {
             var list = zone == SlotZone.PocketL ? Inv.PocketL : Inv.PocketR;
-            if (index < 0 || index >= list.Count) return;
-            ItemStack stack = list[index];
-            TryEquip(stack, () => list[index] = ItemStack.Empty);
-            PersistAndRedraw();
+            TryMutate(() => index >= 0 && index < list.Count
+                            && TryEquip(list[index], () => list[index] = ItemStack.Empty));
         }
 
         private void EquipFromStash(int stashIndex)
         {
-            ItemStack stack = Stash.Slots[stashIndex];
-            TryEquip(stack, () => Stash.TakeAt(stashIndex));
-            PersistAndRedraw();
+            TryMutate(() => stashIndex >= 0 && stashIndex < Stash.Slots.Count
+                            && TryEquip(Stash.Slots[stashIndex], () => Stash.TakeAt(stashIndex)));
         }
 
+        /// <summary>Equipa el stack sacándolo de su origen. Lo que estaba equipado (y cualquier
+        /// cantidad extra del stack) va a los pockets o, si no hay lugar, al Stash; si tampoco
+        /// entra, devuelve false y TryMutate deshace todo.</summary>
         private bool TryEquip(ItemStack stack, System.Action removeFromSource)
         {
             if (stack.IsEmpty) return false;
-            if (_database.GetById(stack.ItemId) is not EquipmentItemSO equip) return false;
+            if (Resolve(stack.ItemId) is not EquipmentItemSO equip) return false;
 
             int slotIndex;
             if (equip.Slot.IsPocket())
@@ -616,19 +651,14 @@ namespace Game.Presentation.UI
 
             if (slotIndex < 0 || slotIndex >= Inv.Equipment.Count) return false;
 
-            // Pre-chequeo: si reemplazamos un pocket más grande por este, ¿el sobrante entra en el Stash?
-            if (((EquipmentSlot)slotIndex).IsPocket() && !CanShrinkPocketSafely((EquipmentSlot)slotIndex, equip))
-                return false; // bloquear el cambio entero
-
             ItemStack current = Inv.Equipment[slotIndex];
             removeFromSource();
             Inv.Equipment[slotIndex] = new ItemStack(stack.ItemId, 1, stack.Durability);
 
-            if (!current.IsEmpty)
-                AddToPockets(current);
-
-            if (((EquipmentSlot)slotIndex).IsPocket())
-                RebuildPocketWithRescue((EquipmentSlot)slotIndex);
+            if (stack.Quantity > 1 && !StoreSomewhere(new ItemStack(stack.ItemId, stack.Quantity - 1, stack.Durability)))
+                return false;
+            if (!current.IsEmpty && !StoreSomewhere(current))
+                return false;
 
             return true;
         }
@@ -637,50 +667,50 @@ namespace Game.Presentation.UI
         private void MovePocketToStash(SlotZone zone, int index)
         {
             var list = zone == SlotZone.PocketL ? Inv.PocketL : Inv.PocketR;
-            if (index < 0 || index >= list.Count) return;
-            ItemStack stack = list[index];
-            if (stack.IsEmpty) return;
-
-            int notAdded = Stash.Add(stack, id => _database.GetById(id));
-            if (notAdded <= 0)
-                list[index] = ItemStack.Empty;
-            else
+            TryMutate(() =>
             {
-                var s = stack; s.Quantity = notAdded; list[index] = s;
-            }
-            PersistAndRedraw();
+                if (index < 0 || index >= list.Count) return false;
+                ItemStack stack = list[index];
+                if (stack.IsEmpty) return false;
+
+                int notAdded = Stash.Add(stack, Resolve);
+                if (notAdded >= stack.Quantity) return false; // no entró nada
+                list[index] = notAdded <= 0 ? ItemStack.Empty : new ItemStack(stack.ItemId, notAdded, stack.Durability);
+                return true;
+            });
         }
 
         private void MoveStashToInventory(int stashIndex)
         {
-            ItemStack stack = Stash.Slots[stashIndex];
-            if (stack.IsEmpty) return;
+            TryMutate(() =>
+            {
+                if (stashIndex < 0 || stashIndex >= Stash.Slots.Count) return false;
+                ItemStack stack = Stash.Slots[stashIndex];
+                if (stack.IsEmpty) return false;
 
-            AddToPockets(stack);
-            Stash.TakeAt(stashIndex);
-            PersistAndRedraw();
+                // Pockets llenos: no se mueve nada (antes el item salía del stash igual y se perdía).
+                if (!AddToPockets(stack)) return false;
+                Stash.TakeAt(stashIndex);
+                return true;
+            });
         }
 
         private void UnequipToPocket(int equipSlotIndex)
         {
-            if (equipSlotIndex < 0 || equipSlotIndex >= Inv.Equipment.Count) return;
-            ItemStack stack = Inv.Equipment[equipSlotIndex];
-            if (stack.IsEmpty) return;
+            TryMutate(() =>
+            {
+                if (equipSlotIndex < 0 || equipSlotIndex >= Inv.Equipment.Count) return false;
+                ItemStack stack = Inv.Equipment[equipSlotIndex];
+                if (stack.IsEmpty) return false;
 
-            EquipmentSlot slotEnum = (EquipmentSlot)equipSlotIndex;
-
-            // Pre-chequeo: si es un pocket, al sacarlo la capacidad vuelve al default (1) — ¿entra el sobrante en el Stash?
-            if (slotEnum.IsPocket() && !CanShrinkPocketSafely(slotEnum, null))
-                return; // bloquear: no se saca nada
-
-            AddToPockets(stack);
-            Inv.Equipment[equipSlotIndex] = ItemStack.Empty;
-
-            if (slotEnum.IsPocket())
-                RebuildPocketWithRescue(slotEnum);
-
-            PersistAndRedraw();
+                Inv.Equipment[equipSlotIndex] = ItemStack.Empty;
+                return StoreSomewhere(stack);
+            });
         }
+
+        /// <summary>Guarda el stack en el primer slot libre de los pockets o, si no hay, en el Stash. False si no entró entero.</summary>
+        private bool StoreSomewhere(ItemStack stack)
+            => AddToPockets(stack) || Stash.Add(stack, Resolve) <= 0;
 
         private bool AddToPockets(ItemStack stack)
         {
