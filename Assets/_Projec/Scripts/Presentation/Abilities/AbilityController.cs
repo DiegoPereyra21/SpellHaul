@@ -46,6 +46,7 @@ namespace Game.Presentation.Abilities
 
         private Mana _mana;
         private PlayerMovementController _movement;
+        private PlayerAvatarState _avatar;
         [SerializeField] private Game.Presentation.Combat.PlayerStats _stats;
         private AbilityExecutor _executor;
 
@@ -72,6 +73,27 @@ namespace Game.Presentation.Abilities
                 var scope = FindFirstObjectByType<GameLifetimeScope>();
                 scope?.InjectSpawnedObject(base.NetworkObject);
             }
+        }
+
+        /// <summary>Server-only. False si el jugador ya murió o extrajo: desactivar el componente no
+        /// bloquea los ServerRpc, así que cada uno lo chequea explícitamente.</summary>
+        private bool CanActServer => _avatar == null || !_avatar.IsControlDisabled;
+
+        /// <summary>
+        /// Corta todo cast en curso: windups pendientes (server y owner), cargas sostenidas y su
+        /// telegrafía. Lo llama PlayerAvatarState al morir o extraer, en todas las instancias.
+        /// </summary>
+        public void CancelActiveCasts()
+        {
+            StopAllCoroutines();
+            for (int i = 0; i < _castActions.Length; i++)
+            {
+                _localCharging[i] = false;
+                _serverCharging[i] = false;
+                _hasPendingAim[i] = false;
+            }
+            _trajectoryPreview?.Hide();
+            _chargeVfx?.EndCharge();
         }
 
         // ---------- Helpers de tiempo (ticks) ----------
@@ -108,6 +130,7 @@ namespace Game.Presentation.Abilities
         {
             _mana = GetComponent<Mana>();
             _movement = GetComponent<PlayerMovementController>();
+            _avatar = GetComponent<PlayerAvatarState>();
             _stats = GetComponent<Game.Presentation.Combat.PlayerStats>();
 
             _controls = new PlayerControls();
@@ -257,6 +280,7 @@ namespace Game.Presentation.Abilities
         [ServerRpc]
         private void BeginChargeServerRpc(int slot)
         {
+            if (!CanActServer) return;
             if (slot < 0 || slot >= _equippedAbilities.Length) return;
             AbilitySO ability = _equippedAbilities[slot];
             if (ability == null || !ability.IsChargeable) return;
@@ -287,6 +311,7 @@ namespace Game.Presentation.Abilities
         [ServerRpc]
         private void ReleaseChargeServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick)
         {
+            if (!CanActServer) return;
             if (slot < 0 || slot >= _equippedAbilities.Length) return;
             if (!_serverCharging[slot]) return; // soltó sin haber empezado (o el begin fue rechazado)
 
@@ -324,17 +349,23 @@ namespace Game.Presentation.Abilities
         }
 
         /// <summary>
-        /// Mientras dura el windup, el cliente le manda al servidor su aim actualizado cada frame
-        /// (no valida nada, solo datos de puntería — el servidor sigue siendo quien decide CUÁNDO
-        /// se ejecuta, esto solo define HACIA DÓNDE).
+        /// Mientras dura el windup, el cliente le manda al servidor su aim actualizado una vez por
+        /// tick (no por frame: a 300 fps eran 300 RPC por segundo). No valida nada, solo datos de
+        /// puntería — el servidor sigue siendo quien decide CUÁNDO se ejecuta, esto define HACIA DÓNDE.
         /// </summary>
         private System.Collections.IEnumerator SendAimUpdatesDuringWindup(int slot, float duration)
         {
             float elapsed = 0f;
+            uint lastSentTick = 0;
             while (elapsed < duration)
             {
-                ResolveAim(out Vector3 aimDirection, out Vector3 aimPoint);
-                UpdateAimServerRpc(slot, aimDirection, aimPoint);
+                uint tick = base.TimeManager.Tick;
+                if (tick != lastSentTick)
+                {
+                    lastSentTick = tick;
+                    ResolveAim(out Vector3 aimDirection, out Vector3 aimPoint);
+                    UpdateAimServerRpc(slot, aimDirection, aimPoint);
+                }
                 yield return null;
                 elapsed += Time.deltaTime;
             }
@@ -343,6 +374,7 @@ namespace Game.Presentation.Abilities
         [ServerRpc]
         private void UpdateAimServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint)
         {
+            if (!CanActServer) return;
             if (slot < 0 || slot >= _pendingAimDirection.Length) return;
             _pendingAimDirection[slot] = aimDirection;
             _pendingAimPoint[slot] = aimPoint;
@@ -385,6 +417,7 @@ namespace Game.Presentation.Abilities
         [ServerRpc]
         private void CastServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick)
         {
+            if (!CanActServer) return;
             if (slot < 0 || slot >= _equippedAbilities.Length) return;
             AbilitySO ability = _equippedAbilities[slot];
             if (ability == null) return;
@@ -434,6 +467,7 @@ namespace Game.Presentation.Abilities
         [Server]
         private void ExecuteCast(AbilitySO ability, int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick, float charge = 0f)
         {
+            if (!CanActServer) return; // red de seguridad: murió/extrajo durante un windup
             float dmgMul = _stats != null ? _stats.DamageMultiplier : 1f;
 
             Vector3 head = _aimOrigin != null ? _aimOrigin.position : transform.position;

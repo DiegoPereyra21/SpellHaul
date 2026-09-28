@@ -29,6 +29,13 @@ namespace Game.Presentation.Abilities
             StartCoroutine(ParryRoutine(data, aimDirection.normalized, slot));
         }
 
+        /// <summary>Corta un parry en curso (muerte/extracción). Seguro de llamar en cualquier lado.</summary>
+        public void CancelParry()
+        {
+            StopAllCoroutines();
+            _parrying = false;
+        }
+
         [Server]
         private IEnumerator ParryRoutine(ParryAbilitySO data, Vector3 aimDir, int slot)
         {
