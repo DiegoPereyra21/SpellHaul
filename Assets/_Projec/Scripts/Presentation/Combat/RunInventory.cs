@@ -504,7 +504,7 @@ namespace Game.Presentation.Combat
                 container.ServerUpdateAt(fromIndex, ItemStack.Empty);
                 SetSlot(toZone, toIndex, dragged);
                 if (!existing.IsEmpty)
-                    container.ServerDeposit(existing); // si el contenedor se hubiera despawneado antes, esto se perdía
+                    container.ServerDeposit(existing, _database.GetById(existing.ItemId)); // si el contenedor se hubiera despawneado antes, esto se perdía
 
                 if (toZone == 0) RebuildAllPocketCapacities();
                 return true;
@@ -515,7 +515,7 @@ namespace Game.Presentation.Combat
                 if (dragged.IsEmpty) return false;
 
                 SetSlot(fromZone, fromIndex, ItemStack.Empty);
-                container.ServerDeposit(dragged);
+                container.ServerDeposit(dragged, _database.GetById(dragged.ItemId));
 
                 if (fromZone == 0) RebuildAllPocketCapacities();
                 return true;
