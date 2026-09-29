@@ -379,35 +379,41 @@ namespace Game.Presentation.Combat
             ItemSO def = _database.GetById(itemId);
             if (def == null || quantity <= 0) return quantity;
 
+            // Primero completar las pilas que ya tenga en CUALQUIER pocket; recién después ocupar
+            // slots vacíos (L primero). Antes se llenaba L entero (pilas y huecos) antes de mirar R,
+            // y un item apilable abría una pila nueva en L aunque en R hubiera una con lugar.
             int remaining = quantity;
-            remaining = TryAddItemToList(_pocketL, def, itemId, remaining);
-            if (remaining > 0)
-                remaining = TryAddItemToList(_pocketR, def, itemId, remaining);
+            if (def.IsStackable)
+            {
+                remaining = StackIntoExisting(_pocketL, def, itemId, remaining);
+                remaining = StackIntoExisting(_pocketR, def, itemId, remaining);
+            }
+            remaining = FillEmptySlots(_pocketL, def, itemId, remaining);
+            remaining = FillEmptySlots(_pocketR, def, itemId, remaining);
 
             return remaining; // lo que no entró (los dos pockets llenos)
         }
 
-        private int TryAddItemToList(SyncList<ItemStack> list, ItemSO def, string itemId, int remaining)
+        private static int StackIntoExisting(SyncList<ItemStack> list, ItemSO def, string itemId, int remaining)
         {
-            // 1. Si es apilable, rellenar pilas existentes del mismo item.
-            if (def.IsStackable)
+            for (int i = 0; i < list.Count && remaining > 0; i++)
             {
-                for (int i = 0; i < list.Count && remaining > 0; i++)
-                {
-                    ItemStack s = list[i];
-                    if (s.IsEmpty || s.ItemId != itemId) continue;
+                ItemStack s = list[i];
+                if (s.IsEmpty || s.ItemId != itemId) continue;
 
-                    int space = def.MaxStack - s.Quantity;
-                    if (space <= 0) continue;
+                int space = def.MaxStack - s.Quantity;
+                if (space <= 0) continue;
 
-                    int add = Mathf.Min(space, remaining);
-                    s.Quantity += add;
-                    list[i] = s;
-                    remaining -= add;
-                }
+                int add = Mathf.Min(space, remaining);
+                s.Quantity += add;
+                list[i] = s;
+                remaining -= add;
             }
+            return remaining;
+        }
 
-            // 2. Ocupar slots vacíos con nuevas pilas.
+        private static int FillEmptySlots(SyncList<ItemStack> list, ItemSO def, string itemId, int remaining)
+        {
             for (int i = 0; i < list.Count && remaining > 0; i++)
             {
                 if (!list[i].IsEmpty) continue;

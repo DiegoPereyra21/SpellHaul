@@ -19,7 +19,7 @@
     border-width: 1px;
     border-color: rgba(68, 70, 88, 0.4);
     border-radius: 18px;
-    padding: 52px 60px;
+    padding: 44px 44px;
 }
 
 .inv-header {
@@ -45,7 +45,7 @@
 }
 
 .column {
-    margin: 0 20px;
+    margin: 0 16px;
 }
 
 .equipment-column {
@@ -67,7 +67,7 @@
 
 .equipment-slots {
     flex-direction: column;
-    width: 440px;
+    width: 390px;
 }
 
 .equip-slot {
@@ -111,13 +111,13 @@
 }
 
 .pocket-column {
-    margin-right: 30px;
+    margin-right: 18px;
 }
 
 .backpack-grid {
     flex-direction: row;
     flex-wrap: wrap;
-    width: 344px;
+    width: 336px; /* 4 slots por fila (68 + 2x8 de margen) */
 }
 
 .item-slot {
@@ -242,39 +242,39 @@
     border-color: rgba(68, 70, 88, 0.5);
     border-radius: 8px;
     padding: 12px 14px;
-    max-width: 260px;
+    max-width: 320px;
 }
 
 .tooltip-title {
     -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
     color: rgb(237, 238, 245);
-    font-size: 15px;
+    font-size: 17px;
     margin-bottom: 2px;
 }
 
 .tooltip-type {
     color: rgb(97, 98, 111);
-    font-size: 11px;
+    font-size: 13px;
     letter-spacing: 1px;
     margin-bottom: 6px;
 }
 
 .tooltip-description {
     color: rgb(180, 182, 192);
-    font-size: 12px;
+    font-size: 14px;
     white-space: normal;
     margin-bottom: 6px;
 }
 
 .tooltip-stat-line {
-    font-size: 12px;
+    font-size: 14px;
     -unity-font-style: bold;
 }
 
 .container-column {
     border-left-width: 2px;
     border-left-color: rgba(226, 73, 71, 0.4);
-    padding-left: 24px;
+    padding-left: 18px;
 }
 
 .container-title {

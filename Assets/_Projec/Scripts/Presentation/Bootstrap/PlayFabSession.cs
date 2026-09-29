@@ -33,6 +33,14 @@ namespace Game.Presentation.Bootstrap
 
         private const int LoginRetryDelaySeconds = 5;
 
+        // El session ticket y el entity token de PlayFab vencen a las 24 h. Se renuevan con tiempo
+        // de sobra (a las 20 h) en segundo plano, y antes de buscar partida o reconectar.
+        private const float RefreshAfterSeconds = 20f * 3600f;
+        private const int RefreshCheckIntervalMs = 30 * 60 * 1000;
+
+        private static float _loggedInAt;
+        private static Task<bool> _refreshTask;
+
         private void Start()
         {
             // Un server dedicado no persiste inventarios de nadie: cada cliente habla con PlayFab
@@ -44,7 +52,7 @@ namespace Game.Presentation.Bootstrap
         }
 
         /// <summary>Reintenta el login indefinidamente cada LoginRetryDelaySeconds hasta que resuelve.</summary>
-        private async Task LoginLoopAsync()
+        private static async Task LoginLoopAsync()
         {
             while (!IsReady)
             {
@@ -52,9 +60,43 @@ namespace Game.Presentation.Bootstrap
                 if (success) break;
                 await Task.Delay(LoginRetryDelaySeconds * 1000);
             }
+
+            // Un solo loop por proceso (Start no vuelve a entrar con IsReady): sobrevive a los
+            // cambios de escena porque no depende de este componente.
+            while (true)
+            {
+                await Task.Delay(RefreshCheckIntervalMs);
+                if (!Application.isPlaying) return;
+                if (NeedsRefresh) await RefreshAsync();
+            }
         }
 
-        private async Task<bool> TryLoginOnceAsync()
+        private static bool NeedsRefresh => Time.realtimeSinceStartup - _loggedInAt >= RefreshAfterSeconds;
+
+        /// <summary>
+        /// Garantiza una sesión vigente antes de algo que la necesita (buscar partida, reconectar:
+        /// el servidor verifica el session ticket). Si está por vencer, vuelve a loguear. False si
+        /// no hay sesión o no se pudo renovar.
+        /// </summary>
+        public static async Task<bool> EnsureFreshAsync()
+        {
+            if (!IsReady) return false;
+            if (!NeedsRefresh) return true;
+            return await RefreshAsync();
+        }
+
+        private static Task<bool> RefreshAsync()
+        {
+            // Una sola renovación en vuelo aunque la pidan el loop y el menú a la vez.
+            if (_refreshTask == null || _refreshTask.IsCompleted)
+            {
+                Debug.Log("[PlayFabSession] Renovando la sesión de PlayFab.");
+                _refreshTask = TryLoginOnceAsync();
+            }
+            return _refreshTask;
+        }
+
+        private static async Task<bool> TryLoginOnceAsync()
         {
             var tcs = new TaskCompletionSource<LoginResult>();
 
@@ -88,6 +130,9 @@ namespace Game.Presentation.Bootstrap
 
                 Game.Presentation.Run.PlayerLoadoutService.Storage = new Game.Presentation.Run.PlayFabPlayerLoadoutStorage();
                 Game.Presentation.Run.StashService.Storage = new Game.Presentation.Run.PlayFabStashStorage();
+
+                _loggedInAt = Time.realtimeSinceStartup;
+                if (IsReady) return true; // renovación: la sesión ya estaba lista, nada más que avisar
 
                 IsReady = true;
                 OnReady?.Invoke();

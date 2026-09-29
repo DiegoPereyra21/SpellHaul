@@ -170,7 +170,7 @@ namespace Game.Presentation.UI
             SetGameplayButtonsEnabled(PlayFabSession.IsReady);
         }
 
-        private void OnRejoinReconnectClicked()
+        private async void OnRejoinReconnectClicked()
         {
             var run = Game.Presentation.Run.PlayerLoadoutService.ActiveRun;
             if (!run.Active) { HideRejoinPanel(); return; }
@@ -178,6 +178,12 @@ namespace Game.Presentation.UI
             _rejoinStatus.text = "Reconnecting...";
             _rejoinReconnect.SetEnabled(false);
             _rejoinAbandon.SetEnabled(false);
+
+            if (!await PlayFabSession.EnsureFreshAsync())
+            {
+                ShowRejoinPanel("Could not refresh your session. Check your connection and try again.");
+                return;
+            }
 
             // Si el servidor ya no existe, llega "Could not reach the run server" y vuelve este panel.
             // Si nos rechaza (murió / ya extrajo), aplica el resultado y lo muestra el menú.
@@ -274,6 +280,14 @@ namespace Game.Presentation.UI
                     return;
                 }
             }
+
+            // El servidor verifica el session ticket al entrar: que no esté por vencer.
+            if (!await PlayFabSession.EnsureFreshAsync())
+            {
+                ShowNotice("Could not refresh your session. Check your connection and try again.");
+                return;
+            }
+            if (!_searching) return;
 
             _searchStatus.text = "Entering the queue...";
             _matchmaking.StartSearch();

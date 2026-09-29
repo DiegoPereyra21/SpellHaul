@@ -728,13 +728,54 @@ namespace Game.Presentation.UI
         private bool StoreSomewhere(ItemStack stack)
             => AddToPockets(stack) || Stash.Add(stack, Resolve) <= 0;
 
+        /// <summary>
+        /// Mete el stack entero en los pockets: si es apilable, primero completa las pilas del mismo
+        /// item que ya haya (L y R) y el resto ocupa un slot vacío. Todo o nada: si no entra
+        /// completo no toca nada (StoreSomewhere prueba después el stash con el stack entero).
+        /// </summary>
         private bool AddToPockets(ItemStack stack)
         {
-            for (int i = 0; i < Inv.PocketL.Count; i++)
-                if (Inv.PocketL[i].IsEmpty) { Inv.PocketL[i] = stack; return true; }
-            for (int i = 0; i < Inv.PocketR.Count; i++)
-                if (Inv.PocketR[i].IsEmpty) { Inv.PocketR[i] = stack; return true; }
-            return false;
+            ItemSO def = Resolve(stack.ItemId);
+            bool stackable = def != null && def.IsStackable;
+            int maxStack = stackable ? def.MaxStack : 1;
+
+            int stackSpace = 0;
+            if (stackable)
+                foreach (var list in new[] { Inv.PocketL, Inv.PocketR })
+                    foreach (var s in list)
+                        if (!s.IsEmpty && s.ItemId == stack.ItemId) stackSpace += Mathf.Max(0, maxStack - s.Quantity);
+
+            int emptyIndexL = Inv.PocketL.FindIndex(s => s.IsEmpty);
+            int emptyIndexR = emptyIndexL >= 0 ? -1 : Inv.PocketR.FindIndex(s => s.IsEmpty);
+            bool hasEmpty = emptyIndexL >= 0 || emptyIndexR >= 0;
+
+            int leftover = stack.Quantity - Mathf.Min(stackSpace, stack.Quantity);
+            if (leftover > 0 && (!hasEmpty || leftover > maxStack)) return false;
+
+            int remaining = stack.Quantity;
+            if (stackable)
+            {
+                foreach (var list in new[] { Inv.PocketL, Inv.PocketR })
+                {
+                    for (int i = 0; i < list.Count && remaining > 0; i++)
+                    {
+                        var s = list[i];
+                        if (s.IsEmpty || s.ItemId != stack.ItemId) continue;
+                        int add = Mathf.Min(maxStack - s.Quantity, remaining);
+                        if (add <= 0) continue;
+                        list[i] = new ItemStack(s.ItemId, s.Quantity + add, s.Durability);
+                        remaining -= add;
+                    }
+                }
+            }
+
+            if (remaining > 0)
+            {
+                var target = emptyIndexL >= 0 ? Inv.PocketL : Inv.PocketR;
+                int index = emptyIndexL >= 0 ? emptyIndexL : emptyIndexR;
+                target[index] = new ItemStack(stack.ItemId, remaining, stack.Durability);
+            }
+            return true;
         }
     }
 }

@@ -109,12 +109,20 @@
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 480px;
+    width: 520px;
     background-color: rgba(14, 14, 24, 0.96);
     border-width: 1px;
     border-color: rgba(48, 49, 66, 0.5);
     border-radius: 12px;
     padding: 26px;
+}
+
+/* Dentro del panel los botones ocupan el ancho disponible: con el ancho fijo del menú
+   principal (460px + márgenes) se salían del panel. */
+.lobby-panel .menu-button {
+    width: auto;
+    align-self: stretch;
+    margin: 8px 0;
 }
 
 .lobby-title {
@@ -131,9 +139,10 @@
 
 .search-status {
     -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
-    font-size: 15px;
+    font-size: 16px;
     color: rgb(220, 221, 229);
     -unity-text-align: upper-center;
+    white-space: normal; /* los avisos largos parten en líneas en vez de salirse del panel */
     margin-bottom: 8px;
 }
 
