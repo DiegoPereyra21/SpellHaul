@@ -55,7 +55,8 @@ namespace Game.Presentation.Bootstrap
 
         /// <summary>Identidad de PlayFab forzada por línea de comandos (-playerid). TEMPORAL: sirve
         /// para levantar varias instancias en la misma máquina con cuentas distintas, ya que
-        /// deviceUniqueIdentifier es el mismo para todas. Muere cuando entre LoginWithSteam.</summary>
+        /// deviceUniqueIdentifier es el mismo para todas. Solo en Editor/Development Build. Muere cuando
+        /// entre LoginWithSteam.</summary>
         public static string PlayerId { get { EnsureParsed(); return _playerId; } }
 
         private static void EnsureParsed()
@@ -88,9 +89,13 @@ namespace Game.Presentation.Bootstrap
                         if (i + 1 < args.Length && ushort.TryParse(args[i + 1], out ushort parsedPort))
                             _port = parsedPort;
                         break;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    // Solo desarrollo: en release permitiría entrar a cualquier cuenta de
+                    // PlayFab conociendo su CustomId.
                     case "-playerid":
                         if (i + 1 < args.Length) _playerId = args[i + 1];
                         break;
+#endif
                 }
             }
 
