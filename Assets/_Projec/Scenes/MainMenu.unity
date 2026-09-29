@@ -417,6 +417,7 @@ MonoBehaviour:
   _matchmaking: {fileID: 1554046102}
   _fallbackServerAddress: 127.0.0.1
   _fallbackServerPort: 56100
+  _gamePortName: game_port
 --- !u!114 &1302570103
 MonoBehaviour:
   m_ObjectHideFlags: 0
