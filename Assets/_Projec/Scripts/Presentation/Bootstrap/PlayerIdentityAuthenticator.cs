@@ -144,20 +144,19 @@ namespace Game.Presentation.Bootstrap
             string key = msg.PlayerKey;
             bool valid = !string.IsNullOrEmpty(key) && key.Length <= MaxKeyLength;
 
-            if (valid && !IsAllowedByMatch(key, out string allowedList))
+            if (!valid)
+            {
+                Debug.LogWarning($"[Auth] Conexión {conn.ClientId} rechazada: clave de jugador vacía o demasiado larga.");
+            }
+            else if (!IsAllowedByMatch(key, out string allowedList))
             {
                 valid = false;
                 Debug.LogWarning($"[Auth] Conexión {conn.ClientId} rechazada: '{key}' no es jugador de este match. Permitidos: [{allowedList}]");
             }
-
-            if (valid)
+            else
             {
                 KickStaleConnection(key);
                 _keysByClientId[conn.ClientId] = key;
-            }
-            else
-            {
-                Debug.LogWarning($"[Auth] Conexión {conn.ClientId} rechazada: clave de jugador vacía o demasiado larga.");
             }
 
             OnAuthenticationResult?.Invoke(conn, valid);
