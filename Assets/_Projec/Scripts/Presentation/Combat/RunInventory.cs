@@ -45,6 +45,7 @@ namespace Game.Presentation.Combat
 
             _loadoutSubmitted = false;
             _ownerPlayFabId = null;
+            _runId = null;
             _serverOwnsLoadout = false;
             _resultWritten = false;
 
@@ -55,6 +56,7 @@ namespace Game.Presentation.Combat
 
         // Server-only: el loadout de este personaje lo guarda el servidor (ver ServerProfileStore).
         private string _ownerPlayFabId;
+        private string _runId;
         private bool _serverOwnsLoadout;
         private bool _resultWritten;
 
@@ -86,35 +88,69 @@ namespace Game.Presentation.Combat
             if (!ok)
             {
                 Debug.LogError($"[RunInventory] No se pudo leer el loadout de {(known ? playFabId : "un jugador sin sesión verificada")}: se lo saca de la run sin tocar sus datos.");
-                if (owner != null && owner.IsActive)
-                    Game.Presentation.Bootstrap.PlayerIdentityAuthenticator.RejectWithOutcome(
-                        InstanceFinder.NetworkManager, owner, Game.Presentation.Bootstrap.RunOutcome.ProfileUnavailable);
-                base.Despawn(); // sin cuerpo: no cuenta como vivo ni bloquea el fin de la run
+                RejectAndRemoveBody(owner, Game.Presentation.Bootstrap.RunOutcome.ProfileUnavailable);
                 return;
             }
 
+            // Con el equipo todavía "adentro" de otra run (un cliente que se saltó el panel de
+            // reconexión del menú), entrar acá duplicaría ese equipo en dos runs a la vez.
+            if (loaded != null && loaded.ActiveRun.Active)
+            {
+                Debug.LogWarning($"[RunInventory] {playFabId} tiene otra run en curso ({loaded.ActiveRun.RunId}): no puede entrar a esta.");
+                RejectAndRemoveBody(owner, Game.Presentation.Bootstrap.RunOutcome.AlreadyInRun);
+                return;
+            }
+
+            // Murió o extrajo mientras se leía: su loadout nunca entró en juego, no hay nada que guardar.
+            if (TryGetComponent(out Game.Presentation.Player.PlayerAvatarState avatar) && avatar.IsControlDisabled)
+                return;
+
             loaded ??= Game.Presentation.Run.PlayerLoadoutService.CreateStartingSnapshot(_startingKit);
             _ownerPlayFabId = playFabId;
+            _runId = System.Guid.NewGuid().ToString("N");
             _serverOwnsLoadout = true;
             _loadoutSubmitted = true;
+
+            // Lo que haya juntado mientras se leía el loadout no se pierde: ApplySnapshot vacía todo.
+            var pickedUp = new List<ItemStack>();
+            foreach (var s in _equipment) if (!s.IsEmpty) pickedUp.Add(s);
+            foreach (var s in _pocketL) if (!s.IsEmpty) pickedUp.Add(s);
+            foreach (var s in _pocketR) if (!s.IsEmpty) pickedUp.Add(s);
+
             ApplySnapshot(SanitizeSnapshot(loaded));
 
-            // Marca de run en curso con lo que quedó aplicado (si algo no entraba, ya está en el piso).
-            var marked = TakeSnapshot();
-            if (Game.Presentation.Bootstrap.PlayerIdentityAuthenticator.TryGetEndpoint(key, out string address, out ushort port))
-                marked.ActiveRun = Game.Presentation.Run.PlayerLoadoutService.CreateActiveRun(address, port);
-            else
-                marked.ActiveRun = Game.Presentation.Run.PlayerLoadoutService.CreateActiveRun(string.Empty, 0);
+            foreach (var s in pickedUp)
+            {
+                int left = TryAddItem(s.ItemId, s.Quantity);
+                if (left > 0) SpawnWorldItem(new ItemStack(s.ItemId, left, s.Durability));
+            }
+
+            // Marca de run en curso con lo que trajo (lo juntado acá todavía no es suyo hasta extraer).
+            var marked = SanitizeSnapshot(loaded);
+            marked.ActiveRun = Game.Presentation.Bootstrap.PlayerIdentityAuthenticator.TryGetEndpoint(key, out string address, out ushort port)
+                ? Game.Presentation.Run.PlayerLoadoutService.CreateActiveRun(address, port)
+                : Game.Presentation.Run.PlayerLoadoutService.CreateActiveRun(string.Empty, 0);
+            marked.ActiveRun.RunId = _runId;
             Game.Presentation.Run.ServerProfileStore.SaveLoadout(_ownerPlayFabId, marked);
-            Debug.Log($"[RunInventory] Loadout de {playFabId} leído por el servidor: run en curso guardada.");
+            Debug.Log($"[RunInventory] Loadout de {playFabId} leído por el servidor: run {_runId} en curso guardada.");
         }
 
-        /// <summary>Server-only. Guarda el resultado final de la run (una sola vez por personaje).</summary>
+        /// <summary>Server-only. El jugador no puede jugar esta run: avisarle, sacarlo y quitar el
+        /// cuerpo (sin cuerpo no cuenta como vivo ni bloquea el fin de la run).</summary>
+        private void RejectAndRemoveBody(FishNet.Connection.NetworkConnection owner, Game.Presentation.Bootstrap.RunOutcome outcome)
+        {
+            if (owner != null && owner.IsActive)
+                Game.Presentation.Bootstrap.PlayerIdentityAuthenticator.RejectWithOutcome(InstanceFinder.NetworkManager, owner, outcome);
+            base.Despawn();
+        }
+
+        /// <summary>Server-only. Guarda el resultado final de la run (una sola vez por personaje),
+        /// solo si el perfil sigue marcado con esta run.</summary>
         private void ServerWriteResult(InventorySnapshot result)
         {
             if (!_serverOwnsLoadout || _resultWritten) return;
             _resultWritten = true;
-            Game.Presentation.Run.ServerProfileStore.SaveLoadout(_ownerPlayFabId, result);
+            Game.Presentation.Run.ServerProfileStore.SaveLoadout(_ownerPlayFabId, result, _runId);
         }
 
         public override void OnStartClient()
@@ -183,11 +219,10 @@ namespace Game.Presentation.Combat
         private const int MaxSnapshotPocketEntries = 12;
 
         /// <summary>
-        /// Server-only. El loadout lo manda el cliente (la persistencia es suya, ver GDD), así que
-        /// antes de aplicarlo se descarta todo lo que no podría existir: ids desconocidos, items de
+        /// Server-only. Antes de aplicar un loadout (leído de PlayFab o, sin servidor dueño, enviado
+        /// por el cliente) se descarta todo lo que no podría existir: ids desconocidos, items de
         /// equipo en un slot que no les corresponde, cantidades fuera de [1, MaxStack], durabilidad
-        /// fuera de [0, 1] y listas más largas de lo posible. No impide editar los datos de PlayFab
-        /// con items válidos; eso requiere que el servidor sea dueño de la persistencia.
+        /// fuera de [0, 1] y listas más largas de lo posible.
         /// </summary>
         private InventorySnapshot SanitizeSnapshot(InventorySnapshot snap)
         {

@@ -159,19 +159,30 @@ namespace Game.Presentation.Run
 
         // ---------- Escritura ----------
 
-        // Último JSON pendiente por jugador: lo más nuevo gana, igual que ProfileSaveQueue.
-        private static readonly Dictionary<string, string> _pending = new();
+        // Último JSON pendiente por jugador (+ la run de la que tiene que seguir siendo la marca
+        // guardada, o null si no hay condición): lo más nuevo gana, igual que ProfileSaveQueue.
+        private static readonly Dictionary<string, (string json, string requireRunId, string marksRunId)> _pending = new();
+
+        // Runs cuya marca ya quedó guardada en PlayFab. Si el resultado llega antes de que la marca
+        // se confirme (reemplaza a la marca pendiente), no hay nada que pudiera haberla cambiado y
+        // se escribe sin condición; exigirla ahí descartaba el resultado.
+        private static readonly HashSet<string> _confirmedRuns = new();
         private static readonly HashSet<string> _running = new();
 
         /// <summary>True mientras quede alguna escritura sin confirmar (el proceso espera antes de cerrarse).</summary>
         public static bool HasPendingWrites => _pending.Count > 0 || _running.Count > 0;
 
-        /// <summary>Guarda el loadout del jugador (JSON tomado ahora). Reintenta hasta confirmar.</summary>
-        public static void SaveLoadout(string playFabId, InventorySnapshot snapshot)
+        /// <summary>
+        /// Guarda el loadout del jugador (JSON tomado ahora). Reintenta hasta confirmar. Con
+        /// requireRunId, solo escribe si la marca de run guardada sigue siendo esa run: si el jugador
+        /// la abandonó desde el menú (o entró a otra), lo guardado ahora es más nuevo y no se pisa.
+        /// </summary>
+        public static void SaveLoadout(string playFabId, InventorySnapshot snapshot, string requireRunId = null)
         {
             if (!IsActive || string.IsNullOrEmpty(playFabId) || snapshot == null) return;
 
-            _pending[playFabId] = JsonUtility.ToJson(snapshot);
+            string marksRunId = snapshot.ActiveRun.Active ? snapshot.ActiveRun.RunId : null;
+            _pending[playFabId] = (JsonUtility.ToJson(snapshot), requireRunId, marksRunId);
             if (!_running.Contains(playFabId)) _ = RunAsync(playFabId);
         }
 
@@ -181,17 +192,29 @@ namespace Game.Presentation.Run
             try
             {
                 int failures = 0;
-                while (_pending.TryGetValue(playFabId, out string json))
+                while (_pending.TryGetValue(playFabId, out var entry))
                 {
                     _pending.Remove(playFabId);
                     try
                     {
-                        await WriteOnceAsync(playFabId, json);
+                        if (entry.requireRunId != null && _confirmedRuns.Contains(entry.requireRunId))
+                        {
+                            var current = await ReadLoadoutOnceAsync(playFabId);
+                            if (current == null || !current.ActiveRun.Active || current.ActiveRun.RunId != entry.requireRunId)
+                            {
+                                Debug.LogWarning($"[ServerProfileStore] {playFabId} ya no está en la run {entry.requireRunId} (abandonó o entró a otra): no se guarda el resultado.");
+                                failures = 0;
+                                continue;
+                            }
+                        }
+
+                        await WriteOnceAsync(playFabId, entry.json);
+                        if (entry.marksRunId != null) _confirmedRuns.Add(entry.marksRunId);
                         failures = 0;
                     }
                     catch (Exception e)
                     {
-                        if (!_pending.ContainsKey(playFabId)) _pending[playFabId] = json; // lo nuevo gana
+                        if (!_pending.ContainsKey(playFabId)) _pending[playFabId] = entry; // lo nuevo gana
                         failures++;
                         int delay = Math.Min(MaxBackoffMs, 500 * (1 << Math.Min(failures - 1, 4)));
                         Debug.LogWarning($"[ServerProfileStore] Falló el guardado de {playFabId} (intento {failures}), reintento en {delay} ms: {e.Message}");

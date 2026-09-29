@@ -12,5 +12,9 @@ namespace Game.Core.Run
         public string Address;          // servidor de la run, para reconectar
         public int Port;
         public long StartedUnixSeconds; // para dar por terminada una run muy vieja
+        /// <summary>Identifica la run (la genera el servidor al marcarla). El resultado solo se
+        /// guarda si la marca guardada sigue siendo la de esa run: si el jugador la abandonó o ya
+        /// está en otra, el servidor viejo no pisa lo nuevo.</summary>
+        public string RunId;
     }
 }

@@ -37,6 +37,8 @@ namespace Game.Presentation.Bootstrap
         NotInMatch = 4,
         /// <summary>El servidor no pudo verificar la sesión de PlayFab o leer el loadout.</summary>
         ProfileUnavailable = 5,
+        /// <summary>El perfil tiene otra run en curso: hay que reconectar a esa o abandonarla.</summary>
+        AlreadyInRun = 6,
     }
 
     /// <summary>Servidor → cliente: por qué no puede volver a la run (antes de desconectarlo).</summary>
@@ -64,6 +66,7 @@ namespace Game.Presentation.Bootstrap
     public class PlayerIdentityAuthenticator : Authenticator
     {
         private const int MaxKeyLength = 128;
+        private const float AuthTimeoutSeconds = 20f;
 
         public override event Action<NetworkConnection, bool> OnAuthenticationResult;
 
@@ -188,6 +191,10 @@ namespace Game.Presentation.Bootstrap
                     break;
                 case RunOutcome.DiedWhileAway:
                     Game.Presentation.Run.PlayerLoadoutService.ApplyRunLost();
+                    break;
+                case RunOutcome.AlreadyInRun:
+                    // El perfil tiene la marca de otra run: releerlo para que el menú ofrezca resolverla.
+                    Game.Presentation.Run.PlayerLoadoutService.Invalidate();
                     break;
                 case RunOutcome.LeftRun:
                     // Con el servidor dueño, él sabe cómo quedó: releer. Si no, se pierde como antes.
@@ -325,10 +332,26 @@ namespace Game.Presentation.Bootstrap
 
         private void OnRemoteConnectionState(NetworkConnection conn, RemoteConnectionStateArgs args)
         {
-            if (args.ConnectionState == RemoteConnectionState.Stopped)
+            if (args.ConnectionState == RemoteConnectionState.Started)
+            {
+                StartCoroutine(KickIfNotAuthenticated(conn));
+            }
+            else if (args.ConnectionState == RemoteConnectionState.Stopped)
             {
                 _keysByClientId.Remove(conn.ClientId);
                 _verifying.Remove(conn.ClientId);
+            }
+        }
+
+        /// <summary>Una conexión que nunca se identifica (o se queda colgada verificando) no ocupa
+        /// lugar para siempre: FishNet no corta solo a las conexiones sin autenticar.</summary>
+        private System.Collections.IEnumerator KickIfNotAuthenticated(NetworkConnection conn)
+        {
+            yield return new WaitForSeconds(AuthTimeoutSeconds);
+            if (conn != null && conn.IsActive && !conn.IsAuthenticated)
+            {
+                Debug.LogWarning($"[Auth] Conexión {conn.ClientId} sin identificarse en {AuthTimeoutSeconds:0}s: se corta.");
+                conn.Disconnect(true);
             }
         }
 
