@@ -14,6 +14,10 @@ namespace Game.Core.Items
         public List<ItemStack> PocketL = new List<ItemStack>();
         public List<ItemStack> PocketR = new List<ItemStack>();
 
+        /// <summary>Run en curso con este loadout en juego (inactiva fuera de una run). Viaja en la
+        /// misma escritura que el loadout: extraer o morir guarda un snapshot nuevo y la limpia.</summary>
+        public Game.Core.Run.ActiveRunInfo ActiveRun;
+
         public bool IsEmpty => Equipment.Count == 0 && PocketL.Count == 0 && PocketR.Count == 0;
     }
 }

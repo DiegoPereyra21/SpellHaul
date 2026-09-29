@@ -25,5 +25,13 @@
             <ui:Label name="search-timer" text="0:00" class="search-timer" />
             <ui:Button name="search-cancel" text="Cancel" class="menu-button quit" />
         </ui:VisualElement>
+
+        <!-- Run en curso sin terminar (desconexión o cierre del juego). Oculto por defecto. -->
+        <ui:VisualElement name="rejoin-panel" class="lobby-panel">
+            <ui:Label text="Run in Progress" class="lobby-title" />
+            <ui:Label name="rejoin-status" text="" class="search-status rejoin-status" />
+            <ui:Button name="rejoin-reconnect" text="Reconnect" class="menu-button primary" />
+            <ui:Button name="rejoin-abandon" text="Abandon Run" class="menu-button quit" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

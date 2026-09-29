@@ -53,6 +53,12 @@ namespace Game.Presentation.Bootstrap
         public static RunOutcome LastRunOutcome { get; private set; }
         public static void ConsumeRunOutcome() => LastRunOutcome = RunOutcome.None;
 
+        /// <summary>
+        /// Server-only. Jugadores que tiene permitido entrar (en la nube: InitialPlayers del GSDK,
+        /// lo inyecta NetworkBootstrap). Null o lista vacía = sin dato, se acepta cualquier clave.
+        /// </summary>
+        public static Func<IList<string>> AllowedKeysProvider;
+
         // Server-only: clave de cada conexión autenticada.
         private static readonly Dictionary<int, string> _keysByClientId = new();
 
@@ -92,17 +98,18 @@ namespace Game.Presentation.Bootstrap
         }
 
         /// <summary>
-        /// Clave del jugador local. Con -playerid (solo desarrollo) es esa identidad, siempre la
-        /// misma aunque el login a PlayFab todavía no haya terminado: así una reconexión de prueba
-        /// por conexión directa reconoce al mismo jugador. Si no, su EntityId de PlayFab; sin sesión
-        /// todavía (conexión directa sin -playerid), una clave de dispositivo.
+        /// Clave del jugador local: su EntityId de PlayFab (el menú solo deja jugar con la sesión
+        /// lista, y es lo que el servidor en la nube compara contra los jugadores del match).
+        /// Sin sesión todavía (conexión directa de desarrollo con -client, que conecta antes de que
+        /// termine el login) usa una clave de desarrollo: -playerid si se pasó, si no el dispositivo.
+        /// Cada camino es consistente consigo mismo, así la reconexión reconoce al mismo jugador.
         /// </summary>
         private static string BuildLocalPlayerKey()
         {
-            if (!string.IsNullOrEmpty(LaunchArgs.PlayerId))
-                return "dev:" + LaunchArgs.PlayerId;
             if (!string.IsNullOrEmpty(PlayFabSession.EntityId))
                 return PlayFabSession.EntityId;
+            if (!string.IsNullOrEmpty(LaunchArgs.PlayerId))
+                return "dev:" + LaunchArgs.PlayerId;
             return "dev:" + SystemInfo.deviceUniqueIdentifier;
         }
 
@@ -137,6 +144,12 @@ namespace Game.Presentation.Bootstrap
             string key = msg.PlayerKey;
             bool valid = !string.IsNullOrEmpty(key) && key.Length <= MaxKeyLength;
 
+            if (valid && !IsAllowedByMatch(key, out string allowedList))
+            {
+                valid = false;
+                Debug.LogWarning($"[Auth] Conexión {conn.ClientId} rechazada: '{key}' no es jugador de este match. Permitidos: [{allowedList}]");
+            }
+
             if (valid)
             {
                 KickStaleConnection(key);
@@ -148,6 +161,19 @@ namespace Game.Presentation.Bootstrap
             }
 
             OnAuthenticationResult?.Invoke(conn, valid);
+        }
+
+        /// <summary>En la nube solo entran (y vuelven) los jugadores que PlayFab asignó a este servidor.</summary>
+        private static bool IsAllowedByMatch(string key, out string allowedList)
+        {
+            allowedList = string.Empty;
+            IList<string> allowed = AllowedKeysProvider?.Invoke();
+            if (allowed == null || allowed.Count == 0) return true;
+
+            allowedList = string.Join(", ", allowed);
+            foreach (string a in allowed)
+                if (string.Equals(a, key, StringComparison.Ordinal)) return true;
+            return false;
         }
 
         /// <summary>Corta una conexión anterior con la misma clave (sesión colgada tras un crash).</summary>

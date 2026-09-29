@@ -66,6 +66,15 @@ namespace Game.Presentation.Combat
                 return;
             }
             SubmitLoadoutServerRpc(Game.Presentation.Run.PlayerLoadoutService.Current);
+
+            // Desde acá el equipo está en juego. Si el cliente se cae o se cierra, al volver al menú
+            // tiene que reconectar o darlo por perdido. En host no aplica: el servidor es este proceso.
+            if (!base.IsServerStarted)
+            {
+                var tugboat = InstanceFinder.TransportManager.GetTransport<FishNet.Transporting.Tugboat.Tugboat>();
+                if (tugboat != null)
+                    Game.Presentation.Run.PlayerLoadoutService.MarkActiveRun(tugboat.GetClientAddress(), tugboat.GetPort());
+            }
         }
 
         [ServerRpc]

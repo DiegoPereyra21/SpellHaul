@@ -42,6 +42,8 @@ namespace Game.Presentation.Bootstrap
         [SerializeField] private string _gamePortName = "game_port";
         [Tooltip("Segundos desde que PlayFab pasa el servidor a Active sin que se registre ningún jugador antes de cerrar el proceso (ej. el match se armó pero nadie llegó a conectar). Evita instancias Active vacías para siempre.")]
         [SerializeField] private float _noPlayersShutdownSeconds = 120f;
+        [Tooltip("Solo dejar entrar (y reconectar) a los jugadores que PlayFab asignó a este servidor (InitialPlayers). Destildar solo si la nube rechaza jugadores válidos: el log de [Auth] muestra la lista.")]
+        [SerializeField] private bool _requireMatchMembership = true;
 
         private const string GsdkConfigEnvVar = "GSDK_CONFIG_FILE";
 
@@ -149,6 +151,9 @@ namespace Game.Presentation.Bootstrap
         private IEnumerator StartServerWithGsdk()
         {
             PlayFabMultiplayerAgentAPI.Start();
+
+            if (_requireMatchMembership)
+                PlayerIdentityAuthenticator.AllowedKeysProvider = () => PlayFabMultiplayerAgentAPI.GetInitialPlayers();
             PlayFabMultiplayerAgentAPI.OnShutDownCallback += OnGsdkShutdown;
             PlayFabMultiplayerAgentAPI.OnServerActiveCallback += OnGsdkServerActive;
             PlayFabMultiplayerAgentAPI.OnAgentErrorCallback += OnGsdkAgentError;

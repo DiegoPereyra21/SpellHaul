@@ -144,3 +144,7 @@
     -unity-text-align: upper-center;
     margin-bottom: 20px;
 }
+.rejoin-status {
+    white-space: normal;
+    margin-bottom: 20px;
+}

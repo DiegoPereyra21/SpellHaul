@@ -84,6 +84,30 @@ namespace Game.Presentation.Run
             return true;
         }
 
+        /// <summary>True si el loadout está "adentro" de una run que no terminó para este jugador
+        /// (se desconectó o cerró el juego). Hasta resolverla (reconectar o abandonar) no se puede
+        /// jugar otra ni tocar el inventario.</summary>
+        public static bool IsInActiveRun => _snapshot != null && _snapshot.ActiveRun.Active;
+
+        public static ActiveRunInfo ActiveRun => _snapshot != null ? _snapshot.ActiveRun : default;
+
+        /// <summary>Client-only. El servidor ya tiene nuestro loadout: desde acá está en juego.</summary>
+        public static void MarkActiveRun(string address, ushort port)
+        {
+            if (_snapshot == null) return;
+            _snapshot.ActiveRun = new ActiveRunInfo
+            {
+                Active = true,
+                Address = address,
+                Port = port,
+                StartedUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            };
+            ProfileSaveQueue.EnqueueLoadout(_snapshot);
+        }
+
+        /// <summary>Abandona la run en curso: el equipo que se llevó se pierde (igual que morir).</summary>
+        public static void AbandonActiveRun() => Clear();
+
         /// <summary>Guarda una foto nueva (al extraer / al gestionar en el menú). Cache instantáneo + persistencia en background.</summary>
         public static void Save(InventorySnapshot snapshot)
         {

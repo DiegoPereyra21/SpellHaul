@@ -30,6 +30,20 @@ namespace Game.Presentation.UI
         private float _searchStartTime;
         private bool _searching;
 
+        // Run en curso sin terminar (ver PlayerLoadoutService.IsInActiveRun).
+        private VisualElement _rejoinPanel;
+        private Label _rejoinStatus;
+        private Button _rejoinReconnect;
+        private Button _rejoinAbandon;
+        private bool _abandonArmed; // el primer clic en Abandon pide confirmación
+
+        [Header("Run en curso")]
+        [Tooltip("Una run marcada como en curso hace más de estos segundos se da por terminada sin el jugador (el equipo se pierde) sin intentar reconectar.")]
+        [SerializeField] private long _maxActiveRunAgeSeconds = 3600;
+
+        private const string RejoinDefaultMessage =
+            "You left a run in progress. Reconnect to get back to your character, or abandon the run and lose everything you brought.";
+
         private void OnEnable()
         {
             _document = GetComponent<UIDocument>();
@@ -47,6 +61,13 @@ namespace Game.Presentation.UI
             _searchPanel = root.Q<VisualElement>("search-panel");
             _searchStatus = root.Q<Label>("search-status");
             _searchTimer = root.Q<Label>("search-timer");
+
+            _rejoinPanel = root.Q<VisualElement>("rejoin-panel");
+            _rejoinStatus = root.Q<Label>("rejoin-status");
+            _rejoinReconnect = root.Q<Button>("rejoin-reconnect");
+            _rejoinAbandon = root.Q<Button>("rejoin-abandon");
+            if (_rejoinReconnect != null) _rejoinReconnect.clicked += OnRejoinReconnectClicked;
+            if (_rejoinAbandon != null) _rejoinAbandon.clicked += OnRejoinAbandonClicked;
 
             // Jugar y tocar el stash dependen del loadout persistente listo (login a PlayFab
             // resuelto) — entrar antes jugaría contra el backend local descartable.
@@ -68,6 +89,10 @@ namespace Game.Presentation.UI
                 NetworkDisconnectHandler.ConsumeDisconnectMessage();
                 ShowNotice(disconnectMessage);
             }
+
+            // Con la sesión lista, revisar si quedó una run sin terminar (si no, lo hace HandleSessionReady).
+            if (PlayFabSession.IsReady)
+                _ = CheckActiveRunAsync(disconnectMessage);
         }
 
         private void OnDisable()
@@ -91,7 +116,84 @@ namespace Game.Presentation.UI
             _searchTimer.text = $"{(int)(elapsed / 60f)}:{(int)(elapsed % 60f):00}";
         }
 
-        private void HandleSessionReady() => SetGameplayButtonsEnabled(true);
+        private void HandleSessionReady()
+        {
+            SetGameplayButtonsEnabled(true);
+            _ = CheckActiveRunAsync(null);
+        }
+
+        // ---------- Run en curso (reconexión) ----------
+
+        /// <summary>
+        /// Si el loadout quedó "adentro" de una run (el juego se cerró o se cortó la conexión), no se
+        /// puede jugar otra ni tocar el inventario hasta resolverla: reconectar o abandonar. Una run
+        /// demasiado vieja ya terminó seguro: el equipo se pierde sin preguntar.
+        /// </summary>
+        private async System.Threading.Tasks.Task CheckActiveRunAsync(string contextMessage)
+        {
+            if (_stashScreen == null) return;
+            if (!await _stashScreen.EnsureLoadoutLoadedAsync()) return;
+            if (!Game.Presentation.Run.PlayerLoadoutService.IsInActiveRun) return;
+
+            var run = Game.Presentation.Run.PlayerLoadoutService.ActiveRun;
+            long age = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds() - run.StartedUnixSeconds;
+            if (age > _maxActiveRunAgeSeconds)
+            {
+                Game.Presentation.Run.PlayerLoadoutService.AbandonActiveRun();
+                ShowNotice("The run ended while you were away. Your gear was lost.");
+                return;
+            }
+
+            ShowRejoinPanel(string.IsNullOrEmpty(contextMessage) ? RejoinDefaultMessage : $"{contextMessage}\n\n{RejoinDefaultMessage}");
+        }
+
+        private void ShowRejoinPanel(string message)
+        {
+            _searching = false;
+            SetSearchPanel(false);
+            SetGameplayButtonsEnabled(false);
+
+            _abandonArmed = false;
+            if (_rejoinAbandon != null) _rejoinAbandon.text = "Abandon Run";
+            if (_rejoinStatus != null) _rejoinStatus.text = message;
+            _rejoinReconnect?.SetEnabled(true);
+            _rejoinAbandon?.SetEnabled(true);
+            if (_rejoinPanel != null) _rejoinPanel.style.display = DisplayStyle.Flex;
+        }
+
+        private void HideRejoinPanel()
+        {
+            if (_rejoinPanel != null) _rejoinPanel.style.display = DisplayStyle.None;
+            SetGameplayButtonsEnabled(PlayFabSession.IsReady);
+        }
+
+        private void OnRejoinReconnectClicked()
+        {
+            var run = Game.Presentation.Run.PlayerLoadoutService.ActiveRun;
+            if (!run.Active) { HideRejoinPanel(); return; }
+
+            _rejoinStatus.text = "Reconnecting...";
+            _rejoinReconnect.SetEnabled(false);
+            _rejoinAbandon.SetEnabled(false);
+
+            // Si el servidor ya no existe, llega "Could not reach the run server" y vuelve este panel.
+            // Si nos rechaza (murió / ya extrajo), aplica el resultado y lo muestra el menú.
+            ConnectTo(run.Address, (ushort)run.Port);
+        }
+
+        private void OnRejoinAbandonClicked()
+        {
+            if (!_abandonArmed)
+            {
+                _abandonArmed = true;
+                _rejoinAbandon.text = "Confirm: lose your gear";
+                return;
+            }
+
+            Game.Presentation.Run.PlayerLoadoutService.AbandonActiveRun();
+            HideRejoinPanel();
+            ShowNotice("Run abandoned. Everything you brought was lost.");
+        }
 
         private void SetGameplayButtonsEnabled(bool enabled)
         {
@@ -105,6 +207,7 @@ namespace Game.Presentation.UI
         private async void OnStashClicked()
         {
             if (_stashScreen == null) return;
+            if (Game.Presentation.Run.PlayerLoadoutService.IsInActiveRun) { ShowRejoinPanel(RejoinDefaultMessage); return; }
             if (!await _stashScreen.TryShowAsync())
                 ShowNotice(InventoryLoadFailedMessage);
         }
@@ -138,6 +241,7 @@ namespace Game.Presentation.UI
                 return;
             }
             if (!_searching) return; // canceló mientras cargaba
+            if (Game.Presentation.Run.PlayerLoadoutService.IsInActiveRun) { ShowRejoinPanel(RejoinDefaultMessage); return; }
 
             _searchStatus.text = "Entering the queue...";
             _matchmaking.StartSearch();
@@ -183,6 +287,14 @@ namespace Game.Presentation.UI
         {
             NetworkDisconnectHandler.ConsumeDisconnectMessage();
             _matchmaking?.CancelSearch();
+
+            // Falló una reconexión (o se cortó la conexión inicial) con una run todavía en curso.
+            if (Game.Presentation.Run.PlayerLoadoutService.IsInActiveRun)
+            {
+                ShowRejoinPanel($"{reason}\n\n{RejoinDefaultMessage}");
+                return;
+            }
+
             ShowNotice(reason);
         }
 
@@ -224,6 +336,11 @@ namespace Game.Presentation.UI
 #endif
             }
 
+            ConnectTo(address, port);
+        }
+
+        private void ConnectTo(string address, ushort port)
+        {
             var tugboat = InstanceFinder.TransportManager.GetTransport<Tugboat>();
             if (tugboat == null)
             {
