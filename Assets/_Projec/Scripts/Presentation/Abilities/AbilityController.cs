@@ -181,24 +181,36 @@ namespace Game.Presentation.Abilities
                 {
                     if (_castActions[i].WasPressedThisFrame()) BeginCharge(i);
                     else if (_castActions[i].WasReleasedThisFrame() && _localCharging[i]) ReleaseCharge(i);
-
-                    // Preview de trayectoria: se actualiza cada frame mientras se sostiene.
-                    if (_localCharging[i] && ability.ShowTrajectoryPreview && _trajectoryPreview != null)
-                    {
-                        float held = (float)base.TimeManager.TicksToTime(base.TimeManager.Tick - _localChargeStartTick[i]);
-                        float t = ability.MaxChargeDuration > 0f
-                            ? Mathf.Clamp01(held / ability.MaxChargeDuration)
-                            : 1f;
-                        ability.GetLaunchForCharge(t, out float launchSpeed, out float gravity);
-                        ResolveAim(out _, out Vector3 aimPoint);
-                        Vector3 origin = _spellOrigin != null ? _spellOrigin.position : _aimOrigin.position;
-                        _trajectoryPreview.Show(origin, aimPoint, launchSpeed, gravity);
-                    }
                 }
                 else if (_castActions[i].WasPressedThisFrame())
                 {
                     TryCast(i);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Preview de trayectoria mientras se sostiene una carga. En LateUpdate: la cámara y el
+        /// SpellOrigin (hijos de Graphics) ya tienen la posición suavizada de este frame; leerlos
+        /// antes dibujaba la línea con un frame de atraso y "saltaba" al moverse.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (!base.IsOwner || _trajectoryPreview == null || _inputBlocked) return;
+
+            for (int i = 0; i < _castActions.Length; i++)
+            {
+                AbilitySO ability = _equippedAbilities[i];
+                if (ability == null || !_localCharging[i] || !ability.ShowTrajectoryPreview) continue;
+
+                float held = (float)base.TimeManager.TicksToTime(base.TimeManager.Tick - _localChargeStartTick[i]);
+                float t = ability.MaxChargeDuration > 0f
+                    ? Mathf.Clamp01(held / ability.MaxChargeDuration)
+                    : 1f;
+                ability.GetLaunchForCharge(t, out float launchSpeed, out float gravity);
+                ResolveAim(out _, out Vector3 aimPoint);
+                Vector3 origin = _spellOrigin != null ? _spellOrigin.position : _aimOrigin.position;
+                _trajectoryPreview.Show(origin, aimPoint, launchSpeed, gravity);
             }
         }
 
