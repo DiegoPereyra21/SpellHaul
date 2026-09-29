@@ -22,6 +22,8 @@ namespace Game.Presentation.Bootstrap
         DiedWhileAway = 1,
         Extracted = 2,
         LeftRun = 3,
+        /// <summary>El servidor no tiene a este jugador entre los del match (validación en la nube).</summary>
+        NotInMatch = 4,
     }
 
     /// <summary>Servidor → cliente: por qué no puede volver a la run (antes de desconectarlo).</summary>
@@ -30,6 +32,8 @@ namespace Game.Presentation.Bootstrap
         public RunOutcome Outcome;
         /// <summary>Solo con Extracted: lo que el personaje sacó de la run, para guardarlo.</summary>
         public Game.Core.Items.InventorySnapshot ExtractedLoadout;
+        /// <summary>Detalle para el log del cliente (diagnóstico), nunca se muestra al jugador.</summary>
+        public string Detail;
     }
 
     /// <summary>
@@ -121,6 +125,8 @@ namespace Game.Presentation.Bootstrap
         private static void OnRunOutcomeBroadcast(RunOutcomeBroadcast msg, Channel channel)
         {
             LastRunOutcome = msg.Outcome;
+            if (!string.IsNullOrEmpty(msg.Detail))
+                Debug.LogWarning($"[Auth] Servidor: {msg.Outcome} | {msg.Detail}");
 
             switch (msg.Outcome)
             {
@@ -147,31 +153,49 @@ namespace Game.Presentation.Bootstrap
             if (!valid)
             {
                 Debug.LogWarning($"[Auth] Conexión {conn.ClientId} rechazada: clave de jugador vacía o demasiado larga.");
-            }
-            else if (!IsAllowedByMatch(key, out string allowedList))
-            {
-                valid = false;
-                Debug.LogWarning($"[Auth] Conexión {conn.ClientId} rechazada: '{key}' no es jugador de este match. Permitidos: [{allowedList}]");
-            }
-            else
-            {
-                KickStaleConnection(key);
-                _keysByClientId[conn.ClientId] = key;
+                OnAuthenticationResult?.Invoke(conn, false);
+                return;
             }
 
-            OnAuthenticationResult?.Invoke(conn, valid);
+            if (!IsAllowedByMatch(key, out string allowedList))
+            {
+                string detail = $"'{key}' no es jugador de este match. Permitidos: [{allowedList}]";
+                Debug.LogWarning($"[Auth] Conexión {conn.ClientId} rechazada: {detail}");
+                // Sin OnAuthenticationResult(false): FishNet cortaría en el acto y el aviso no llegaría.
+                RejectWithOutcome(NetworkManager, conn, RunOutcome.NotInMatch, null, detail, requireAuthenticated: false);
+                return;
+            }
+
+            KickStaleConnection(key);
+            _keysByClientId[conn.ClientId] = key;
+            OnAuthenticationResult?.Invoke(conn, true);
         }
 
         /// <summary>En la nube solo entran (y vuelven) los jugadores que PlayFab asignó a este servidor.</summary>
         private static bool IsAllowedByMatch(string key, out string allowedList)
         {
             allowedList = string.Empty;
-            IList<string> allowed = AllowedKeysProvider?.Invoke();
+            IList<string> allowed;
+            try { allowed = AllowedKeysProvider?.Invoke(); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[Auth] No se pudo leer la lista de jugadores del match, se acepta: {e.Message}");
+                return true;
+            }
             if (allowed == null || allowed.Count == 0) return true;
 
             allowedList = string.Join(", ", allowed);
             foreach (string a in allowed)
-                if (string.Equals(a, key, StringComparison.Ordinal)) return true;
+            {
+                if (string.IsNullOrEmpty(a)) continue;
+                // Tolerante al formato: igual, o con prefijo de tipo de entidad ("tipo!id", "tipo/id").
+                if (string.Equals(a, key, StringComparison.OrdinalIgnoreCase)) return true;
+                if (a.Length > key.Length && a.EndsWith(key, StringComparison.OrdinalIgnoreCase))
+                {
+                    char sep = a[a.Length - key.Length - 1];
+                    if (sep == '!' || sep == '/' || sep == ':') return true;
+                }
+            }
             return false;
         }
 
@@ -199,9 +223,11 @@ namespace Game.Presentation.Bootstrap
 
         /// <summary>Server-only. Avisa al cliente por qué no puede volver y lo desconecta.</summary>
         public static void RejectWithOutcome(NetworkManager networkManager, NetworkConnection conn, RunOutcome outcome,
-            Game.Core.Items.InventorySnapshot extractedLoadout = null)
+            Game.Core.Items.InventorySnapshot extractedLoadout = null, string detail = null, bool requireAuthenticated = true)
         {
-            networkManager.ServerManager.Broadcast(conn, new RunOutcomeBroadcast { Outcome = outcome, ExtractedLoadout = extractedLoadout });
+            networkManager.ServerManager.Broadcast(conn,
+                new RunOutcomeBroadcast { Outcome = outcome, ExtractedLoadout = extractedLoadout, Detail = detail },
+                requireAuthenticated);
             conn.Disconnect(false); // no inmediato: deja salir el broadcast
         }
     }
