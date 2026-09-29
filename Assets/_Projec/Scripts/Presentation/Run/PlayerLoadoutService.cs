@@ -80,8 +80,31 @@ namespace Game.Presentation.Run
 
             _snapshot = CreateStartingSnapshot(kit);
             _initialized = true;
-            ProfileSaveQueue.EnqueueLoadout(_snapshot); // primera vez (lectura OK y vacía): persistir el kit
+            // Primera vez (lectura OK y vacía): persistir el kit. En PlayFab no hace falta ni se
+            // puede: lo da CloudScript (EnsureProfile) al loguear, y el cliente no escribe directo.
+            if (!(Storage is PlayFabPlayerLoadoutStorage))
+                ProfileSaveQueue.EnqueueLoadout(_snapshot);
             return true;
+        }
+
+        /// <summary>Relee el loadout del storage y reemplaza la cache solo si la lectura funcionó.</summary>
+        public static async Task<bool> ReloadAsync()
+        {
+            try
+            {
+                var loaded = await Storage.LoadAsync();
+                if (loaded != null)
+                {
+                    _snapshot = loaded;
+                    _initialized = true;
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[PlayerLoadoutService] Falló la relectura: {e.Message}");
+                return false;
+            }
         }
 
         /// <summary>True si el loadout está "adentro" de una run que no terminó para este jugador
@@ -104,7 +127,9 @@ namespace Game.Presentation.Run
         {
             if (_snapshot == null) return;
             _snapshot.ActiveRun = CreateActiveRun(address, port);
-            if (!ServerOwnsRun) ProfileSaveQueue.EnqueueLoadout(_snapshot);
+            // En PlayFab la marca la guarda solo el servidor de la run (CloudScript ignora la del
+            // cliente); localmente (pruebas sin sesión) se guarda acá.
+            if (!ServerOwnsRun && !(Storage is PlayFabPlayerLoadoutStorage)) ProfileSaveQueue.EnqueueLoadout(_snapshot);
         }
 
         public static ActiveRunInfo CreateActiveRun(string address, ushort port) => new ActiveRunInfo
@@ -138,8 +163,36 @@ namespace Game.Presentation.Run
             else Clear();
         }
 
-        /// <summary>Abandona la run en curso: el equipo que se llevó se pierde (igual que morir).</summary>
-        public static void AbandonActiveRun() => Clear();
+        /// <summary>
+        /// Abandona la run en curso: el equipo que se llevó se pierde (igual que morir). En PlayFab
+        /// lo hace CloudScript (el cliente no puede escribir el loadout). False si no se pudo.
+        /// </summary>
+        public static async Task<bool> AbandonActiveRunAsync()
+        {
+            if (!(Storage is PlayFabPlayerLoadoutStorage))
+            {
+                Clear();
+                return true;
+            }
+
+            try
+            {
+                await PlayFabUserData.CallAsync(PlayFabUserData.AbandonActiveRunFunction);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[PlayerLoadoutService] No se pudo abandonar la run: {e.Message}");
+                return false;
+            }
+
+            var empty = CreateEmptySnapshot();
+            // Misma cantidad de slots de equipo que tenía (CloudScript hace lo mismo).
+            if (_snapshot != null)
+                while (empty.Equipment.Count < _snapshot.Equipment.Count) empty.Equipment.Add(ItemStack.Empty);
+            _snapshot = empty;
+            _initialized = true;
+            return true;
+        }
 
         /// <summary>Guarda una foto nueva (al extraer / al gestionar en el menú). Cache instantáneo + persistencia en background.</summary>
         public static void Save(InventorySnapshot snapshot)

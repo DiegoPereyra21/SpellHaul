@@ -73,6 +73,23 @@ namespace Game.Presentation.Run
             return true;
         }
 
+        /// <summary>Relee el stash del storage y reemplaza la cache solo si la lectura funcionó.</summary>
+        public static async Task<bool> ReloadAsync()
+        {
+            try
+            {
+                var loaded = await Storage.LoadAsync();
+                _stash = loaded ?? _stash ?? new StashData();
+                _initialized = true;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[StashService] Falló la relectura: {e.Message}");
+                return false;
+            }
+        }
+
         /// <summary>Guarda el estado actual del stash. Cache instantáneo + persistencia en background.</summary>
         public static void Save(StashData stash)
         {

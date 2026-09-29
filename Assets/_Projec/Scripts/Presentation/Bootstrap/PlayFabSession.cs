@@ -82,6 +82,10 @@ namespace Game.Presentation.Bootstrap
                 EntityId = result.EntityToken?.Entity?.Id;
                 SessionTicket = result.SessionTicket;
                 EntityType = result.EntityToken?.Entity?.Type;
+                // El perfil (loadout + stash) es de solo lectura para el cliente: si es un jugador
+                // nuevo, CloudScript le da el kit inicial. Sin esto no se puede jugar ni usar el stash.
+                await Game.Presentation.Run.PlayFabUserData.CallAsync(Game.Presentation.Run.PlayFabUserData.EnsureProfileFunction);
+
                 Game.Presentation.Run.PlayerLoadoutService.Storage = new Game.Presentation.Run.PlayFabPlayerLoadoutStorage();
                 Game.Presentation.Run.StashService.Storage = new Game.Presentation.Run.PlayFabStashStorage();
 

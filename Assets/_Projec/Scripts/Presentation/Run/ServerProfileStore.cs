@@ -13,7 +13,7 @@ namespace Game.Presentation.Run
 {
     /// <summary>
     /// Server-only. Persistencia del loadout escrita por el servidor de la run (Server API de
-    /// PlayFab), no por el cliente: el servidor lee el loadout al entrar el jugador, marca la run
+    /// PlayFab, Player Data de solo lectura para el cliente), no por el cliente: el servidor lee el loadout al entrar el jugador, marca la run
     /// en curso y guarda el resultado al extraer o morir. Así un cliente modificado ya no puede
     /// quedarse el equipo al morir ni "restaurar" lo que perdió.
     ///
@@ -136,7 +136,7 @@ namespace Game.Presentation.Run
             var tcs = new TaskCompletionSource<InventorySnapshot>();
 #if ENABLE_PLAYFABSERVER_API
             string key = PlayFabPlayerLoadoutStorage.DataKey;
-            PlayFabServerAPI.GetUserData(
+            PlayFabServerAPI.GetUserReadOnlyData(
                 new GetUserDataRequest { PlayFabId = playFabId, Keys = new List<string> { key } },
                 result =>
                 {
@@ -209,7 +209,7 @@ namespace Game.Presentation.Run
         {
             var tcs = new TaskCompletionSource<bool>();
 #if ENABLE_PLAYFABSERVER_API
-            PlayFabServerAPI.UpdateUserData(
+            PlayFabServerAPI.UpdateUserReadOnlyData(
                 new UpdateUserDataRequest
                 {
                     PlayFabId = playFabId,

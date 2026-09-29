@@ -75,6 +75,22 @@ namespace Game.Presentation.UI
             if (closeBtn != null) closeBtn.clicked += Hide;
 
             _root.RegisterCallback<PointerUpEvent>(_ => { if (_isDragging) CancelDrag(); });
+
+            ProfileSaveQueue.OnProfileReloaded += HandleProfileReloaded;
+        }
+
+        private void OnDisable()
+        {
+            ProfileSaveQueue.OnProfileReloaded -= HandleProfileReloaded;
+        }
+
+        /// <summary>PlayFab rechazó un cambio y el perfil se volvió a leer: mostrar lo real.</summary>
+        private void HandleProfileReloaded(string reason)
+        {
+            if (_root == null || _root.style.display != DisplayStyle.Flex) return;
+            if (Inv == null || Stash == null) { Hide(); return; }
+            if (_isDragging) CancelDrag();
+            Redraw();
         }
 
         /// <summary>Asegura el loadout persistente leído (el kit inicial vive acá). False si no se

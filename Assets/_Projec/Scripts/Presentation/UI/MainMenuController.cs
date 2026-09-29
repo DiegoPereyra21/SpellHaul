@@ -139,9 +139,12 @@ namespace Game.Presentation.UI
             long age = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds() - run.StartedUnixSeconds;
             if (age > _maxActiveRunAgeSeconds)
             {
-                Game.Presentation.Run.PlayerLoadoutService.AbandonActiveRun();
-                ShowNotice("The run ended while you were away. Your gear was lost.");
-                return;
+                if (await Game.Presentation.Run.PlayerLoadoutService.AbandonActiveRunAsync())
+                {
+                    ShowNotice("The run ended while you were away. Your gear was lost.");
+                    return;
+                }
+                // No se pudo resolver ahora: queda el panel para reintentar a mano.
             }
 
             ShowRejoinPanel(string.IsNullOrEmpty(contextMessage) ? RejoinDefaultMessage : $"{contextMessage}\n\n{RejoinDefaultMessage}");
@@ -181,7 +184,7 @@ namespace Game.Presentation.UI
             ConnectTo(run.Address, (ushort)run.Port);
         }
 
-        private void OnRejoinAbandonClicked()
+        private async void OnRejoinAbandonClicked()
         {
             if (!_abandonArmed)
             {
@@ -190,7 +193,16 @@ namespace Game.Presentation.UI
                 return;
             }
 
-            Game.Presentation.Run.PlayerLoadoutService.AbandonActiveRun();
+            _rejoinReconnect.SetEnabled(false);
+            _rejoinAbandon.SetEnabled(false);
+            _rejoinStatus.text = "Abandoning the run...";
+
+            if (!await Game.Presentation.Run.PlayerLoadoutService.AbandonActiveRunAsync())
+            {
+                ShowRejoinPanel("Could not abandon the run. Check your connection and try again.");
+                return;
+            }
+
             HideRejoinPanel();
             ShowNotice("Run abandoned. Everything you brought was lost.");
         }
