@@ -55,18 +55,6 @@ namespace Game.Presentation.Abilities
             }
         }
 
-        public void ApplyAreaEffect(Vector3 point, float radius, float damage, int casterNetworkId)
-        {
-            if (!InstanceFinder.IsServerStarted) return;
-
-            Collider[] hits = Physics.OverlapSphere(point, radius);
-            foreach (Collider hit in hits)
-            {
-                if (hit.TryGetComponent(out IDamageable damageable))
-                    damageable.ApplyDamage(damage, casterNetworkId);
-            }
-        }
-
         public void StartDash(int casterNetworkId, Vector3 direction, float speed, float duration)
         {
             if (!InstanceFinder.IsServerStarted) return;

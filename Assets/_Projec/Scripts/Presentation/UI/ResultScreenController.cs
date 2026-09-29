@@ -8,7 +8,7 @@ namespace Game.Presentation.UI
 {
     /// <summary>
     /// Pantalla de resultados de la run (Extraído / Eliminado). La dispara el estado individual
-    /// del jugador (muerte o extracción). El botón vuelve al menú (host local por ahora).
+    /// del jugador (muerte o extracción). El botón vuelve al menú.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public class ResultScreenController : MonoBehaviour

@@ -1,13 +1,13 @@
 namespace Game.Core.Run
 {
     /// <summary>
-    /// Contrato del inventario de run. Todavía sin implementación concreta: existe para
-    /// que extracción y muerte llamen al comportamiento correcto sin acoplarse a un
-    /// inventario real. Cuando se implemente el inventario, solo hay que cumplir esta interfaz.
+    /// Contrato del inventario de run (lo implementa RunInventory). Extracción y muerte lo
+    /// invocan sin acoplarse al inventario concreto.
     /// </summary>
     public interface IRunInventory
     {
-        /// <summary>Consolida el loot de la run al stash persistente (extracción exitosa).</summary>
+        /// <summary>Extracción exitosa: el inventario de la run pasa a ser el inventario propio
+        /// persistente (loadout) del jugador. No toca el stash, pese al nombre.</summary>
         void CommitToStash();
 
         /// <summary>Suelta / pierde el loot de la run (muerte).</summary>

@@ -1,6 +1,3 @@
-using FishNet;
-using FishNet.Object;
-using Game.Core.Abilities.Abilities;
 using UnityEngine;
 
 namespace Game.Core.Abilities
@@ -14,24 +11,17 @@ namespace Game.Core.Abilities
     {
         /// <summary>Spawnea un proyectil de red desde el pool (server-authoritative). slot: para resolver audio localmente en cada cliente.</summary>
         void SpawnProjectile(GameObject projectilePrefab, Vector3 origin, Vector3 direction, float speed, float damage, float radius, int casterNetworkId, uint fireTick, int slot);
-        /// <summary>Aplica daño/efecto en área alrededor de un punto (server-authoritative).</summary>
-        void ApplyAreaEffect(Vector3 point, float radius, float damage, int casterNetworkId);
 
-        /// <summary>Aplica un impulso de movimiento al caster (ej. dash), respetando predicción.</summary>
-        public void StartDash(int casterNetworkId, Vector3 direction, float speed, float duration)
-        {
-            if (!InstanceFinder.IsServerStarted) return;
-            if (!InstanceFinder.ServerManager.Objects.Spawned.TryGetValue(casterNetworkId, out NetworkObject nob)) return;
-            if (nob.TryGetComponent(out Game.Presentation.Player.PlayerMovementController movement))
-                movement.StartDash(direction, speed, duration);
-        }
+        /// <summary>Aplica un impulso de movimiento al caster fuera de su input (el dash del jugador viaja como input predicho; ver PlayerMovementController).</summary>
+        void StartDash(int casterNetworkId, Vector3 direction, float speed, float duration);
 
         /// <summary>Aplica curación/buff directo al caster.</summary>
         void ApplySelfEffect(int casterNetworkId, float healAmount);
 
-
         /// <summary>Spawnea un orbe cargado con trayectoria balística hacia el punto de mira.</summary>
-void SpawnChargedOrb(GameObject orbPrefab, Vector3 origin, Vector3 aimPoint, float damage, float explosionRadius, float visualScale, float launchSpeed, float gravity, int casterNetworkId, int slot);        void StartParry(Game.Core.Abilities.Abilities.ParryAbilitySO data, in AbilityCastContext context);
-        
+        void SpawnChargedOrb(GameObject orbPrefab, Vector3 origin, Vector3 aimPoint, float damage, float explosionRadius, float visualScale, float launchSpeed, float gravity, int casterNetworkId, int slot);
+
+        /// <summary>Arranca las fases del parry en el caster.</summary>
+        void StartParry(Game.Core.Abilities.Abilities.ParryAbilitySO data, in AbilityCastContext context);
     }
 }

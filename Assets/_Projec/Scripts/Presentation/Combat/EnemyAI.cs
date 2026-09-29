@@ -5,8 +5,8 @@ using UnityEngine.AI;
 namespace Game.Presentation.Combat
 {
     /// <summary>
-    /// IA de enemigo básica, server-authoritative. FSM mínima: Idle (quieto) y Chase (persigue
-    /// al jugador más cercano dentro del radio de detección). El NavMeshAgent solo se mueve en
+    /// IA de enemigo básica, server-authoritative. FSM: Idle (patrulla cerca del spawn), Chase (persigue
+    /// al jugador más cercano con línea de visión) y Attack (golpe con windup). El NavMeshAgent solo se mueve en
     /// el servidor; el NetworkTransform replica la posición a los clientes.
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]

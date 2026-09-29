@@ -7,7 +7,7 @@ namespace Game.Core.Items
         JumpForce,
         MoveSpeed,
         Protection,        // porcentaje de reducción de daño (con cap aplicado en PlayerStats)
-        DamageMultiplier,  // afecta habilidades (catalizador)
+        DamageMultiplier,  // afecta el daño de las habilidades (eje propio de Glove)
         CastSpeedMultiplier
     }
 }

@@ -5,7 +5,7 @@ namespace Game.Core.Items
     /// <summary>
     /// "Foto" del inventario propio del jugador: equipamiento por slot + items de cada pocket.
     /// Es lo que persiste entre runs y se restaura al entrar. Listas planas de ItemStack,
-    /// listas para serializar (backend de persistencia a futuro).
+    /// listas para serializar (se guarda en PlayFab Player Data).
     /// </summary>
     [System.Serializable]
     public class InventorySnapshot

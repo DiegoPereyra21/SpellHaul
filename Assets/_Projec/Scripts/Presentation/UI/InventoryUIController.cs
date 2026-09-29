@@ -15,7 +15,6 @@ namespace Game.Presentation.UI
         [SerializeField] private ItemDatabase _database;
         [SerializeField] private RunInventory _inventory;
         [SerializeField] private PlayerMovementController _movement;
-        [SerializeField] private CameraLookController _cameraLook;
         [SerializeField] private AbilityController _abilities;
         [SerializeField] private PlayerInteraction _interaction;
         [SerializeField] private UIDocument _document;
@@ -131,7 +130,6 @@ namespace Game.Presentation.UI
 
             UnityEngine.Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;
             UnityEngine.Cursor.visible = open;
-            if (_cameraLook != null)  _cameraLook.enabled = !open;
             if (_movement != null)    _movement.SetInputBlocked(open);
             if (_abilities != null)   _abilities.SetInputBlocked(open);
             if (_interaction != null) _interaction.SetInputBlocked(open);

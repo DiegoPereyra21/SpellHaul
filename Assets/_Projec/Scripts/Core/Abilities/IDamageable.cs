@@ -1,8 +1,7 @@
 namespace Game.Core.Abilities
 {
     /// <summary>
-    /// Contrato mínimo para recibir daño/curación (valor negativo = cura).
-    /// Placeholder hasta definir el sistema de salud completo.
+    /// Contrato mínimo para recibir daño/curación (valor negativo = cura). Lo implementa Health.
     /// </summary>
     public interface IDamageable
     {

@@ -26,8 +26,6 @@ namespace Game.Presentation.Run
         /// <summary>El inventario propio persistente actual (cache en memoria). Null si nunca se inicializó.</summary>
         public static InventorySnapshot Current => _snapshot;
 
-        public static bool HasSnapshot => _initialized && _snapshot != null;
-
         /// <summary>True mientras quede un guardado sin confirmar (ver ProfileSaveQueue).</summary>
         public static bool PendingSync => ProfileSaveQueue.PendingSync;
 

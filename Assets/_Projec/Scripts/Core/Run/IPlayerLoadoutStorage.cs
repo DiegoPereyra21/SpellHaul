@@ -5,7 +5,7 @@ namespace Game.Core.Run
 {
     /// <summary>
     /// Almacén persistente del inventario propio del jugador (equipo + pockets), fuera de la
-    /// run. Contrato: la implementación real (local ahora, PlayFab después) se enchufa sin
+    /// run. Contrato: la implementación real (local antes del login, PlayFab después) se enchufa sin
     /// tocar a quien lo consume.
     /// </summary>
     public interface IPlayerLoadoutStorage
