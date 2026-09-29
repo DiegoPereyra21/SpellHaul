@@ -32,7 +32,7 @@ namespace Game.Presentation.Bootstrap
         [Header("Escena")]
         [SerializeField] private string _runSceneName = "Run";
 
-        [Header("Editor (ignorado si el proceso arrancó con argumentos de rol)")]
+        [Header("Editor (solo en el editor; ignorado si hay argumentos de rol y en builds)")]
         [SerializeField] private NetworkRole _editorRole = NetworkRole.None;
         [SerializeField] private string _editorAddress = "127.0.0.1";
         [SerializeField] private ushort _editorPort = 7770;
@@ -53,13 +53,17 @@ namespace Game.Presentation.Bootstrap
             string address = LaunchArgs.Address;
             ushort port = LaunchArgs.Port;
 
-            // Sin argumentos de rol (caso típico del editor): usar la configuración del inspector.
+#if UNITY_EDITOR
+            // Sin argumentos de rol en el editor: usar la configuración del inspector. Solo en el
+            // editor: un build sin argumentos siempre arranca en el menú, aunque la escena se haya
+            // guardado con _editorRole en Host o Client.
             if (role == NetworkRole.None)
             {
                 role = _editorRole;
                 address = _editorAddress;
                 port = _editorPort;
             }
+#endif
 
 #if UNITY_SERVER
             // Un build de servidor dedicado no puede ser otra cosa, con o sin argumentos.
