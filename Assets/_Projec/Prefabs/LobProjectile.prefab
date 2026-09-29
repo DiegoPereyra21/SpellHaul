@@ -14968,7 +14968,7 @@ MonoBehaviour:
   _isGlobal: 0
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
-  _defaultDespawnType: 0
+  _defaultDespawnType: 1
   _initializedTimestamp: 0
 --- !u!114 &7784752130273880379
 MonoBehaviour:
@@ -15010,7 +15010,7 @@ MonoBehaviour:
     X: 0
     Y: 0
     Z: 0
-  _synchronizeScale: 1
+  _synchronizeScale: 0
   _scaleSensitivity: 0.001
   _scaleSnapping:
     X: 0

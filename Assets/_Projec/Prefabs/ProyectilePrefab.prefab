@@ -29395,6 +29395,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 576
   _maxCatchUpTicks: 12
+  _maxRewindTicks: 20
   _visual: {fileID: 8942972072319118501}
 --- !u!135 &6509815930719459171
 SphereCollider:
@@ -29452,7 +29453,7 @@ MonoBehaviour:
     X: 0
     Y: 0
     Z: 0
-  _synchronizeRotation: 1
+  _synchronizeRotation: 0
   _rotationSnapping:
     X: 0
     Y: 0

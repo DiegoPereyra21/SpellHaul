@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 3303801480241003777}
   - component: {fileID: 91766549151548473}
   - component: {fileID: 1784785244851555160}
-  - component: {fileID: 1253714598417422521}
   m_Layer: 7
   m_Name: Chest
   m_TagString: Untagged
@@ -162,7 +161,7 @@ MonoBehaviour:
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
   - {fileID: 1784785244851555160}
-  - {fileID: 1253714598417422521}
+  - {fileID: 0}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -193,49 +192,3 @@ MonoBehaviour:
   _emptyColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
   _hasLootColor: {r: 0.85, g: 0.65, b: 0.15, a: 1}
   _colorProperty: _BaseColor
---- !u!114 &1253714598417422521
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2764254699792074859}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Transforming.NetworkTransform
-  _componentIndexCache: 1
-  _addedNetworkObject: {fileID: 91766549151548473}
-  _networkObjectCache: {fileID: 91766549151548473}
-  _componentConfiguration: 0
-  _synchronizeParent: 0
-  _packing:
-    Position: 1
-    Rotation: 1
-    Scale: 0
-  _useScaledTime: 1
-  _interpolation: 2
-  _extrapolation: 2
-  _enableTeleport: 0
-  _teleportThreshold: 1
-  _clientAuthoritative: 0
-  _sendToOwner: 1
-  _interval: 1
-  _synchronizePosition: 1
-  _positionSensitivity: 0.001
-  _positionSnapping:
-    X: 0
-    Y: 0
-    Z: 0
-  _synchronizeRotation: 1
-  _rotationSnapping:
-    X: 0
-    Y: 0
-    Z: 0
-  _synchronizeScale: 1
-  _scaleSensitivity: 0.001
-  _scaleSnapping:
-    X: 0
-    Y: 0
-    Z: 0
