@@ -44,8 +44,9 @@ namespace Game.Presentation.Combat
             if (_avatar != null)
                 _avatar.DisableControl();
 
-            // Soltar el loot de la run al morir (si hay inventario implementado).
-            if (TryGetComponent(out Game.Core.Run.IRunInventory inventory))
+            // Soltar el loot de la run: solo el servidor (DropAll es [Server]; en los clientes
+            // solo generaba un warning por muerte).
+            if (base.IsServerInitialized && TryGetComponent(out Game.Core.Run.IRunInventory inventory))
                 inventory.DropAll();
 
 

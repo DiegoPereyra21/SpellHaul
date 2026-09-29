@@ -39,6 +39,14 @@ namespace Game.Presentation.UI
         private readonly Label[] _cooldownTexts = new Label[5];
         private VisualElement _dangerFrame;
 
+        // Últimos valores mostrados: los textos solo se reescriben cuando cambia lo que muestran
+        // (antes se armaban ~10 strings nuevos por frame, basura para el GC).
+        private int _lastHp = int.MinValue, _lastHpMax = int.MinValue;
+        private int _lastMana = int.MinValue, _lastManaMax = int.MinValue;
+        private int _lastTimerSeconds = int.MinValue;
+        private int _lastAlive = -1, _lastExtracted = -1, _lastDead = -1;
+        private readonly int[] _lastCooldownKey = { int.MinValue, int.MinValue, int.MinValue, int.MinValue, int.MinValue }; // MinValue = sin dibujar aún, -1 = oculto
+
         private VisualElement _dashRing;
         private float _dashRingProgress; // 0 = vacío (en cooldown), 1 = lleno (listo)
 
@@ -163,17 +171,29 @@ namespace Game.Presentation.UI
             // Vida
             if (_health != null && _healthFill != null)
             {
-                float pct = _health.Max > 0 ? _health.Current / _health.Max : 0f;
-                _healthFill.style.width = Length.Percent(pct * 100f);
-                _healthText.text = $"{_health.Current:0} / {_health.Max:0}";
+                int hp = Mathf.RoundToInt(_health.Current);
+                int hpMax = Mathf.RoundToInt(_health.Max);
+                if (hp != _lastHp || hpMax != _lastHpMax)
+                {
+                    _lastHp = hp; _lastHpMax = hpMax;
+                    float pct = _health.Max > 0 ? _health.Current / _health.Max : 0f;
+                    _healthFill.style.width = Length.Percent(pct * 100f);
+                    _healthText.text = $"{hp} / {hpMax}";
+                }
             }
 
             // Maná
             if (_mana != null && _manaFill != null)
             {
-                float pct = _mana.Max > 0 ? _mana.Current / _mana.Max : 0f;
-                _manaFill.style.width = Length.Percent(pct * 100f);
-                _manaText.text = $"{_mana.Current:0} / {_mana.Max:0}";
+                int mana = Mathf.RoundToInt(_mana.Current);
+                int manaMax = Mathf.RoundToInt(_mana.Max);
+                if (mana != _lastMana || manaMax != _lastManaMax)
+                {
+                    _lastMana = mana; _lastManaMax = manaMax;
+                    float pct = _mana.Max > 0 ? _mana.Current / _mana.Max : 0f;
+                    _manaFill.style.width = Length.Percent(pct * 100f);
+                    _manaText.text = $"{mana} / {manaMax}";
+                }
             }
             
             // Cooldowns
@@ -190,11 +210,18 @@ namespace Game.Presentation.UI
                     {
                         var ability = _abilities.GetAbility(i);
                         float remaining = ability != null ? cd * ability.Cooldown : 0f;
-                        _cooldownTexts[i].text = remaining >= 1f ? $"{remaining:0}" : $"{remaining:0.0}";
-                        _cooldownTexts[i].style.display = DisplayStyle.Flex;
+                        // Clave de lo que se muestra: segundos enteros (≥1 s) o décimas (<1 s).
+                        int key = remaining >= 1f ? 1000 + Mathf.RoundToInt(remaining) : Mathf.RoundToInt(remaining * 10f);
+                        if (key != _lastCooldownKey[i])
+                        {
+                            if (_lastCooldownKey[i] < 0) _cooldownTexts[i].style.display = DisplayStyle.Flex;
+                            _lastCooldownKey[i] = key;
+                            _cooldownTexts[i].text = remaining >= 1f ? $"{remaining:0}" : $"{remaining:0.0}";
+                        }
                     }
-                    else
+                    else if (_lastCooldownKey[i] != -1)
                     {
+                        _lastCooldownKey[i] = -1;
                         _cooldownTexts[i].style.display = DisplayStyle.None;
                     }
                 }
@@ -229,9 +256,11 @@ namespace Game.Presentation.UI
             if (run != null && _runTimer != null)
             {
                 int total = Mathf.CeilToInt(run.TimeRemaining);
-                int mm = total / 60;
-                int ss = total % 60;
-                _runTimer.text = $"{mm:00}:{ss:00}";
+                if (total != _lastTimerSeconds)
+                {
+                    _lastTimerSeconds = total;
+                    _runTimer.text = $"{total / 60:00}:{total % 60:00}";
+                }
 
                 bool danger = run.Phase == Game.Core.Run.RunPhase.DangerPhase;
                 _runDanger.style.display = danger ? DisplayStyle.Flex : DisplayStyle.None;
@@ -241,7 +270,11 @@ namespace Game.Presentation.UI
                     else _dangerFrame.RemoveFromClassList("active");
                 }
 
-                _runCounter.text = $"Alive {run.AliveCount}  ·  Extracted {run.ExtractedCount}  ·  Dead {run.DeadCount}";
+                if (run.AliveCount != _lastAlive || run.ExtractedCount != _lastExtracted || run.DeadCount != _lastDead)
+                {
+                    _lastAlive = run.AliveCount; _lastExtracted = run.ExtractedCount; _lastDead = run.DeadCount;
+                    _runCounter.text = $"Alive {_lastAlive}  ·  Extracted {_lastExtracted}  ·  Dead {_lastDead}";
+                }
             }
 
             //interact prompt
@@ -470,6 +503,8 @@ namespace Game.Presentation.UI
             }
         }
 
+        private static readonly float[] HitMarkerAngles = { 45f, 135f, 225f, 315f };
+
         // Cuatro ticks diagonales (estilo shooter competitivo) que hacen pop y se desvanecen.
         // Kill marker: mismo dibujo, más grueso y en rojo.
         private void DrawHitMarker(MeshGenerationContext ctx)
@@ -494,8 +529,7 @@ namespace Game.Presentation.UI
                 : new Color(1f, 1f, 1f, alpha);
             painter.lineWidth = _hitMarkerIsKill ? 3.5f : 2.5f;
 
-            float[] angles = { 45f, 135f, 225f, 315f };
-            foreach (float deg in angles)
+            foreach (float deg in HitMarkerAngles)
             {
                 float rad = deg * Mathf.Deg2Rad;
                 Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));

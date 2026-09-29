@@ -32,6 +32,8 @@ namespace Game.Presentation.Combat
         // Buffer compartido para el OverlapSphere sin allocations. El proyectil corre en Update
         // del server (single-thread), así que reutilizarlo secuencialmente es seguro.
         private static readonly Collider[] _overlapBuffer = new Collider[16];
+        private static readonly Collider[] _explosionBuffer = new Collider[64];
+        private static readonly System.Collections.Generic.HashSet<int> _alreadyHit = new();
 
         private void Awake()
         {
@@ -113,12 +115,16 @@ namespace Game.Presentation.Combat
         {
             _exploded = true;
 
-            Collider[] hits = Physics.OverlapSphere(point, _explosionRadius, _hitMask, QueryTriggerInteraction.Ignore);
-            foreach (Collider hit in hits)
+            // Un solo golpe por entidad: con más de una hitbox (cabeza + cuerpo, etc.) cada collider
+            // aplicaba el daño de nuevo.
+            _alreadyHit.Clear();
+            int count = Physics.OverlapSphereNonAlloc(point, _explosionRadius, _explosionBuffer, _hitMask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
             {
-                NetworkObject nob = hit.GetComponentInParent<NetworkObject>();
+                NetworkObject nob = _explosionBuffer[i].GetComponentInParent<NetworkObject>();
                 if (nob == null) continue; // geometría (Ground)
                 if (nob.ObjectId == _casterNetworkId) continue; // no dañar al propio guardián
+                if (!_alreadyHit.Add(nob.ObjectId)) continue;  // una vez por entidad
 
                 if (nob.TryGetComponent(out IDamageable damageable))
                     damageable.ApplyDamage(_damage, _casterNetworkId);

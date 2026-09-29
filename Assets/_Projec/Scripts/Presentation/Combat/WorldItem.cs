@@ -35,6 +35,13 @@ namespace Game.Presentation.Combat
         public override void OnStartClient()
         {
             base.OnStartClient();
+
+            // La física la simula solo el servidor; en los clientes la posición llega por
+            // NetworkTransform. Con el Rigidbody activo en los dos, la simulación local peleaba
+            // con la replicada (items temblando o deslizándose).
+            if (!base.IsServerInitialized && TryGetComponent(out Rigidbody body))
+                body.isKinematic = true;
+
             ApplyMesh();
             // Si el SyncVar llega después del OnStartClient (raro pero posible), re-aplicar.
             _itemId.OnChange += (_, _, _) => ApplyMesh();

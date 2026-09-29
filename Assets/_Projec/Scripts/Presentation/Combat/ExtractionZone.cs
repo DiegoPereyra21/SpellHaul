@@ -16,6 +16,7 @@ namespace Game.Presentation.Combat
 
         // Progreso por jugador presente en la zona (solo servidor).
         private readonly Dictionary<PlayerExtractionState, float> _channeling = new();
+        private readonly List<PlayerExtractionState> _iterationBuffer = new(); // evita una lista nueva por frame
 
         private void OnTriggerEnter(Collider other)
         {
@@ -45,8 +46,9 @@ namespace Game.Presentation.Combat
             if (_channeling.Count == 0) return;
 
             // Copia de keys para poder modificar el diccionario mientras iteramos.
-            var players = new List<PlayerExtractionState>(_channeling.Keys);
-            foreach (var ext in players)
+            _iterationBuffer.Clear();
+            _iterationBuffer.AddRange(_channeling.Keys);
+            foreach (var ext in _iterationBuffer)
             {
                 if (ext == null || !ext.CanExtract)
                 {

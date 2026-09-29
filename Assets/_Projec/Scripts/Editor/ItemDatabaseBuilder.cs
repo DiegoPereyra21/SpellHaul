@@ -21,8 +21,17 @@ namespace Game.EditorTools.Items
             string[] movedAssets,
             string[] movedFromAssetPaths)
         {
-            if (TouchesItemSO(importedAssets) || TouchesItemSO(deletedAssets) || TouchesItemSO(movedAssets))
+            // Un asset borrado ya no se puede cargar para saber si era un ItemSO: cualquier .asset
+            // borrado dispara el rebuild (barato, y así no queda una entrada null en la base).
+            if (TouchesItemSO(importedAssets) || TouchesItemSO(movedAssets) || AnyAsset(deletedAssets))
                 Rebuild();
+        }
+
+        private static bool AnyAsset(string[] paths)
+        {
+            foreach (var path in paths)
+                if (path.EndsWith(".asset")) return true;
+            return false;
         }
 
         private static bool TouchesItemSO(string[] paths)
