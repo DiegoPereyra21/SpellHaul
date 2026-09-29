@@ -123,20 +123,20 @@ namespace Game.Presentation.Combat
         /// <summary>
         /// Diferencias contra los valores base, listas para mostrar en UI. Solo devuelve
         /// stats que realmente cambiaron (equipo vacío = lista vacía). label ya viene
-        /// formateado en español; isPositive determina el color (verde/rojo) en la UI.
+        /// formateado en inglés (texto visible al jugador); isPositive determina el color (verde/rojo) en la UI.
         /// </summary>
         public System.Collections.Generic.List<(string Label, bool IsPositive)> GetActiveModifierSummaries()
         {
             var result = new System.Collections.Generic.List<(string, bool)>();
 
-            AddIfChanged(result, "Daño", DamageMultiplier, _baseDamageMultiplier, asPercent: true);
-            AddIfChanged(result, "Vel. de casteo", CastSpeedMultiplier, _baseCastSpeedMultiplier, asPercent: true);
-            AddIfChanged(result, "Vel. de movimiento", MoveSpeed, _baseMoveSpeed, asPercent: true);
-            AddIfChanged(result, "Salto", JumpForce, _baseJumpForce, asPercent: true);
-            AddIfChanged(result, "Regen. de maná", ManaRegen, _baseManaRegen, asPercent: true);
+            AddIfChanged(result, "Damage", DamageMultiplier, _baseDamageMultiplier, asPercent: true);
+            AddIfChanged(result, "Cast Speed", CastSpeedMultiplier, _baseCastSpeedMultiplier, asPercent: true);
+            AddIfChanged(result, "Move Speed", MoveSpeed, _baseMoveSpeed, asPercent: true);
+            AddIfChanged(result, "Jump", JumpForce, _baseJumpForce, asPercent: true);
+            AddIfChanged(result, "Mana Regen", ManaRegen, _baseManaRegen, asPercent: true);
 
             if (ProtectionPercent > 0.001f)
-                result.Add(($"Protección +{ProtectionPercent * 100f:0}%", true));
+                result.Add(($"Protection +{ProtectionPercent * 100f:0}%", true));
 
             return result;
         }
