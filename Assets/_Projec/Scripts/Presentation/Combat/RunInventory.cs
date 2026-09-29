@@ -678,7 +678,8 @@ namespace Game.Presentation.Combat
         public void CommitToStash()
         {
             var snapshot = TakeSnapshot();
-            SaveLoadoutTargetRpc(base.Owner, snapshot);
+            if (base.Owner.IsActive) // desconectado: sin a quién mandarlo (ver reconexión)
+                SaveLoadoutTargetRpc(base.Owner, snapshot);
         }
 
         [TargetRpc]
@@ -710,7 +711,8 @@ namespace Game.Presentation.Combat
                 }
             }
 
-            ClearLoadoutTargetRpc(base.Owner);
+            if (base.Owner.IsActive) // desconectado: el cliente lo resuelve al volver al menú
+                ClearLoadoutTargetRpc(base.Owner);
             ClearAll();
         }
 

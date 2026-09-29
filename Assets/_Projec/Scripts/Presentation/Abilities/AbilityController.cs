@@ -569,7 +569,7 @@ namespace Game.Presentation.Abilities
         {
             PlayImpactObserversRpc(point, normal);
 
-            if (hitConfirmed)
+            if (hitConfirmed && base.Owner.IsActive) // el tirador pudo haberse desconectado
                 PlayHitMarkerTargetRpc(base.Owner, isKill);
         }
 

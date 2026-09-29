@@ -4,6 +4,8 @@ using FishNet.Managing;
 using FishNet.Managing.Scened;
 using FishNet.Object;
 using FishNet.Transporting;
+using Game.Presentation.Combat;
+using Game.Presentation.Player;
 using UnityEngine;
 
 namespace Game.Presentation.Bootstrap
@@ -33,6 +35,10 @@ namespace Game.Presentation.Bootstrap
         // Conexiones que ya terminaron de cargar sus escenas iniciales pero todavía no están en la
         // escena de la run (llegaron mientras el servidor la cargaba). Se spawnean al entrar.
         private readonly HashSet<NetworkConnection> _pending = new();
+
+        // Server-only: personaje de cada jugador en esta run, por clave de identidad
+        // (PlayerIdentityAuthenticator). Permite volver a tomar el mismo personaje al reconectar.
+        private readonly Dictionary<string, NetworkObject> _bodiesByKey = new();
 
         private void Start()
         {
@@ -83,8 +89,19 @@ namespace Game.Presentation.Bootstrap
 
         private void OnRemoteConnectionState(NetworkConnection conn, RemoteConnectionStateArgs args)
         {
-            if (args.ConnectionState == RemoteConnectionState.Stopped)
-                _pending.Remove(conn);
+            if (args.ConnectionState != RemoteConnectionState.Stopped) return;
+
+            _pending.Remove(conn);
+
+            // El personaje se queda en el mundo sin dueño (el prefab tiene Prevent Despawn On
+            // Disconnect): sigue siendo vulnerable y cuenta como vivo para la run hasta que muera,
+            // extraiga o su dueño vuelva a tomarlo.
+            foreach (var body in _bodiesByKey.Values)
+            {
+                if (body == null || !body.IsSpawned || body.OwnerId != conn.ClientId) continue;
+                body.RemoveOwnership();
+                Debug.Log($"[PlayerSpawnManager] Conexión {conn.ClientId} se fue: su personaje queda en la run esperando que vuelva.");
+            }
         }
 
         /// <summary>La escena de la run es la de los spawn points (se registran al habilitarse en ella).</summary>
@@ -98,12 +115,49 @@ namespace Game.Presentation.Bootstrap
         {
             if (!conn.IsActive) return;
 
+            PlayerIdentityAuthenticator.TryGetPlayerKey(conn, out string key);
+            if (key != null && _bodiesByKey.TryGetValue(key, out NetworkObject body))
+            {
+                TryReclaimBody(conn, key, body);
+                return;
+            }
+
             Transform point = PickSpawnPoint();
             Vector3 pos = point != null ? point.position : Vector3.zero;
             Quaternion rot = point != null ? point.rotation : Quaternion.identity;
 
             NetworkObject nob = _networkManager.GetPooledInstantiated(_playerPrefab, pos, rot, true);
             _networkManager.ServerManager.Spawn(nob, conn);
+
+            if (key != null) _bodiesByKey[key] = nob;
+        }
+
+        /// <summary>
+        /// Server-only. El jugador ya tuvo un personaje en esta run. Si sigue vivo y en juego, vuelve
+        /// a ser suyo (reconexión). Si murió o extrajo, se le avisa el resultado y se lo desconecta.
+        /// Si el personaje ya no existe, no se le da uno nuevo: sería entrar de nuevo con el loadout.
+        /// </summary>
+        private void TryReclaimBody(NetworkConnection conn, string key, NetworkObject body)
+        {
+            if (body == null || !body.IsSpawned)
+            {
+                PlayerIdentityAuthenticator.RejectWithOutcome(_networkManager, conn, RunOutcome.LeftRun);
+                return;
+            }
+
+            if (body.TryGetComponent(out PlayerAvatarState avatar) && avatar.IsControlDisabled)
+            {
+                bool extracted = body.TryGetComponent(out PlayerExtractionState ext) && ext.IsExtracted;
+                PlayerIdentityAuthenticator.RejectWithOutcome(_networkManager, conn,
+                    extracted ? RunOutcome.Extracted : RunOutcome.DiedWhileAway);
+                return;
+            }
+
+            if (body.Owner.IsActive && body.OwnerId != conn.ClientId)
+                body.RemoveOwnership(); // conexión vieja todavía sin cerrar del todo
+
+            body.GiveOwnership(conn);
+            Debug.Log($"[PlayerSpawnManager] {key} volvió a la run: recupera su personaje.");
         }
 
         private Transform PickSpawnPoint()

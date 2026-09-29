@@ -77,7 +77,21 @@ namespace Game.Presentation.Bootstrap
             bool runFinished = _localRunFinished;
             _localRunFinished = false;
 
-            if (runFinished)
+            // El servidor no nos dejó volver a la run (reconexión) y dijo por qué.
+            RunOutcome outcome = PlayerIdentityAuthenticator.LastRunOutcome;
+            PlayerIdentityAuthenticator.ConsumeRunOutcome();
+
+            if (outcome != RunOutcome.None)
+            {
+                LastDisconnectMessage = outcome switch
+                {
+                    RunOutcome.DiedWhileAway => "Your character died while you were away.",
+                    RunOutcome.Extracted => "You already extracted from this run.",
+                    _ => "You can no longer rejoin this run.",
+                };
+                Debug.Log($"[Disconnect] {LastDisconnectMessage}");
+            }
+            else if (runFinished)
             {
                 LastDisconnectMessage = "The run has ended.";
                 Debug.Log($"[Disconnect] {LastDisconnectMessage}");
