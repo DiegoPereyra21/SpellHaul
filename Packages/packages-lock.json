@@ -262,7 +262,7 @@
       "url": "https://packages.unity.com"
     },
     "jp.hadashikick.vcontainer": {
-      "version": "https://github.com/hadashiA/VContainer.git?path=VContainer/Assets/VContainer#master",
+      "version": "https://github.com/hadashiA/VContainer.git?path=VContainer/Assets/VContainer#5401e5a7ebc4980a2b82141ffc26391a6547edd7",
       "depth": 0,
       "source": "git",
       "dependencies": {},
