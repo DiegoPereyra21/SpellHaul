@@ -65,8 +65,9 @@ namespace Game.Presentation.Bootstrap
             }
 #endif
 
-#if UNITY_SERVER
-            // Un build de servidor dedicado no puede ser otra cosa, con o sin argumentos.
+#if UNITY_SERVER && !UNITY_EDITOR
+            // Un build de servidor dedicado no puede ser otra cosa, con o sin argumentos. No aplica
+            // al editor: con el Build Profile en Dedicated Server, UNITY_SERVER también está definido ahí.
             role = NetworkRole.Server;
 #endif
 

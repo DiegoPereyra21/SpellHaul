@@ -40,12 +40,13 @@ namespace Game.Presentation.Bootstrap
 
         /// <summary>True en cualquier proceso que sea un servidor dedicado: un build hecho con el
         /// target Dedicated Server siempre lo es, con o sin argumentos. Sirve para saltear todo lo
-        /// que es exclusivo de cliente (login a PlayFab, UI, etc.).</summary>
+        /// que es exclusivo de cliente (login a PlayFab, UI, etc.). En el editor manda el rol, aunque
+        /// el Build Profile activo sea Dedicated Server (ahí UNITY_SERVER también está definido).</summary>
         public static bool IsDedicatedServer
         {
             get
             {
-#if UNITY_SERVER
+#if UNITY_SERVER && !UNITY_EDITOR
                 return true;
 #else
                 return Role == NetworkRole.Server;
