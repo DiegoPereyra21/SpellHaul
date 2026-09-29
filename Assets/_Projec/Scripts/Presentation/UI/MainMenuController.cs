@@ -350,6 +350,7 @@ namespace Game.Presentation.UI
 
             tugboat.SetClientAddress(address);
             tugboat.SetPort(port);
+            RunServerEndpoint.Set(address, port);
 
             Debug.Log($"[MainMenu] Conectando a {address}:{port}");
             InstanceFinder.ClientManager.StartConnection();

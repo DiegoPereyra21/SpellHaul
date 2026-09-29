@@ -111,6 +111,7 @@ namespace Game.Presentation.Bootstrap
 
             tugboat.SetPort(port);
             tugboat.SetClientAddress(address);
+            RunServerEndpoint.Set(address, port);
         }
 
         private void StartRole(NetworkRole role)

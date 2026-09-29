@@ -69,12 +69,11 @@ namespace Game.Presentation.Combat
 
             // Desde acá el equipo está en juego. Si el cliente se cae o se cierra, al volver al menú
             // tiene que reconectar o darlo por perdido. En host no aplica: el servidor es este proceso.
-            if (!base.IsServerStarted)
-            {
-                var tugboat = InstanceFinder.TransportManager.GetTransport<FishNet.Transporting.Tugboat.Tugboat>();
-                if (tugboat != null)
-                    Game.Presentation.Run.PlayerLoadoutService.MarkActiveRun(tugboat.GetClientAddress(), tugboat.GetPort());
-            }
+            // Se usa la dirección pedida al conectar, no la de Tugboat: su GetPort() con el cliente
+            // conectado es el puerto local del socket, y reconectar ahí nunca llega.
+            if (!base.IsServerStarted && Game.Presentation.Bootstrap.RunServerEndpoint.IsSet)
+                Game.Presentation.Run.PlayerLoadoutService.MarkActiveRun(
+                    Game.Presentation.Bootstrap.RunServerEndpoint.Address, Game.Presentation.Bootstrap.RunServerEndpoint.Port);
         }
 
         [ServerRpc]
