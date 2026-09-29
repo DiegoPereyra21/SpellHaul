@@ -22,6 +22,10 @@ namespace Game.Presentation.Bootstrap
         /// <summary>Entity Key del jugador logueado (lo que usan las APIs de matchmaking, distinto
         /// del PlayFabId). Vacío hasta que IsReady sea true.</summary>
         public static string EntityId { get; private set; }
+
+        /// <summary>Session ticket de la sesión actual: se lo manda al servidor de la run para que
+        /// verifique la identidad con PlayFab. Nunca se loguea.</summary>
+        public static string SessionTicket { get; private set; }
         public static string EntityType { get; private set; }
 
 
@@ -76,6 +80,7 @@ namespace Game.Presentation.Bootstrap
                 var result = await tcs.Task;
                 Debug.Log($"[PlayFabSession] Login OK. PlayFabId: {result.PlayFabId}");
                 EntityId = result.EntityToken?.Entity?.Id;
+                SessionTicket = result.SessionTicket;
                 EntityType = result.EntityToken?.Entity?.Type;
                 Game.Presentation.Run.PlayerLoadoutService.Storage = new Game.Presentation.Run.PlayFabPlayerLoadoutStorage();
                 Game.Presentation.Run.StashService.Storage = new Game.Presentation.Run.PlayFabStashStorage();

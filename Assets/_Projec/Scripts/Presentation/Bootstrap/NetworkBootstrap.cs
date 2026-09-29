@@ -46,6 +46,7 @@ namespace Game.Presentation.Bootstrap
         [SerializeField] private bool _requireMatchMembership = true;
 
         private const string GsdkConfigEnvVar = "GSDK_CONFIG_FILE";
+        private const float MaxSaveFlushSeconds = 30f;
 
         private void Start()
         {
@@ -119,6 +120,7 @@ namespace Game.Presentation.Bootstrap
             switch (role)
             {
                 case NetworkRole.Server:
+                    Game.Presentation.Run.ServerProfileStore.Configure();
                     InstanceFinder.ServerManager.StartConnection();
                     StartCoroutine(LoadRunWhenServerReady());
                     break;
@@ -157,6 +159,7 @@ namespace Game.Presentation.Bootstrap
         private IEnumerator StartServerWithGsdk()
         {
             PlayFabMultiplayerAgentAPI.Start();
+            Game.Presentation.Run.ServerProfileStore.Configure();
 
             if (_requireMatchMembership)
                 PlayerIdentityAuthenticator.AllowedKeysProvider = () => PlayFabMultiplayerAgentAPI.GetInitialPlayers();
@@ -276,6 +279,15 @@ namespace Game.Presentation.Bootstrap
         private IEnumerator ShutdownAfterRunEnded()
         {
             yield return new WaitForSeconds(8f);
+
+            // El resultado de cada jugador lo guarda este proceso: no cerrarlo con escrituras
+            // pendientes (con un tope, para no quedar vivo para siempre si PlayFab no responde).
+            float giveUpAt = Time.time + MaxSaveFlushSeconds;
+            while (Game.Presentation.Run.ServerProfileStore.HasPendingWrites && Time.time < giveUpAt)
+                yield return null;
+            if (Game.Presentation.Run.ServerProfileStore.HasPendingWrites)
+                Debug.LogError("[NetworkBootstrap] Se cierra con guardados de loadout sin confirmar.");
+
             InstanceFinder.ServerManager.StopConnection(true);
             Application.Quit();
         }

@@ -78,7 +78,7 @@ namespace Game.Presentation.Run
                 return true;
             }
 
-            _snapshot = BuildSnapshotWithKit(kit);
+            _snapshot = CreateStartingSnapshot(kit);
             _initialized = true;
             ProfileSaveQueue.EnqueueLoadout(_snapshot); // primera vez (lectura OK y vacía): persistir el kit
             return true;
@@ -91,18 +91,51 @@ namespace Game.Presentation.Run
 
         public static ActiveRunInfo ActiveRun => _snapshot != null ? _snapshot.ActiveRun : default;
 
-        /// <summary>Client-only. El servidor ya tiene nuestro loadout: desde acá está en juego.</summary>
+        /// <summary>
+        /// Client-only, por conexión. True si el servidor de la run guarda el loadout (ver
+        /// ServerProfileStore): el cliente solo actualiza su cache y no escribe nada propio de la run.
+        /// Lo avisa el servidor al autenticar; se reinicia en cada conexión.
+        /// </summary>
+        public static bool ServerOwnsRun { get; set; }
+
+        /// <summary>Client-only. El servidor ya tiene nuestro loadout: desde acá está en juego.
+        /// Si el servidor es dueño del loadout, él ya guardó la marca: acá solo se refleja en la cache.</summary>
         public static void MarkActiveRun(string address, ushort port)
         {
             if (_snapshot == null) return;
-            _snapshot.ActiveRun = new ActiveRunInfo
-            {
-                Active = true,
-                Address = address,
-                Port = port,
-                StartedUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            };
-            ProfileSaveQueue.EnqueueLoadout(_snapshot);
+            _snapshot.ActiveRun = CreateActiveRun(address, port);
+            if (!ServerOwnsRun) ProfileSaveQueue.EnqueueLoadout(_snapshot);
+        }
+
+        public static ActiveRunInfo CreateActiveRun(string address, ushort port) => new ActiveRunInfo
+        {
+            Active = true,
+            Address = address,
+            Port = port,
+            StartedUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+        };
+
+        /// <summary>Client-only. Resultado de la run que llega del servidor (extrajo con esto).</summary>
+        public static void ApplyRunResult(InventorySnapshot snapshot)
+        {
+            if (snapshot == null) return;
+            if (ServerOwnsRun) { _snapshot = snapshot; _initialized = true; } // ya lo guardó el servidor
+            else Save(snapshot);
+        }
+
+        /// <summary>Client-only. Descarta la cache: la próxima lectura va a PlayFab (el servidor
+        /// es quien sabe cómo quedó el loadout).</summary>
+        public static void Invalidate()
+        {
+            _snapshot = null;
+            _initialized = false;
+        }
+
+        /// <summary>Client-only. La run se perdió (murió, o ya no puede volver).</summary>
+        public static void ApplyRunLost()
+        {
+            if (ServerOwnsRun) { _snapshot = CreateEmptySnapshot(); _initialized = true; }
+            else Clear();
         }
 
         /// <summary>Abandona la run en curso: el equipo que se llevó se pierde (igual que morir).</summary>
@@ -119,14 +152,15 @@ namespace Game.Presentation.Run
         /// <summary>Vacía el inventario propio (al morir: volvés desnudo, pero con los slots de equipo visibles).</summary>
         public static void Clear()
         {
-            _snapshot = BuildEmptySnapshot();
+            _snapshot = CreateEmptySnapshot();
             _initialized = true;
             ProfileSaveQueue.EnqueueLoadout(_snapshot);
         }
 
-        private static InventorySnapshot BuildSnapshotWithKit(StartingKitSO kit)
+        /// <summary>Loadout de un jugador nuevo: el kit inicial acomodado en sus slots.</summary>
+        public static InventorySnapshot CreateStartingSnapshot(StartingKitSO kit)
         {
-            var snap = BuildEmptySnapshot();
+            var snap = CreateEmptySnapshot();
 
             if (kit != null)
             {
@@ -167,8 +201,8 @@ namespace Game.Presentation.Run
             return 1;
         }
 
-        /// <summary>Snapshot con un slot vacío por cada EquipmentSlot (sin items). Base común de Clear/BuildSnapshotWithKit.</summary>
-        private static InventorySnapshot BuildEmptySnapshot()
+        /// <summary>Snapshot con un slot vacío por cada EquipmentSlot (sin items). Base común de Clear/CreateStartingSnapshot.</summary>
+        public static InventorySnapshot CreateEmptySnapshot()
         {
             var snap = new InventorySnapshot();
             int slotCount = System.Enum.GetValues(typeof(EquipmentSlot)).Length;

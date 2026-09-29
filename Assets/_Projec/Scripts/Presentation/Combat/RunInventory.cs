@@ -42,6 +42,79 @@ namespace Game.Presentation.Combat
                 _equipment.Add(ItemStack.Empty);
 
             RebuildAllPocketCapacities();
+
+            _loadoutSubmitted = false;
+            _ownerPlayFabId = null;
+            _serverOwnsLoadout = false;
+            _resultWritten = false;
+
+            // Con el servidor dueño del loadout, lo lee él de PlayFab (el cliente ya no lo manda).
+            if (Game.Presentation.Run.ServerProfileStore.IsActive)
+                _ = ServerLoadLoadoutAsync();
+        }
+
+        // Server-only: el loadout de este personaje lo guarda el servidor (ver ServerProfileStore).
+        private string _ownerPlayFabId;
+        private bool _serverOwnsLoadout;
+        private bool _resultWritten;
+
+        /// <summary>
+        /// Server-only. Lee el loadout del dueño desde PlayFab, lo aplica y guarda la marca de run en
+        /// curso (el equipo ya está en juego: si el jugador no vuelve, se pierde al morir el cuerpo).
+        /// Si no se puede leer, el jugador no juega esta run: se lo saca sin escribir nada, porque
+        /// cualquier escritura pisaría su loadout real.
+        /// </summary>
+        private async System.Threading.Tasks.Task ServerLoadLoadoutAsync()
+        {
+            // El dueño se asigna en el mismo Spawn; por las dudas, darle un momento.
+            for (int i = 0; i < 30 && base.IsSpawned && !base.Owner.IsValid; i++)
+                await System.Threading.Tasks.Task.Yield();
+            if (!base.IsSpawned) return;
+
+            var owner = base.Owner;
+            string key = null, playFabId = null;
+            bool known = Game.Presentation.Bootstrap.PlayerIdentityAuthenticator.TryGetPlayerKey(owner, out key)
+                         && Game.Presentation.Bootstrap.PlayerIdentityAuthenticator.TryGetPlayFabId(key, out playFabId);
+
+            bool ok = false;
+            InventorySnapshot loaded = null;
+            if (known)
+                (ok, loaded) = await Game.Presentation.Run.ServerProfileStore.LoadLoadoutAsync(playFabId);
+
+            if (!base.IsSpawned) return;
+
+            if (!ok)
+            {
+                Debug.LogError($"[RunInventory] No se pudo leer el loadout de {(known ? playFabId : "un jugador sin sesión verificada")}: se lo saca de la run sin tocar sus datos.");
+                if (owner != null && owner.IsActive)
+                    Game.Presentation.Bootstrap.PlayerIdentityAuthenticator.RejectWithOutcome(
+                        InstanceFinder.NetworkManager, owner, Game.Presentation.Bootstrap.RunOutcome.ProfileUnavailable);
+                base.Despawn(); // sin cuerpo: no cuenta como vivo ni bloquea el fin de la run
+                return;
+            }
+
+            loaded ??= Game.Presentation.Run.PlayerLoadoutService.CreateStartingSnapshot(_startingKit);
+            _ownerPlayFabId = playFabId;
+            _serverOwnsLoadout = true;
+            _loadoutSubmitted = true;
+            ApplySnapshot(SanitizeSnapshot(loaded));
+
+            // Marca de run en curso con lo que quedó aplicado (si algo no entraba, ya está en el piso).
+            var marked = TakeSnapshot();
+            if (Game.Presentation.Bootstrap.PlayerIdentityAuthenticator.TryGetEndpoint(key, out string address, out ushort port))
+                marked.ActiveRun = Game.Presentation.Run.PlayerLoadoutService.CreateActiveRun(address, port);
+            else
+                marked.ActiveRun = Game.Presentation.Run.PlayerLoadoutService.CreateActiveRun(string.Empty, 0);
+            Game.Presentation.Run.ServerProfileStore.SaveLoadout(_ownerPlayFabId, marked);
+            Debug.Log($"[RunInventory] Loadout de {playFabId} leído por el servidor: run en curso guardada.");
+        }
+
+        /// <summary>Server-only. Guarda el resultado final de la run (una sola vez por personaje).</summary>
+        private void ServerWriteResult(InventorySnapshot result)
+        {
+            if (!_serverOwnsLoadout || _resultWritten) return;
+            _resultWritten = true;
+            Game.Presentation.Run.ServerProfileStore.SaveLoadout(_ownerPlayFabId, result);
         }
 
         public override void OnStartClient()
@@ -57,6 +130,16 @@ namespace Game.Presentation.Combat
         /// y se lo empuja al servidor para que arme el inventario de esta run.</summary>
         private async System.Threading.Tasks.Task ClientPushLoadoutAsync()
         {
+            // El servidor lee y guarda el loadout: acá solo se refleja en la cache la run en curso
+            // (él ya la guardó en PlayFab), para que el menú ofrezca reconectar si se corta.
+            if (Game.Presentation.Run.PlayerLoadoutService.ServerOwnsRun)
+            {
+                if (Game.Presentation.Bootstrap.RunServerEndpoint.IsSet)
+                    Game.Presentation.Run.PlayerLoadoutService.MarkActiveRun(
+                        Game.Presentation.Bootstrap.RunServerEndpoint.Address, Game.Presentation.Bootstrap.RunServerEndpoint.Port);
+                return;
+            }
+
             if (!await Game.Presentation.Run.PlayerLoadoutService.EnsureInitializedAsync(_startingKit))
             {
                 // Sin loadout leído no se puede jugar la run: al extraer/morir se persistiría encima
@@ -79,6 +162,9 @@ namespace Game.Presentation.Combat
         [ServerRpc]
         private void SubmitLoadoutServerRpc(Game.Core.Items.InventorySnapshot snapshot)
         {
+            // Con el servidor dueño del loadout, lo que mande el cliente no cuenta.
+            if (Game.Presentation.Run.ServerProfileStore.IsActive) return;
+
             // Una sola vez por run, al entrar: si se aceptara en cualquier momento, un cliente podía
             // "restaurar" su equipo a mitad de run o después de morir (duplicar lo que ya soltó).
             if (_loadoutSubmitted)
@@ -686,6 +772,7 @@ namespace Game.Presentation.Combat
         public void CommitToStash()
         {
             var snapshot = TakeSnapshot();
+            ServerWriteResult(snapshot);
             if (base.Owner.IsActive) // desconectado: sin a quién mandarlo (ver reconexión)
                 SaveLoadoutTargetRpc(base.Owner, snapshot);
         }
@@ -693,7 +780,7 @@ namespace Game.Presentation.Combat
         [TargetRpc]
         private void SaveLoadoutTargetRpc(FishNet.Connection.NetworkConnection conn, Game.Core.Items.InventorySnapshot snapshot)
         {
-            Game.Presentation.Run.PlayerLoadoutService.Save(snapshot);
+            Game.Presentation.Run.PlayerLoadoutService.ApplyRunResult(snapshot);
         }
 
         [Server]
@@ -719,16 +806,16 @@ namespace Game.Presentation.Combat
                 }
             }
 
+            ServerWriteResult(Game.Presentation.Run.PlayerLoadoutService.CreateEmptySnapshot());
             if (base.Owner.IsActive) // desconectado: el cliente lo resuelve al volver al menú
                 ClearLoadoutTargetRpc(base.Owner);
             ClearAll();
         }
 
-
         [TargetRpc]
         private void ClearLoadoutTargetRpc(FishNet.Connection.NetworkConnection conn)
         {
-            Game.Presentation.Run.PlayerLoadoutService.Clear();
+            Game.Presentation.Run.PlayerLoadoutService.ApplyRunLost();
         }
 
         [Server]

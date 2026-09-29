@@ -212,6 +212,8 @@ namespace Game.Presentation.UI
                 ShowNotice(InventoryLoadFailedMessage);
         }
 
+        private const float SaveWaitSeconds = 15f;
+
         private const string InventoryLoadFailedMessage = "Could not load your inventory. Please try again.";
 
         private async void OnFindMatchClicked()
@@ -242,6 +244,24 @@ namespace Game.Presentation.UI
             }
             if (!_searching) return; // canceló mientras cargaba
             if (Game.Presentation.Run.PlayerLoadoutService.IsInActiveRun) { ShowRejoinPanel(RejoinDefaultMessage); return; }
+
+            // El servidor de la run lee el loadout de PlayFab: lo último que se tocó en el Stash
+            // tiene que estar guardado antes de entrar, o arrancaría con una versión vieja.
+            if (Game.Presentation.Run.PlayerLoadoutService.PendingSync)
+            {
+                _searchStatus.text = "Saving your inventory...";
+                float giveUpAt = Time.time + SaveWaitSeconds;
+                while (Game.Presentation.Run.PlayerLoadoutService.PendingSync && Time.time < giveUpAt)
+                {
+                    await System.Threading.Tasks.Task.Delay(100);
+                    if (!_searching) return;
+                }
+                if (Game.Presentation.Run.PlayerLoadoutService.PendingSync)
+                {
+                    ShowNotice("Could not save your inventory. Check your connection and try again.");
+                    return;
+                }
+            }
 
             _searchStatus.text = "Entering the queue...";
             _matchmaking.StartSearch();

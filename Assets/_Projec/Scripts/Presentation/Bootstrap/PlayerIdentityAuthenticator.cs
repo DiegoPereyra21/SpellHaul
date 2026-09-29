@@ -13,6 +13,17 @@ namespace Game.Presentation.Bootstrap
     public struct PlayerIdentityBroadcast : IBroadcast
     {
         public string PlayerKey;
+        /// <summary>Session ticket de PlayFab: con el servidor dueño del loadout, prueba quién es.</summary>
+        public string SessionTicket;
+        /// <summary>Dirección y puerto a los que se conectó (los guarda el servidor para la reconexión).</summary>
+        public string ServerAddress;
+        public ushort ServerPort;
+    }
+
+    /// <summary>Servidor → cliente, antes de aceptar la conexión: quién guarda el loadout de esta run.</summary>
+    public struct ServerPersistenceBroadcast : IBroadcast
+    {
+        public bool ServerOwnsProfile;
     }
 
     /// <summary>Resultado de la run de un jugador que intentó volver y ya no tiene personaje jugable.</summary>
@@ -24,6 +35,8 @@ namespace Game.Presentation.Bootstrap
         LeftRun = 3,
         /// <summary>El servidor no tiene a este jugador entre los del match (validación en la nube).</summary>
         NotInMatch = 4,
+        /// <summary>El servidor no pudo verificar la sesión de PlayFab o leer el loadout.</summary>
+        ProfileUnavailable = 5,
     }
 
     /// <summary>Servidor → cliente: por qué no puede volver a la run (antes de desconectarlo).</summary>
@@ -42,10 +55,11 @@ namespace Game.Presentation.Bootstrap
     /// devuelve su personaje (ver PlayerSpawnManager). Va en el mismo GameObject que el
     /// NetworkManager: ServerManager lo toma solo con GetComponent.
     ///
-    /// Todavía no valida la sesión de PlayFab (eso requiere que el servidor sea dueño de la
-    /// persistencia): solo rechaza claves vacías o demasiado largas. Si la misma clave ya tiene
-    /// una conexión abierta (típico tras un crash: el servidor tarda en notar la caída), gana la
-    /// nueva y la vieja se corta.
+    /// Con el servidor dueño del loadout (ServerProfileStore activo) la identidad se verifica con
+    /// el session ticket de PlayFab; sin eso (host / desarrollo) se confía en la clave declarada y
+    /// solo se rechazan claves vacías o demasiado largas. Si la misma clave ya tiene una conexión
+    /// abierta (típico tras un crash: el servidor tarda en notar la caída), gana la nueva y la
+    /// vieja se corta.
     /// </summary>
     public class PlayerIdentityAuthenticator : Authenticator
     {
@@ -66,6 +80,29 @@ namespace Game.Presentation.Bootstrap
         // Server-only: clave de cada conexión autenticada.
         private static readonly Dictionary<int, string> _keysByClientId = new();
 
+        // Server-only, por clave de jugador (sobreviven a la desconexión: el personaje sigue en la run).
+        private static readonly Dictionary<string, string> _playFabIdByKey = new();
+        private static readonly Dictionary<string, (string address, ushort port)> _endpointByKey = new();
+
+        // Server-only: conexiones con una verificación de sesión en curso.
+        private static readonly HashSet<int> _verifying = new();
+
+        /// <summary>Server-only. PlayFabId verificado del jugador (solo con ServerProfileStore activo).</summary>
+        public static bool TryGetPlayFabId(string key, out string playFabId)
+        {
+            playFabId = null;
+            return key != null && _playFabIdByKey.TryGetValue(key, out playFabId);
+        }
+
+        /// <summary>Server-only. Dirección con la que el jugador llegó a este servidor (para reconectar).</summary>
+        public static bool TryGetEndpoint(string key, out string address, out ushort port)
+        {
+            address = null; port = 0;
+            if (key == null || !_endpointByKey.TryGetValue(key, out var ep)) return false;
+            address = ep.address; port = ep.port;
+            return true;
+        }
+
         /// <summary>Server-only. Clave del jugador detrás de esta conexión.</summary>
         public static bool TryGetPlayerKey(NetworkConnection conn, out string key)
         {
@@ -79,6 +116,7 @@ namespace Game.Presentation.Bootstrap
 
             networkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             networkManager.ClientManager.RegisterBroadcast<RunOutcomeBroadcast>(OnRunOutcomeBroadcast);
+            networkManager.ClientManager.RegisterBroadcast<ServerPersistenceBroadcast>(OnServerPersistenceBroadcast);
 
             networkManager.ServerManager.RegisterBroadcast<PlayerIdentityBroadcast>(OnPlayerIdentityBroadcast, requireAuthentication: false);
             networkManager.ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
@@ -98,7 +136,21 @@ namespace Game.Presentation.Bootstrap
             if (args.ConnectionState != LocalConnectionState.Started) return;
 
             LastRunOutcome = RunOutcome.None;
-            NetworkManager.ClientManager.Broadcast(new PlayerIdentityBroadcast { PlayerKey = BuildLocalPlayerKey() });
+            Game.Presentation.Run.PlayerLoadoutService.ServerOwnsRun = false;
+            NetworkManager.ClientManager.Broadcast(new PlayerIdentityBroadcast
+            {
+                PlayerKey = BuildLocalPlayerKey(),
+                SessionTicket = PlayFabSession.SessionTicket,
+                ServerAddress = RunServerEndpoint.Address,
+                ServerPort = RunServerEndpoint.Port,
+            });
+        }
+
+        private static void OnServerPersistenceBroadcast(ServerPersistenceBroadcast msg, Channel channel)
+        {
+            Game.Presentation.Run.PlayerLoadoutService.ServerOwnsRun = msg.ServerOwnsProfile;
+            if (msg.ServerOwnsProfile)
+                Debug.Log("[Auth] El servidor guarda el loadout de esta run.");
         }
 
         /// <summary>
@@ -132,11 +184,17 @@ namespace Game.Presentation.Bootstrap
             {
                 case RunOutcome.Extracted:
                     if (msg.ExtractedLoadout != null)
-                        Game.Presentation.Run.PlayerLoadoutService.Save(msg.ExtractedLoadout);
+                        Game.Presentation.Run.PlayerLoadoutService.ApplyRunResult(msg.ExtractedLoadout);
                     break;
                 case RunOutcome.DiedWhileAway:
+                    Game.Presentation.Run.PlayerLoadoutService.ApplyRunLost();
+                    break;
                 case RunOutcome.LeftRun:
-                    Game.Presentation.Run.PlayerLoadoutService.Clear();
+                    // Con el servidor dueño, él sabe cómo quedó: releer. Si no, se pierde como antes.
+                    if (Game.Presentation.Run.PlayerLoadoutService.ServerOwnsRun)
+                        Game.Presentation.Run.PlayerLoadoutService.Invalidate();
+                    else
+                        Game.Presentation.Run.PlayerLoadoutService.ApplyRunLost();
                     break;
             }
         }
@@ -146,6 +204,7 @@ namespace Game.Presentation.Bootstrap
         private void OnPlayerIdentityBroadcast(NetworkConnection conn, PlayerIdentityBroadcast msg, Channel channel)
         {
             if (conn.IsAuthenticated) return; // ya se identificó: ignorar repeticiones
+            if (_verifying.Contains(conn.ClientId)) return;
 
             string key = msg.PlayerKey;
             bool valid = !string.IsNullOrEmpty(key) && key.Length <= MaxKeyLength;
@@ -157,6 +216,48 @@ namespace Game.Presentation.Bootstrap
                 return;
             }
 
+            // Con el servidor dueño del loadout, la clave no se cree: se verifica el session
+            // ticket con PlayFab y la identidad sale de ahí (nadie puede hacerse pasar por otro).
+            if (Game.Presentation.Run.ServerProfileStore.IsActive)
+            {
+                _ = VerifyAndContinueAsync(conn, msg);
+                return;
+            }
+
+            ContinueAuthentication(conn, key, null, msg);
+        }
+
+        private async System.Threading.Tasks.Task VerifyAndContinueAsync(NetworkConnection conn, PlayerIdentityBroadcast msg)
+        {
+            _verifying.Add(conn.ClientId);
+            Game.Presentation.Run.ServerProfileStore.VerifiedPlayer verified;
+            try
+            {
+                verified = await Game.Presentation.Run.ServerProfileStore.VerifySessionTicketAsync(msg.SessionTicket);
+            }
+            finally
+            {
+                _verifying.Remove(conn.ClientId);
+            }
+
+            if (!conn.IsActive) return; // se fue mientras se verificaba
+
+            if (!verified.Ok)
+            {
+                string detail = $"No se pudo verificar la sesión de PlayFab: {verified.Error}";
+                Debug.LogWarning($"[Auth] Conexión {conn.ClientId} rechazada: {detail}");
+                RejectWithOutcome(NetworkManager, conn, RunOutcome.ProfileUnavailable, null, detail, requireAuthenticated: false);
+                return;
+            }
+
+            if (!string.Equals(verified.EntityId, msg.PlayerKey, StringComparison.Ordinal))
+                Debug.LogWarning($"[Auth] Conexión {conn.ClientId}: la clave declarada '{msg.PlayerKey}' no coincide con la sesión ({verified.EntityId}); se usa la de la sesión.");
+
+            ContinueAuthentication(conn, verified.EntityId, verified.PlayFabId, msg);
+        }
+
+        private void ContinueAuthentication(NetworkConnection conn, string key, string playFabId, PlayerIdentityBroadcast msg)
+        {
             if (!IsAllowedByMatch(key, out string allowedList))
             {
                 string detail = $"'{key}' no es jugador de este match. Permitidos: [{allowedList}]";
@@ -168,6 +269,13 @@ namespace Game.Presentation.Bootstrap
 
             KickStaleConnection(key);
             _keysByClientId[conn.ClientId] = key;
+            if (playFabId != null) _playFabIdByKey[key] = playFabId;
+            if (!string.IsNullOrEmpty(msg.ServerAddress) && msg.ServerPort != 0)
+                _endpointByKey[key] = (msg.ServerAddress, msg.ServerPort);
+
+            // Antes del resultado (mismo canal confiable): el cliente ya sabe quién guarda al entrar.
+            NetworkManager.ServerManager.Broadcast(conn,
+                new ServerPersistenceBroadcast { ServerOwnsProfile = playFabId != null }, requireAuthenticated: false);
             OnAuthenticationResult?.Invoke(conn, true);
         }
 
@@ -218,7 +326,10 @@ namespace Game.Presentation.Bootstrap
         private void OnRemoteConnectionState(NetworkConnection conn, RemoteConnectionStateArgs args)
         {
             if (args.ConnectionState == RemoteConnectionState.Stopped)
+            {
                 _keysByClientId.Remove(conn.ClientId);
+                _verifying.Remove(conn.ClientId);
+            }
         }
 
         /// <summary>Server-only. Avisa al cliente por qué no puede volver y lo desconecta.</summary>

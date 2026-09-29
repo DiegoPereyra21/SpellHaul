@@ -88,6 +88,7 @@ namespace Game.Presentation.Bootstrap
                     RunOutcome.DiedWhileAway => "Your character died while you were away.",
                     RunOutcome.Extracted => "You already extracted from this run.",
                     RunOutcome.NotInMatch => "This server doesn't have you in its match. Try finding a new run.",
+                    RunOutcome.ProfileUnavailable => "Could not verify your profile. Please try again.",
                     _ => "You can no longer rejoin this run.",
                 };
                 Debug.Log($"[Disconnect] {LastDisconnectMessage}");

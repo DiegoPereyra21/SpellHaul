@@ -105,3 +105,6 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Clave secreta de PlayFab del servidor dedicado: nunca al repositorio
+playfab_secret.txt
