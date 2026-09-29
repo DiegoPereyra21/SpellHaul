@@ -96,7 +96,22 @@ namespace Game.Presentation.UI
         public override void OnStartClient()
         {
             base.OnStartClient();
+            ApplyOwnershipClient();
+        }
 
+        // Se reevalúa al cambiar de dueño: al reconectar, el cliente recibe su personaje primero
+        // sin dueño (el servidor le devuelve el control un instante después) y OnStartClient ya
+        // corrió como si fuera de otro jugador.
+        public override void OnOwnershipClient(FishNet.Connection.NetworkConnection prevOwner)
+        {
+            base.OnOwnershipClient(prevOwner);
+            ApplyOwnershipClient();
+        }
+
+        private bool _ownerSetupDone;
+
+        private void ApplyOwnershipClient()
+        {
             // Solo el dueño ve su propio HUD. Los demás Players no deben renderizar UI.
             if (!base.IsOwner)
             {
@@ -104,7 +119,12 @@ namespace Game.Presentation.UI
                 enabled = false;
                 return;
             }
-            
+
+            _document.rootVisualElement.style.display = DisplayStyle.Flex;
+            enabled = true;
+            if (_ownerSetupDone) return;
+            _ownerSetupDone = true;
+
             var root = _document.rootVisualElement;
             _cam = GetComponentInChildren<Camera>();
             _healthFill = root.Q<VisualElement>("health-bar-fill");

@@ -172,14 +172,28 @@ namespace Game.Presentation.Player
         public override void OnStartClient()
         {
             base.OnStartClient();
+            ApplyOwnershipClient();
+        }
 
-            if (!base.IsOwner)
-            {
-                // Desactivar cámara y input para jugadores que no son nuestros.
-                if (_cameraRoot != null) _cameraRoot.SetActive(false);
-                enabled = false;
-            }
-            else if (_cameraRoot != null)
+        // Se reevalúa al cambiar de dueño: al reconectar, el cliente recibe su personaje primero
+        // sin dueño (el servidor le devuelve el control un instante después) y OnStartClient ya
+        // corrió como si fuera de otro jugador.
+        public override void OnOwnershipClient(FishNet.Connection.NetworkConnection prevOwner)
+        {
+            base.OnOwnershipClient(prevOwner);
+            ApplyOwnershipClient();
+        }
+
+        private void ApplyOwnershipClient()
+        {
+            bool owner = base.IsOwner;
+
+            // Cámara e input solo para el personaje propio.
+            if (_cameraRoot != null) _cameraRoot.SetActive(owner);
+            enabled = owner;
+            if (!owner) return;
+
+            if (_cameraRoot != null)
             {
                 var shake = _cameraRoot.GetComponentInChildren<Game.Presentation.Combat.ScreenShake>(true);
                 if (shake != null)

@@ -74,8 +74,27 @@ namespace Game.Presentation.UI
         public override void OnStartClient()
         {
             base.OnStartClient();
+            ApplyOwnershipClient();
+        }
 
+        // Se reevalúa al cambiar de dueño: al reconectar, el cliente recibe su personaje primero
+        // sin dueño (el servidor le devuelve el control un instante después) y OnStartClient ya
+        // corrió como si fuera de otro jugador.
+        public override void OnOwnershipClient(FishNet.Connection.NetworkConnection prevOwner)
+        {
+            base.OnOwnershipClient(prevOwner);
+            ApplyOwnershipClient();
+        }
+
+        private bool _ownerSetupDone;
+
+        private void ApplyOwnershipClient()
+        {
             if (!base.IsOwner) { enabled = false; return; }
+
+            enabled = true;
+            if (_ownerSetupDone) return;
+            _ownerSetupDone = true;
 
             var go = GameObject.Find("InventoryUIDocument");
             if (go != null) _document = go.GetComponent<UIDocument>();
