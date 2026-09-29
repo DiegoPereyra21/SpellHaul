@@ -137,7 +137,6 @@ namespace Game.Presentation.Player
             _jumpAction.Enable();
             _sprintAction.Enable();
             _lookAction.Enable();
-            Cursor.lockState = CursorLockMode.Locked;
         }
 
         private void OnDisable()
@@ -192,6 +191,11 @@ namespace Game.Presentation.Player
             if (_cameraRoot != null) _cameraRoot.SetActive(owner);
             enabled = owner;
             if (!owner) return;
+
+            // Solo el personaje propio bloquea el cursor. Antes lo hacía OnEnable en cualquier
+            // Player (también el de otro jugador o uno rechazado al reconectar) y el cursor
+            // quedaba bloqueado al volver al menú.
+            Cursor.lockState = CursorLockMode.Locked;
 
             if (_cameraRoot != null)
             {

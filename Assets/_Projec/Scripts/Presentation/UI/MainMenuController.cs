@@ -35,6 +35,10 @@ namespace Game.Presentation.UI
             _document = GetComponent<UIDocument>();
             var root = _document.rootVisualElement;
 
+            // Volviendo de una run (fin, caída o reconexión rechazada) el cursor puede venir bloqueado.
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
+
             root.Q<Button>("find-match-button").clicked += OnFindMatchClicked;
             root.Q<Button>("stash-button").clicked += OnStashClicked;
             root.Q<Button>("quit-button").clicked += () => Application.Quit();

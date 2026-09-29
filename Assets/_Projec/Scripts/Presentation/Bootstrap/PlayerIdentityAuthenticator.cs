@@ -28,6 +28,8 @@ namespace Game.Presentation.Bootstrap
     public struct RunOutcomeBroadcast : IBroadcast
     {
         public RunOutcome Outcome;
+        /// <summary>Solo con Extracted: lo que el personaje sacó de la run, para guardarlo.</summary>
+        public Game.Core.Items.InventorySnapshot ExtractedLoadout;
     }
 
     /// <summary>
@@ -104,9 +106,26 @@ namespace Game.Presentation.Bootstrap
             return "dev:" + SystemInfo.deviceUniqueIdentifier;
         }
 
+        /// <summary>
+        /// Client-only. El servidor no nos deja volver a la run. Con la persistencia en el cliente,
+        /// acá se aplica el resultado que no pudo llegar mientras estábamos desconectados:
+        /// extrajo → se guarda lo extraído; murió o ya no está → se pierde el equipo (como en Tarkov).
+        /// </summary>
         private static void OnRunOutcomeBroadcast(RunOutcomeBroadcast msg, Channel channel)
         {
             LastRunOutcome = msg.Outcome;
+
+            switch (msg.Outcome)
+            {
+                case RunOutcome.Extracted:
+                    if (msg.ExtractedLoadout != null)
+                        Game.Presentation.Run.PlayerLoadoutService.Save(msg.ExtractedLoadout);
+                    break;
+                case RunOutcome.DiedWhileAway:
+                case RunOutcome.LeftRun:
+                    Game.Presentation.Run.PlayerLoadoutService.Clear();
+                    break;
+            }
         }
 
         // ---------- Servidor ----------
@@ -154,9 +173,10 @@ namespace Game.Presentation.Bootstrap
         }
 
         /// <summary>Server-only. Avisa al cliente por qué no puede volver y lo desconecta.</summary>
-        public static void RejectWithOutcome(NetworkManager networkManager, NetworkConnection conn, RunOutcome outcome)
+        public static void RejectWithOutcome(NetworkManager networkManager, NetworkConnection conn, RunOutcome outcome,
+            Game.Core.Items.InventorySnapshot extractedLoadout = null)
         {
-            networkManager.ServerManager.Broadcast(conn, new RunOutcomeBroadcast { Outcome = outcome });
+            networkManager.ServerManager.Broadcast(conn, new RunOutcomeBroadcast { Outcome = outcome, ExtractedLoadout = extractedLoadout });
             conn.Disconnect(false); // no inmediato: deja salir el broadcast
         }
     }

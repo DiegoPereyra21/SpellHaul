@@ -4,6 +4,7 @@ using FishNet.Managing;
 using FishNet.Managing.Scened;
 using FishNet.Object;
 using FishNet.Transporting;
+using Game.Core.Items;
 using Game.Presentation.Combat;
 using Game.Presentation.Player;
 using UnityEngine;
@@ -148,8 +149,11 @@ namespace Game.Presentation.Bootstrap
             if (body.TryGetComponent(out PlayerAvatarState avatar) && avatar.IsControlDisabled)
             {
                 bool extracted = body.TryGetComponent(out PlayerExtractionState ext) && ext.IsExtracted;
+                // Si extrajo, se reenvía lo extraído: el guardado original pudo no llegar si se
+                // desconectó justo al extraer.
+                InventorySnapshot loot = extracted && body.TryGetComponent(out RunInventory inv) ? inv.TakeSnapshot() : null;
                 PlayerIdentityAuthenticator.RejectWithOutcome(_networkManager, conn,
-                    extracted ? RunOutcome.Extracted : RunOutcome.DiedWhileAway);
+                    extracted ? RunOutcome.Extracted : RunOutcome.DiedWhileAway, loot);
                 return;
             }
 

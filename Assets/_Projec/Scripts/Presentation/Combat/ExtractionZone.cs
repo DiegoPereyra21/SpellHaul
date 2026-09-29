@@ -50,6 +50,16 @@ namespace Game.Presentation.Combat
             _iterationBuffer.AddRange(_channeling.Keys);
             foreach (var ext in _iterationBuffer)
             {
+                // Sin dueño (desconectado): no canaliza. Se queda en la lista con la barra en 0 para
+                // retomar si vuelve estando todavía adentro (OnTriggerEnter no se repite).
+                // Antes seguía canalizando solo y "extraía" sin nadie a quien guardarle el loot.
+                if (ext != null && ext.CanExtract && !ext.Owner.IsActive)
+                {
+                    _channeling[ext] = 0f;
+                    ext.ServerSetProgress(0f);
+                    continue;
+                }
+
                 if (ext == null || !ext.CanExtract)
                 {
                     _channeling.Remove(ext);
