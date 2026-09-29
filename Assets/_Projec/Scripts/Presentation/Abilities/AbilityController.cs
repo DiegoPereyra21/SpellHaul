@@ -100,6 +100,60 @@ namespace Game.Presentation.Abilities
 
         private bool IsOnCooldown(uint endTick) => base.TimeManager.Tick < endTick;
 
+        // Techo de antigüedad del tick de disparo que manda el cliente para medir cooldowns. A
+        // 60 Hz, 20 ≈ 333 ms (latencia + jitter). Más viejo que eso se toma como "ahora - techo".
+        private const uint MaxFireTickAgeTicks = 20;
+
+        /// <summary>
+        /// Server-only. Tick de disparo del cliente acotado a [ahora - techo, ahora]. El cooldown se
+        /// mide entre ticks de DISPARO, no de llegada del RPC: con la llegada, el jitter de la red
+        /// juntaba dos casts seguidos y el servidor rechazaba el segundo aunque el cliente respetó
+        /// el cooldown (el cliente ya había mostrado el proyectil: "pegaba" sin hacer daño). El
+        /// ritmo sostenido sigue acotado: cada disparo tiene que estar un cooldown después del
+        /// anterior y nunca en el futuro.
+        /// </summary>
+        private uint ClampFireTick(PreciseTick fireTick)
+        {
+            uint now = base.TimeManager.Tick;
+            uint oldest = now > MaxFireTickAgeTicks ? now - MaxFireTickAgeTicks : 0u;
+            uint tick = fireTick.Tick;
+            if (tick < oldest) tick = oldest;
+            if (tick > now) tick = now;
+            return tick;
+        }
+
+        private uint CooldownTicks(AbilitySO ability)
+        {
+            float castSpeed = _stats != null ? _stats.CastSpeedMultiplier : 1f;
+            return base.TimeManager.TimeToTicks(ability.Cooldown / Mathf.Max(0.1f, castSpeed));
+        }
+
+        // ---------- Maná predicho (cliente) ----------
+
+        // Gastos locales que el SyncVar de maná todavía puede no reflejar (llega un RTT después).
+        // Sin esto, spameando con poco maná el cliente veía maná de sobra, mostraba el proyectil y
+        // el servidor rechazaba el cast.
+        private readonly System.Collections.Generic.List<(float time, float cost)> _localManaSpends = new();
+
+        private float PredictedLocalMana()
+        {
+            if (_mana == null) return float.MaxValue;
+            float window = (float)(base.TimeManager.RoundTripTime / 1000.0) + 0.15f;
+            float now = Time.unscaledTime;
+            float pending = 0f;
+            for (int i = _localManaSpends.Count - 1; i >= 0; i--)
+            {
+                if (now - _localManaSpends[i].time > window) _localManaSpends.RemoveAt(i);
+                else pending += _localManaSpends[i].cost;
+            }
+            return _mana.Current - pending;
+        }
+
+        private void RecordLocalManaSpend(float cost)
+        {
+            if (cost > 0f) _localManaSpends.Add((Time.unscaledTime, cost));
+        }
+
         /// <summary>Segundos restantes hasta endTick, en el reloj local de este lado (server o cliente). 0 si ya pasó.</summary>
         private float RemainingSeconds(uint endTick)
         {
@@ -223,10 +277,11 @@ namespace Game.Presentation.Abilities
 
             // Chequeos locales (feedback inmediato, no autoritativos).
             if (IsOnCooldown(_localCooldownEndTick[slot])) return;
-            if (_mana != null && _mana.Current < ability.ResourceCost) return;
+            if (PredictedLocalMana() < ability.ResourceCost) return;
 
-            // Predicción local de cooldown solamente. El maná lo descuenta y sincroniza el servidor.
+            // Predicción local de cooldown y maná. El maná real lo descuenta y sincroniza el servidor.
             PredictCooldownLocally(slot, ability);
+            RecordLocalManaSpend(ability.ResourceCost);
 
             ResolveAim(out Vector3 aimDirection, out Vector3 aimPoint);
 
@@ -268,8 +323,9 @@ namespace Game.Presentation.Abilities
             // Chequeos locales (feedback inmediato, no autoritativos). El cooldown de esta
             // habilidad recién se predice al SOLTAR (arranca cuando se dispara, no al cargar).
             if (IsOnCooldown(_localCooldownEndTick[slot])) return;
-            if (_mana != null && _mana.Current < ability.ResourceCost) return;
+            if (PredictedLocalMana() < ability.ResourceCost) return;
 
+            RecordLocalManaSpend(ability.ResourceCost);
             _localCharging[slot] = true;
             _localChargeStartTick[slot] = base.TimeManager.Tick;
             _chargeVfx?.BeginCharge(ability.MaxChargeDuration); // telegrafía local instantánea
@@ -341,9 +397,8 @@ namespace Game.Presentation.Abilities
             StopChargeVfxObserversRpc(); // cortar la telegrafía para los demás, coincidiendo con el disparo
             if (ability == null) return;
 
-            // Cooldown arranca AHORA (al disparar), no cuando empezó a cargar.
-            float castSpeed = _stats != null ? _stats.CastSpeedMultiplier : 1f;
-            _serverCooldownEndTick[slot] = TicksFromNow(ability.Cooldown / Mathf.Max(0.1f, castSpeed));
+            // Cooldown arranca al disparar (tick de disparo del cliente), no cuando empezó a cargar.
+            _serverCooldownEndTick[slot] = ClampFireTick(fireTick) + CooldownTicks(ability);
 
             // Carga medida contra el reloj del servidor y acotada a [0..1].
             float held = (float)base.TimeManager.TicksToTime(base.TimeManager.Tick - _serverChargeStartTick[slot]);
@@ -441,7 +496,8 @@ namespace Game.Presentation.Abilities
             if (ability == null) return;
             if (ability.TryGetOwnerDash(Vector3.forward, out _, out _, out _)) return; // el dash va por el input de movimiento
 
-            if (IsOnCooldown(_serverCooldownEndTick[slot]))
+            uint fire = ClampFireTick(fireTick);
+            if (fire < _serverCooldownEndTick[slot])
             {
                 RejectCastTargetRpc(base.Owner, slot, RemainingSeconds(_serverCooldownEndTick[slot]));
                 return;
@@ -453,8 +509,7 @@ namespace Game.Presentation.Abilities
                 return;
             }
 
-            float castSpeed = _stats != null ? _stats.CastSpeedMultiplier : 1f;
-            _serverCooldownEndTick[slot] = TicksFromNow(ability.Cooldown / Mathf.Max(0.1f, castSpeed));
+            _serverCooldownEndTick[slot] = fire + CooldownTicks(ability);
 
             if (ability.WindupDuration > 0f)
             {

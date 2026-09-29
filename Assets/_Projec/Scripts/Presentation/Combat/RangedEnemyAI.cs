@@ -6,8 +6,10 @@ using UnityEngine;
 namespace Game.Presentation.Combat
 {
     /// <summary>
-    /// Enemigo a distancia simple: detecta al jugador más cercano, lo mira y dispara
-    /// proyectiles a intervalos. No se mueve. Server-authoritative.
+    /// Enemigo a distancia simple: detecta al jugador más cercano (con línea de visión), lo mira
+    /// y le dispara proyectiles rectos a intervalos, apuntando un poco adelante de hacia donde se
+    /// mueve. No se mueve. Server-authoritative. Al morir se despawnea (el loot lo suelta
+    /// LootDropper, igual que los demás enemigos).
     /// </summary>
     [RequireComponent(typeof(Health))]
     public class RangedEnemyAI : NetworkBehaviour
@@ -23,6 +25,12 @@ namespace Game.Presentation.Combat
         [SerializeField] private float _projectileSpeed = 12f;
         [SerializeField] private float _projectileDamage = 10f;
         [SerializeField] private float _projectileRadius = 0.25f;
+        [Tooltip("Altura desde la base del enemigo de donde salen los proyectiles.")]
+        [SerializeField] private float _muzzleHeight = 1.2f;
+        [Tooltip("Cuánto se adelanta al movimiento del objetivo (0 = apunta a donde está, 1 = predicción completa). Bajo para que se pueda esquivar.")]
+        [SerializeField, Range(0f, 1f)] private float _leadFactor = 0.5f;
+        [Tooltip("Velocidad de giro hacia el objetivo.")]
+        [SerializeField] private float _turnSpeed = 5f;
 
         private Health _health;
         private Transform _target;
@@ -36,8 +44,21 @@ namespace Game.Presentation.Combat
 
         public override void OnStartServer()
         {
-            _health.OnDied += _ => enabled = false;
+            _health.OnDied += HandleDied;
+            _target = null;
             _fireTimer = _fireRate; // esperar un ciclo antes del primer disparo
+            enabled = true;
+        }
+
+        public override void OnStopServer()
+        {
+            if (_health != null) _health.OnDied -= HandleDied;
+        }
+
+        private void HandleDied(int instigator)
+        {
+            enabled = false;
+            Despawn(); // antes quedaba el cuerpo inmóvil en el mapa para siempre
         }
 
         private void Update()
@@ -48,14 +69,18 @@ namespace Game.Presentation.Combat
             if (!TargetIsValid())
                 _target = FindNearestPlayer(_detectionRadius);
 
-            if (_target == null) return;
+            if (_target == null)
+            {
+                _fireTimer = _fireRate; // al volver a ver a alguien, un ciclo de aviso antes de disparar
+                return;
+            }
 
             // Mirar al target.
             Vector3 dir = (_target.position - transform.position);
             dir.y = 0f;
             if (dir.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.Slerp(transform.rotation,
-                    Quaternion.LookRotation(dir), Time.deltaTime * 5f);
+                    Quaternion.LookRotation(dir), Time.deltaTime * _turnSpeed);
 
             // Disparo con cooldown.
             _fireTimer -= Time.deltaTime;
@@ -71,9 +96,19 @@ namespace Game.Presentation.Combat
         {
             if (_projectilePrefab == null) return;
 
-            // Dirección hacia el target con algo de altura para que no vaya al suelo.
-            Vector3 origin = transform.position + Vector3.up * 1.2f;
-            Vector3 dir = (_target.position + Vector3.up * 1f - origin).normalized;
+            if (_target == null) return;
+
+            // Al pecho del objetivo, adelantado según su movimiento (parcial: esquivable).
+            Vector3 origin = transform.position + Vector3.up * _muzzleHeight;
+            Vector3 aimPoint = _target.position + Vector3.up * 1f;
+            if (_target.TryGetComponent(out CharacterController cc) && _projectileSpeed > 0.01f)
+            {
+                Vector3 vel = cc.velocity;
+                vel.y = 0f;
+                float flightTime = Vector3.Distance(origin, aimPoint) / _projectileSpeed;
+                aimPoint += vel * flightTime * _leadFactor;
+            }
+            Vector3 dir = (aimPoint - origin).normalized;
 
             NetworkObject nob = InstanceFinder.NetworkManager.GetPooledInstantiated(
                 _projectilePrefab.GetComponent<NetworkObject>(), origin, Quaternion.LookRotation(dir), true);

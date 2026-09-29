@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Game.EditorTools.Items
 {
     /// <summary>
-    /// Genera (o regenera) las tablas de loot de cada fuente —enemigo cuerpo a cuerpo, guardián
+    /// Genera (o regenera) las tablas de loot de cada fuente —enemigo cuerpo a cuerpo, enemigo a distancia, guardián
     /// planta y cofre— a partir de TODOS los ItemSO del proyecto y un perfil de probabilidades por
     /// rareza/categoría definido acá abajo. Así un item nuevo entra solo a las tablas y el balance
     /// se toca en un único lugar (Profiles). Volver a correrlo pisa las entradas de estas tablas.
@@ -29,11 +29,13 @@ namespace Game.EditorTools.Items
         // Valores de partida para balancear jugando. Con el catálogo actual (13 items por rareza,
         // pockets incluidos) el esperado por fuente es aprox.:
         //   Melee:     0.33 comunes · 0.10 raros · 0.03 épicos · madera 45% · cristal 10%
+        //   Ranged:    0.39 comunes · 0.16 raros · 0.04 épicos · madera 50% · cristal 15%
         //   Guardián:  0.52 comunes · 0.23 raros · 0.07 épicos · madera 60% · cristal 25%
         //   Cofre:     0.78 comunes · 0.39 raros · 0.10 épicos · madera 50% · cristal 30% (nunca vacío)
         private static readonly Profile[] Profiles =
         {
             new Profile { AssetName = "LootTable_Enemy_Melee",         Common = 0.025f, Rare = 0.008f, Epic = 0.002f, Material = 0.45f, MaterialMin = 1, MaterialMax = 3, Resource = 0.10f, GuaranteeAtLeastOne = false },
+            new Profile { AssetName = "LootTable_Enemy_Ranged",        Common = 0.03f,  Rare = 0.012f, Epic = 0.003f, Material = 0.50f, MaterialMin = 1, MaterialMax = 3, Resource = 0.15f, GuaranteeAtLeastOne = false },
             new Profile { AssetName = "LootTable_Enemy_PlantGuardian", Common = 0.04f,  Rare = 0.018f, Epic = 0.005f, Material = 0.60f, MaterialMin = 2, MaterialMax = 4, Resource = 0.25f, GuaranteeAtLeastOne = false },
             new Profile { AssetName = "LootTable_Chest",               Common = 0.06f,  Rare = 0.03f,  Epic = 0.008f, Material = 0.50f, MaterialMin = 2, MaterialMax = 5, Resource = 0.30f, GuaranteeAtLeastOne = true },
         };
