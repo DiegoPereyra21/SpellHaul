@@ -90,17 +90,18 @@ namespace Game.Presentation.Bootstrap
         }
 
         /// <summary>
-        /// Clave del jugador local: su EntityId de PlayFab. Sin sesión todavía (conexión directa de
-        /// desarrollo, donde la run arranca antes del login) usa una clave de dispositivo; con
-        /// -playerid, esa identidad, para que el Editor y un build en la misma PC sean distintos.
+        /// Clave del jugador local. Con -playerid (solo desarrollo) es esa identidad, siempre la
+        /// misma aunque el login a PlayFab todavía no haya terminado: así una reconexión de prueba
+        /// por conexión directa reconoce al mismo jugador. Si no, su EntityId de PlayFab; sin sesión
+        /// todavía (conexión directa sin -playerid), una clave de dispositivo.
         /// </summary>
         private static string BuildLocalPlayerKey()
         {
+            if (!string.IsNullOrEmpty(LaunchArgs.PlayerId))
+                return "dev:" + LaunchArgs.PlayerId;
             if (!string.IsNullOrEmpty(PlayFabSession.EntityId))
                 return PlayFabSession.EntityId;
-
-            string local = !string.IsNullOrEmpty(LaunchArgs.PlayerId) ? LaunchArgs.PlayerId : SystemInfo.deviceUniqueIdentifier;
-            return "dev:" + local;
+            return "dev:" + SystemInfo.deviceUniqueIdentifier;
         }
 
         private static void OnRunOutcomeBroadcast(RunOutcomeBroadcast msg, Channel channel)
