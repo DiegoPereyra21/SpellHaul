@@ -48,6 +48,14 @@ namespace Game.Presentation.Bootstrap
         private string _ticketId;
         private Coroutine _pollRoutine;
         private bool _recoveringFromStaleTicket;
+        private int _consecutivePollErrors;
+
+        // Errores seguidos de consulta tolerados antes de abandonar: un corte puntual o un 429
+        // (límite de 10 consultas/min) no debería tirar abajo toda la búsqueda.
+        private const int MaxConsecutivePollErrors = 3;
+
+        // Textos para el jugador (en inglés). El detalle técnico va solo al log.
+        private const string GenericFailMessage = "Matchmaking failed. Please try again.";
 
         /// <summary>Entra en la cola. No hace nada si ya está buscando.</summary>
         public void StartSearch()
@@ -56,13 +64,14 @@ namespace Game.Presentation.Bootstrap
 
             if (string.IsNullOrEmpty(PlayFabSession.EntityId))
             {
-                Fail("La sesión de PlayFab todavía no está lista.");
+                Fail("Not connected to the game services yet. Please wait a moment.", "Sesión de PlayFab todavía no lista.");
                 return;
             }
 
             MatchId = null;
             ServerDetails = null;
             _ticketId = null;
+            _consecutivePollErrors = 0;
             SetState(State.Searching);
 
             var request = new CreateMatchmakingTicketRequest
@@ -141,23 +150,34 @@ namespace Game.Presentation.Bootstrap
             StopPolling();
 
             if (!string.IsNullOrEmpty(_ticketId))
-            {
-                PlayFabMultiplayerAPI.CancelMatchmakingTicket(
-                    new CancelMatchmakingTicketRequest
-                    {
-                        QueueName = _queueName,
-                        TicketId = _ticketId,
-                    },
-                    _ => { },
-                    error => Debug.LogWarning($"[Matchmaking] No se pudo cancelar el ticket: {error.GenerateErrorReport()}"));
-            }
+                CancelTicket(_ticketId);
 
             _ticketId = null;
             SetState(State.Idle);
         }
 
+        private void CancelTicket(string ticketId)
+        {
+            PlayFabMultiplayerAPI.CancelMatchmakingTicket(
+                new CancelMatchmakingTicketRequest
+                {
+                    QueueName = _queueName,
+                    TicketId = ticketId,
+                },
+                _ => { },
+                error => Debug.LogWarning($"[Matchmaking] No se pudo cancelar el ticket: {error.GenerateErrorReport()}"));
+        }
+
         private void OnTicketCreated(CreateMatchmakingTicketResult result)
         {
+            // Canceló mientras se creaba el ticket: CancelSearch no tenía id para cancelar, así que
+            // el ticket quedaba vivo en PlayFab y podía matchear (servidor asignado a alguien que no va).
+            if (CurrentState != State.Searching)
+            {
+                CancelTicket(result.TicketId);
+                return;
+            }
+
             _ticketId = result.TicketId;
             Debug.Log($"[Matchmaking] Ticket creado: {_ticketId}");
             _pollRoutine = StartCoroutine(PollTicketRoutine());
@@ -179,13 +199,14 @@ namespace Game.Presentation.Bootstrap
                         TicketId = _ticketId,
                     },
                     OnTicketPolled,
-                    OnApiError);
+                    OnPollError);
             }
         }
 
         private void OnTicketPolled(GetMatchmakingTicketResult result)
         {
             if (CurrentState != State.Searching) return;
+            _consecutivePollErrors = 0;
 
             switch (result.Status)
             {
@@ -204,10 +225,8 @@ namespace Game.Presentation.Bootstrap
                 case "Canceled":
                     StopPolling();
                     // Sin razón explícita = se agotó GiveUpAfterSeconds (no había con quién emparejar).
-                    string reason = string.IsNullOrEmpty(result.CancellationReasonString)
-                        ? "No se encontró partida a tiempo."
-                        : result.CancellationReasonString;
-                    Fail(reason);
+                    Fail("No match found. Please try again.",
+                        string.IsNullOrEmpty(result.CancellationReasonString) ? "Timeout (GiveUpAfterSeconds)." : result.CancellationReasonString);
                     break;
 
                 default:
@@ -248,14 +267,30 @@ namespace Game.Presentation.Bootstrap
         private void OnApiError(PlayFabError error)
         {
             StopPolling();
-            Fail(error.GenerateErrorReport());
+            Fail(GenericFailMessage, error.GenerateErrorReport());
         }
 
-        private void Fail(string reason)
+        /// <summary>Un error al consultar el ticket no corta la búsqueda salvo que se repita.</summary>
+        private void OnPollError(PlayFabError error)
         {
-            Debug.LogError($"[Matchmaking] {reason}");
+            if (CurrentState != State.Searching) return;
+
+            _consecutivePollErrors++;
+            if (_consecutivePollErrors < MaxConsecutivePollErrors)
+            {
+                Debug.LogWarning($"[Matchmaking] Falló la consulta del ticket ({_consecutivePollErrors}/{MaxConsecutivePollErrors}), sigo esperando: {error.GenerateErrorReport()}");
+                return;
+            }
+
+            OnApiError(error);
+        }
+
+        /// <summary>playerMessage se muestra en el menú (inglés); logDetail va solo a la consola.</summary>
+        private void Fail(string playerMessage, string logDetail)
+        {
+            Debug.LogError($"[Matchmaking] {playerMessage} | {logDetail}");
             SetState(State.Failed);
-            OnFailed?.Invoke(reason);
+            OnFailed?.Invoke(playerMessage);
         }
 
         private void SetState(State newState)

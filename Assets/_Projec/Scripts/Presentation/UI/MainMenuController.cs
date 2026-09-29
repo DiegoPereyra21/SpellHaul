@@ -20,6 +20,8 @@ namespace Game.Presentation.UI
         [Tooltip("Mientras la queue no tenga server allocation, el match se juega contra esta dirección. Apuntar al LocalMultiplayerAgent para probar.")]
         [SerializeField] private string _fallbackServerAddress = "127.0.0.1";
         [SerializeField] private ushort _fallbackServerPort = 56100;
+        [Tooltip("Nombre del puerto de juego en el Build de PlayFab (igual que en NetworkBootstrap).")]
+        [SerializeField] private string _gamePortName = "game_port";
 
         private UIDocument _document;
         private VisualElement _searchPanel;
@@ -196,15 +198,26 @@ namespace Game.Presentation.UI
         /// </summary>
         private void ConnectToMatchServer()
         {
-            string address = _fallbackServerAddress;
-            ushort port = _fallbackServerPort;
+            string address;
+            ushort port;
 
             var details = _matchmaking.ServerDetails;
-            if (details != null && !string.IsNullOrEmpty(details.IPV4Address))
+            if (details != null && !string.IsNullOrEmpty(details.IPV4Address) && TryGetGamePort(details, out port))
             {
                 address = details.IPV4Address;
-                if (details.Ports != null && details.Ports.Count > 0)
-                    port = (ushort)details.Ports[0].Num;
+            }
+            else
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                // Solo desarrollo: queue sin server allocation → servidor local (LMA).
+                address = _fallbackServerAddress;
+                port = _fallbackServerPort;
+#else
+                // En release no hay a dónde ir: conectar a 127.0.0.1 no tiene sentido.
+                Debug.LogError("[MainMenu] El match no trajo ServerDetails válidos.");
+                ShowNotice("Could not get a server for the run. Please try again.");
+                return;
+#endif
             }
 
             var tugboat = InstanceFinder.TransportManager.GetTransport<Tugboat>();
@@ -220,6 +233,21 @@ namespace Game.Presentation.UI
             Debug.Log($"[MainMenu] Conectando a {address}:{port}");
             InstanceFinder.ClientManager.StartConnection();
             // La escena de run la carga el servidor: llega como escena global al conectar.
+        }
+
+        /// <summary>Puerto del servidor asignado, buscado por nombre (el que declara el Build en
+        /// PlayFab). Si no está, el primero: compatible con Builds de un solo puerto.</summary>
+        private bool TryGetGamePort(PlayFab.MultiplayerModels.ServerDetails details, out ushort port)
+        {
+            port = 0;
+            if (details.Ports == null || details.Ports.Count == 0) return false;
+
+            var chosen = details.Ports[0];
+            foreach (var p in details.Ports)
+                if (string.Equals(p.Name, _gamePortName, System.StringComparison.OrdinalIgnoreCase)) { chosen = p; break; }
+
+            port = (ushort)chosen.Num;
+            return true;
         }
 
         private void SetSearchPanel(bool visible)
