@@ -151,7 +151,7 @@ MonoBehaviour:
   _isSpawnable: 1
   _isGlobal: 0
   _initializeOrder: 0
-  _preventDespawnOnDisconnect: 0
+  _preventDespawnOnDisconnect: 1
   _defaultDespawnType: 0
   _initializedTimestamp: -8584149564927537067
 --- !u!114 &303123316450518896
@@ -429,7 +429,6 @@ MonoBehaviour:
   _database: {fileID: 11400000, guid: 102308c18b8226846a202b06693b2687, type: 2}
   _inventory: {fileID: -6873126794131237326}
   _movement: {fileID: 303123316450518896}
-  _cameraLook: {fileID: 4541030088272683536}
   _abilities: {fileID: 1907102855803517485}
   _interaction: {fileID: 8706064901918070629}
   _document: {fileID: 0}
