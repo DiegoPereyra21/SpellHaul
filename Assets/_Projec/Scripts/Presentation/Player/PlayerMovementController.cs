@@ -1,5 +1,6 @@
 using FishNet.Object;
 using FishNet.Object.Prediction;
+using Game.Presentation.Abilities;
 using Game.Presentation.Combat;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -38,6 +39,18 @@ namespace Game.Presentation.Player
         private float _pendingDashDuration;
         private bool _dashRequested;
         private bool _jumpQueued;
+
+        // Dash como input predicho (ver QueueDashInput): viaja en ReplicateData.
+        private AbilityController _abilities;
+        private bool _dashInputQueued;
+        private byte _queuedDashSlot;
+        private Vector3 _queuedDashDirection;
+
+        // isGrounded del CharacterController no sobrevive a un reconcile (al reactivarlo queda en
+        // false hasta el próximo Move), así que el replay del primer tick veía "en el aire":
+        // saltos que no salían y gravedad de más → tirones al despegar y al aterrizar. Se guarda
+        // acá y viaja en el ReconcileData.
+        private bool _grounded;
         
         [Header("Mirada")]
         [SerializeField] private float _mouseSensitivity = 0.65f;
@@ -56,6 +69,9 @@ namespace Game.Presentation.Player
             public bool Jump;
             public bool Sprint;
             public float Yaw; // rotación absoluta, no delta
+            public bool Dash;             // pidió dash este tick (lo valida el servidor)
+            public byte DashSlot;         // slot de la habilidad de dash
+            public Vector3 DashDirection; // dirección de mirada al pedirlo
 
             public ReplicateData(Vector2 move, bool jump, bool sprint, float yaw) : this()
             {
@@ -78,14 +94,18 @@ namespace Game.Presentation.Player
             public Quaternion Rotation;
             public Vector3 DashVelocity;      // velocidad de dash restante
             public float DashTimeRemaining;   // tiempo de dash restante
+            public float DashDuration;        // duración total del dash en curso (curva de decaimiento)
+            public bool Grounded;
 
-            public ReconcileData(Vector3 position, Vector3 verticalVelocity, Quaternion rotation, Vector3 dashVelocity, float dashTimeRemaining) : this()
+            public ReconcileData(Vector3 position, Vector3 verticalVelocity, Quaternion rotation, Vector3 dashVelocity, float dashTimeRemaining, float dashDuration, bool grounded) : this()
             {
                 Position = position;
                 VerticalVelocity = verticalVelocity;
                 Rotation = rotation;
                 DashVelocity = dashVelocity;
                 DashTimeRemaining = dashTimeRemaining;
+                DashDuration = dashDuration;
+                Grounded = grounded;
             }
 
             private uint _tick;
@@ -97,6 +117,7 @@ namespace Game.Presentation.Player
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
+            _abilities = GetComponent<AbilityController>();
 
             _controls = new PlayerControls();
             _moveAction = _controls.Player.Move;
@@ -199,14 +220,30 @@ namespace Game.Presentation.Player
         private ReplicateData CreateReplicateData()
         {
             if (!base.IsOwner) return default;
-            if (_inputBlocked) return new ReplicateData(Vector2.zero, false, false, transform.eulerAngles.y);
 
-            Vector2 move = _moveAction.ReadValue<Vector2>();
-            bool sprint = _sprintAction.IsPressed();
-            bool jump = _jumpQueued;
-            _jumpQueued = false;
+            ReplicateData data;
+            if (_inputBlocked)
+            {
+                data = new ReplicateData(Vector2.zero, false, false, transform.eulerAngles.y);
+            }
+            else
+            {
+                Vector2 move = _moveAction.ReadValue<Vector2>();
+                bool sprint = _sprintAction.IsPressed();
+                bool jump = _jumpQueued;
+                _jumpQueued = false;
+                data = new ReplicateData(move, jump, sprint, transform.eulerAngles.y);
+            }
 
-            return new ReplicateData(move, jump, sprint, transform.eulerAngles.y);
+            if (_dashInputQueued)
+            {
+                data.Dash = true;
+                data.DashSlot = _queuedDashSlot;
+                data.DashDirection = _queuedDashDirection;
+                _dashInputQueued = false;
+            }
+
+            return data;
         }
 
         [Replicate]
@@ -231,7 +268,7 @@ namespace Game.Presentation.Player
             Vector3 horizontal = (yawRotation * Vector3.right * data.Move.x + yawRotation * Vector3.forward * data.Move.y) * speed;
 
             // Gravedad y salto en el eje vertical, integrados aparte del horizontal.
-            if (_controller.isGrounded)
+            if (_grounded)
             {
                 _verticalVelocity.y = -1f;
 
@@ -244,7 +281,12 @@ namespace Game.Presentation.Player
                 _verticalVelocity.y += _gravity * delta;
             }
 
-            // Iniciar dash si hay una solicitud pendiente.
+            // Dash pedido como input: cliente y servidor lo aplican en el mismo tick.
+            if (data.Dash)
+                TryStartDashFromInput(data, state);
+
+            // Dash pedido por el servidor fuera del input (AbilityExecutor.StartDash). Hoy el
+            // camino normal es el input; esto queda para efectos que empujen sin input del jugador.
             if (_dashRequested)
             {
                 _dashVelocity = _pendingDashDir * _pendingDashSpeed;
@@ -268,7 +310,7 @@ namespace Game.Presentation.Player
             Vector3 dashStep = Vector3.zero;
             if (_dashTimeRemaining > 0f)
             {
-                float t = Mathf.Clamp01(_dashTimeRemaining / _dashDuration);
+                float t = Mathf.Clamp01(_dashTimeRemaining / Mathf.Max(0.0001f, _dashDuration));
                 // Curva ease-out: mantiene velocidad alta al inicio y decae al final.
                 float speedFactor = Mathf.SmoothStep(0f, 1f, t);
                 dashStep = _dashVelocity * speedFactor;
@@ -276,6 +318,7 @@ namespace Game.Presentation.Player
             }
 
             _controller.Move((horizontal + _verticalVelocity + dashStep) * delta);
+            _grounded = _controller.isGrounded;
 
             // Trail visible mientras dura el dash (en todos los clientes, dash es estado replicado).
             if (_dashTrail != null)
@@ -284,7 +327,7 @@ namespace Game.Presentation.Player
 
         public override void CreateReconcile()
         {
-            ReconcileData rd = new ReconcileData(transform.position, _verticalVelocity, transform.rotation, _dashVelocity, _dashTimeRemaining);
+            ReconcileData rd = new ReconcileData(transform.position, _verticalVelocity, transform.rotation, _dashVelocity, _dashTimeRemaining, _dashDuration, _grounded);
             ReconcileState(rd);
         }
 
@@ -301,13 +344,57 @@ namespace Game.Presentation.Player
             _verticalVelocity = data.VerticalVelocity;
             _dashVelocity = data.DashVelocity;
             _dashTimeRemaining = data.DashTimeRemaining;
+            _dashDuration = data.DashDuration;
+            _grounded = data.Grounded;
             _controller.enabled = true;
         }
 
         /// <summary>
-        /// Encola un impulso de dash. Solo debe llamarse en el servidor (el owner lo verá vía reconcile).
+        /// Owner-only. Pide un dash en el próximo tick como parte del input predicho: el cliente lo
+        /// aplica al instante y en sus replays, el servidor lo aplica al procesar ese mismo input
+        /// (validando cooldown y maná). Antes el dash se predecía por fuera del input y el servidor
+        /// lo aplicaba recién al llegar el RPC, en otro tick: al reconciliar, el jugador volvía atrás.
         /// </summary>
-        /// <summary>Server-only. Solicita un dash; se inicia en el próximo tick replicado.</summary>
+        public void QueueDashInput(int slot, Vector3 direction)
+        {
+            if (slot < 0 || slot > byte.MaxValue) return;
+            _queuedDashSlot = (byte)slot;
+            _queuedDashDirection = direction;
+            _dashInputQueued = true;
+        }
+
+        private void TryStartDashFromInput(ReplicateData data, ReplicateState state)
+        {
+            if (_abilities == null) return;
+
+            Vector3 direction = data.DashDirection;
+            if (direction.sqrMagnitude < 0.0001f) return;
+            direction.Normalize();
+
+            float speed, duration;
+            if (base.IsServerStarted)
+            {
+                // El servidor nunca hace replays: esto corre una vez por input y es la validación real.
+                if (!_abilities.ServerTryConsumeDash(data.DashSlot, direction, out speed, out duration)) return;
+            }
+            else if (!_abilities.TryGetDashParams(data.DashSlot, out speed, out duration))
+            {
+                return;
+            }
+
+            _dashVelocity = direction * speed;
+            _dashTimeRemaining = duration;
+            _dashDuration = duration;
+
+            // Feedback una sola vez (nunca en replays) y solo para el que dashea.
+            if (!state.ContainsReplayed() && base.IsOwner && _cameraEffects != null)
+            {
+                _cameraEffects.FovKick(6f, 0.08f, 0.3f);
+                Game.Presentation.Combat.ScreenShake.Shake(0.35f, 0.2f);
+            }
+        }
+
+        /// <summary>Server-only. Solicita un dash fuera del input; se inicia en el próximo tick replicado.</summary>
         public void StartDash(Vector3 direction, float speed, float duration)
         {
             _pendingDashDir = direction.normalized;

@@ -218,6 +218,15 @@ namespace Game.Presentation.Abilities
 
             ResolveAim(out Vector3 aimDirection, out Vector3 aimPoint);
 
+            // El dash no va por CastServerRpc: viaja como input predicho del movimiento, así
+            // cliente y servidor lo aplican en el mismo tick (el servidor valida cooldown y maná ahí).
+            if (_movement != null && ability.TryGetOwnerDash(aimDirection, out Vector3 dashDir, out _, out _))
+            {
+                _movement.QueueDashInput(slot, dashDir);
+                PlayLocalFireFeedback(ability, aimDirection, aimPoint);
+                return;
+            }
+
             // Tick de disparo del cliente para lag compensation (el server rebobina a este tick).
             PreciseTick fireTick = base.TimeManager.GetPreciseTick(TickType.Tick);
             CastServerRpc(slot, aimDirection, aimPoint, fireTick);
@@ -397,9 +406,6 @@ namespace Game.Presentation.Abilities
                 Vector3 dir = toAim.sqrMagnitude > 0.0001f ? toAim.normalized : aimDirection;
                 CosmeticProjectileManager.Spawn(cosmeticPrefab, muzzlePos, dir, cosmeticSpeed, transform);
             }
-
-            if (ability.TryGetOwnerDash(aimDirection, out Vector3 dashDir, out float dashSpeed, out float dashDur))
-                _movement?.StartDash(dashDir, dashSpeed, dashDur);
         }
 
         private void ResolveAim(out Vector3 aimDirection, out Vector3 aimPoint)
@@ -421,6 +427,7 @@ namespace Game.Presentation.Abilities
             if (slot < 0 || slot >= _equippedAbilities.Length) return;
             AbilitySO ability = _equippedAbilities[slot];
             if (ability == null) return;
+            if (ability.TryGetOwnerDash(Vector3.forward, out _, out _, out _)) return; // el dash va por el input de movimiento
 
             if (IsOnCooldown(_serverCooldownEndTick[slot]))
             {
@@ -498,6 +505,49 @@ namespace Game.Presentation.Abilities
                 PlayMuzzleObserversRpc(origin, aimDirection);
             if (ability.CastClip != null)
                 PlayCastSfxObserversRpc(origin, slot);
+        }
+
+        // Margen para el cooldown del dash en el servidor: el input llega con la latencia de ese
+        // momento, que varía entre dashes. Sin margen, dashear justo al terminar el cooldown local
+        // a veces se rechazaba y el jugador volvía atrás.
+        private const uint DashCooldownToleranceTicks = 3;
+
+        /// <summary>Datos del dash de un slot (velocidad/duración, del SO). Lo usan los clientes para predecir.</summary>
+        public bool TryGetDashParams(int slot, out float speed, out float duration)
+        {
+            speed = 0f; duration = 0f;
+            if (slot < 0 || slot >= _equippedAbilities.Length) return false;
+            AbilitySO ability = _equippedAbilities[slot];
+            return ability != null && ability.TryGetOwnerDash(Vector3.forward, out _, out speed, out duration);
+        }
+
+        /// <summary>
+        /// Server-only. Valida y cobra un dash pedido por input (PlayerMovementController): estado del
+        /// jugador, cooldown y maná, igual que CastServerRpc. Devuelve velocidad y duración del SO
+        /// (nunca las del cliente). Si se rechaza, corrige la predicción de cooldown del cliente.
+        /// </summary>
+        public bool ServerTryConsumeDash(int slot, Vector3 direction, out float speed, out float duration)
+        {
+            speed = 0f; duration = 0f;
+            if (!CanActServer) return false;
+            if (!TryGetDashParams(slot, out speed, out duration)) return false;
+
+            AbilitySO ability = _equippedAbilities[slot];
+            uint endTick = _serverCooldownEndTick[slot];
+            bool onCooldown = endTick > DashCooldownToleranceTicks && base.TimeManager.Tick + DashCooldownToleranceTicks < endTick;
+            if (onCooldown || (_mana != null && !_mana.TrySpend(ability.ResourceCost)))
+            {
+                RejectCastTargetRpc(base.Owner, slot, RemainingSeconds(endTick));
+                return false;
+            }
+
+            float castSpeed = _stats != null ? _stats.CastSpeedMultiplier : 1f;
+            _serverCooldownEndTick[slot] = TicksFromNow(ability.Cooldown / Mathf.Max(0.1f, castSpeed));
+
+            Vector3 origin = _spellOrigin != null ? _spellOrigin.position : transform.position;
+            if (ability.MuzzlePrefab != null) PlayMuzzleObserversRpc(origin, direction);
+            if (ability.CastClip != null) PlayCastSfxObserversRpc(origin, slot);
+            return true;
         }
 
         [TargetRpc]
