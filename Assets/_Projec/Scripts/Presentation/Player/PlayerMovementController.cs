@@ -216,15 +216,19 @@ namespace Game.Presentation.Player
             if (!_controller.enabled)
                 return;
 
-            // El owner ya aplicó su rotación en Update (fluidez por frame).
-            // Servidor y replays usan el yaw absoluto que vino en el input.
-            if (!base.IsOwner || state.ContainsReplayed())
-                transform.rotation = Quaternion.Euler(0f, data.Yaw, 0f);
+            // La dirección de movimiento sale SIEMPRE del yaw del input, no del transform.
+            // Servidor y espectadores además aplican esa rotación al cuerpo. El owner NO: su
+            // rotación la maneja Update (mouse por frame), y en los replays tras un reconcile
+            // pisarla dejaba la mirada en el yaw de un input viejo: el jugador quedaba mirando
+            // (y caminando) hacia otro lado.
+            Quaternion yawRotation = Quaternion.Euler(0f, data.Yaw, 0f);
+            if (!base.IsOwner)
+                transform.rotation = yawRotation;
 
-            // Movimiento horizontal relativo a la orientación del jugador.
+            // Movimiento horizontal relativo a la orientación del input.
             float baseSpeed = _stats != null ? _stats.MoveSpeed : _moveSpeed;
             float speed = baseSpeed * (data.Sprint ? _sprintMultiplier : 1f);
-            Vector3 horizontal = (transform.right * data.Move.x + transform.forward * data.Move.y) * speed;
+            Vector3 horizontal = (yawRotation * Vector3.right * data.Move.x + yawRotation * Vector3.forward * data.Move.y) * speed;
 
             // Gravedad y salto en el eje vertical, integrados aparte del horizontal.
             if (_controller.isGrounded)
