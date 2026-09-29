@@ -49,8 +49,18 @@ namespace Game.Presentation.Abilities
         {
             base.OnStartClient();
             ApplyVisualScale(_visualScale.Value);
-            _visualScale.OnChange += (prev, next, asServer) => ApplyVisualScale(next);
+            // Con nombre (no lambda) para poder desuscribirse: con pooling, OnStartClient corre en
+            // cada reutilización y las suscripciones se acumulaban.
+            _visualScale.OnChange += OnVisualScaleChanged;
         }
+
+        public override void OnStopClient()
+        {
+            base.OnStopClient();
+            _visualScale.OnChange -= OnVisualScaleChanged;
+        }
+
+        private void OnVisualScaleChanged(float prev, float next, bool asServer) => ApplyVisualScale(next);
 
         private void ApplyVisualScale(float scale)
         {
@@ -83,6 +93,7 @@ namespace Game.Presentation.Abilities
             transform.rotation = Quaternion.LookRotation(direction);
 
             _initialized = true;
+            _exploded = false; // instancia reutilizada del pool
             _firstFrame = true;
         }
 

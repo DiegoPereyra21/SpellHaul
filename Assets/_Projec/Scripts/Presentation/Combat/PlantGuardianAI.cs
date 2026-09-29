@@ -148,14 +148,16 @@ namespace Game.Presentation.Combat
             Vector3 origin = transform.position + Vector3.up * _muzzleHeight;
             Vector3 dir = (_target.position + Vector3.up * 1f - origin).normalized;
 
-            GameObject instance = UnityEngine.Object.Instantiate(
-                _burstProjectilePrefab, origin, Quaternion.LookRotation(dir));
+            // Pool nativo de Fish-Net (el prefab tiene Default Despawn Type = Pool): reutiliza
+            // instancias en vez de Instantiate/Destroy por disparo.
+            NetworkObject nob = InstanceFinder.NetworkManager.GetPooledInstantiated(
+                _burstProjectilePrefab.GetComponent<NetworkObject>(), origin, Quaternion.LookRotation(dir), true);
 
-            if (instance.TryGetComponent(out Projectile projectile))
+            if (nob.TryGetComponent(out Projectile projectile))
             {
-                InstanceFinder.ServerManager.Spawn(instance);
                 projectile.Initialize(dir, _burstProjectileSpeed, _burstProjectileDamage,
                     _burstProjectileRadius, base.ObjectId);
+                InstanceFinder.ServerManager.Spawn(nob);
             }
         }
 
@@ -193,12 +195,12 @@ namespace Game.Presentation.Combat
 
             Vector3 origin = transform.position + Vector3.up * _muzzleHeight;
 
-            GameObject instance = UnityEngine.Object.Instantiate(
-                _lobProjectilePrefab, origin, Quaternion.identity);
+            NetworkObject nob = InstanceFinder.NetworkManager.GetPooledInstantiated(
+                _lobProjectilePrefab.GetComponent<NetworkObject>(), origin, Quaternion.identity, true);
 
-            if (instance.TryGetComponent(out LobProjectile lob))
+            if (nob.TryGetComponent(out LobProjectile lob))
             {
-                InstanceFinder.ServerManager.Spawn(instance);
+                InstanceFinder.ServerManager.Spawn(nob);
                 lob.Initialize(predictedPoint, _lobArcHeight, _lobFlightTime, _lobDamage, base.ObjectId);
             }
         }

@@ -60,6 +60,7 @@ namespace Game.Presentation.Combat
                 transform.rotation = Quaternion.LookRotation(_velocity.normalized);
 
             _initialized = true;
+            _exploded = false; // instancia reutilizada del pool
             _firstFrame = true;
         }
 

@@ -47,10 +47,11 @@ namespace Game.Presentation.Abilities
             Vector3 toAim = aimPoint - origin;
             Vector3 dir = toAim.sqrMagnitude > 0.0001f ? toAim.normalized : Vector3.forward;
 
-            GameObject instance = UnityEngine.Object.Instantiate(orbPrefab, origin + dir * 0.5f, Quaternion.LookRotation(dir));
-            if (instance.TryGetComponent(out ChargedOrbProjectile orb))
+            NetworkObject nob = InstanceFinder.NetworkManager.GetPooledInstantiated(
+                orbPrefab.GetComponent<NetworkObject>(), origin + dir * 0.5f, Quaternion.LookRotation(dir), true);
+            if (nob.TryGetComponent(out ChargedOrbProjectile orb))
             {
-                InstanceFinder.ServerManager.Spawn(instance);
+                InstanceFinder.ServerManager.Spawn(nob);
                 orb.Initialize(aimPoint, damage, explosionRadius, visualScale, launchSpeed, gravity, casterNetworkId, slot);
             }
         }

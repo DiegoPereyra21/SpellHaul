@@ -75,14 +75,14 @@ namespace Game.Presentation.Combat
             Vector3 origin = transform.position + Vector3.up * 1.2f;
             Vector3 dir = (_target.position + Vector3.up * 1f - origin).normalized;
 
-            GameObject instance = UnityEngine.Object.Instantiate(
-                _projectilePrefab, origin, Quaternion.LookRotation(dir));
+            NetworkObject nob = InstanceFinder.NetworkManager.GetPooledInstantiated(
+                _projectilePrefab.GetComponent<NetworkObject>(), origin, Quaternion.LookRotation(dir), true);
 
-            if (instance.TryGetComponent(out Projectile projectile))
+            if (nob.TryGetComponent(out Projectile projectile))
             {
-                InstanceFinder.ServerManager.Spawn(instance);
                 projectile.Initialize(dir, _projectileSpeed, _projectileDamage,
                     _projectileRadius, base.ObjectId);
+                InstanceFinder.ServerManager.Spawn(nob);
             }
         }
 
