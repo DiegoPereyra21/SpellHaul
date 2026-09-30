@@ -298,3 +298,27 @@
     border-color: rgb(210, 110, 245);
     border-width: 2px;
 }
+/* ---------- Grupo "Bags" (pockets) en la lista de equipo ---------- */
+
+.equip-group-header {
+    color: rgb(150, 132, 190);
+    font-size: 13px;
+    letter-spacing: 1px;
+    margin-top: 8px;
+    padding-top: 8px;
+    margin-bottom: 2px;
+    border-top-width: 1px;
+    border-top-color: rgba(181, 139, 249, 0.25);
+}
+
+.equip-slot.equip-slot-bag {
+    padding: 5px 8px;
+    margin-top: 3px;
+    border-bottom-width: 0;
+    border-radius: 6px;
+    background-color: rgba(181, 139, 249, 0.06);
+}
+
+.equip-slot-bag .equip-slot-label {
+    color: rgb(150, 132, 190);
+}

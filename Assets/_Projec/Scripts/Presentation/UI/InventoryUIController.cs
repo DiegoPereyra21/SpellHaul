@@ -192,15 +192,30 @@ namespace Game.Presentation.UI
         {
             _equipmentSlots.Clear();
             var equip = _inventory.Equipment;
-            for (int i = 0; i < equip.Count; i++)
+            // Orden de pantalla: de la cabeza a los pies y después los pockets (bolsas), separados
+            // con su propio encabezado. No es el orden del enum (ver EquipmentSlotExtensions).
+            var order = EquipmentSlotExtensions.DisplayIndices(equip.Count);
+            bool bagHeaderAdded = false;
+            for (int n = 0; n < order.Count; n++)
             {
+                int i = order[n];
+                bool isBag = ((EquipmentSlot)i).IsPocket();
+                if (isBag && !bagHeaderAdded)
+                {
+                    var header = new Label("Bags");
+                    header.AddToClassList("equip-group-header");
+                    _equipmentSlots.Add(header);
+                    bagHeaderAdded = true;
+                }
+                bool lastOfGroup = n == order.Count - 1 || (!isBag && ((EquipmentSlot)order[n + 1]).IsPocket());
 
                 int slotIndex = i;
                 var slot = new VisualElement();
                 slot.AddToClassList("equip-slot");
-                if (slotIndex == equip.Count - 1) slot.AddToClassList("no-border");
+                if (isBag) slot.AddToClassList("equip-slot-bag");
+                if (lastOfGroup) slot.AddToClassList("no-border");
 
-                var label = new Label(DisplayNameForSlot((EquipmentSlot)i));
+                var label = new Label(((EquipmentSlot)i).DisplayName());
                 label.AddToClassList("equip-slot-label");
                 slot.Add(label);
 
@@ -244,16 +259,6 @@ namespace Game.Presentation.UI
                 slot.RegisterCallback<PointerUpEvent>(_ => TryDrop(SlotZone.Equipment, slotIndex));
                 _equipmentSlots.Add(slot);
             }
-        }
-
-        private string DisplayNameForSlot(EquipmentSlot slot)
-        {
-            return slot switch
-            {
-                EquipmentSlot.PocketL => "Pocket L",
-                EquipmentSlot.PocketR => "Pocket R",
-                _ => slot.ToString()
-            };
         }
 
         private void DrawPockets()
