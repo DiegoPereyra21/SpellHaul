@@ -229,7 +229,7 @@ namespace Game.Presentation.UI
 
                     var dot = new VisualElement();
                     dot.AddToClassList("accent-dot");
-                    dot.AddToClassList(ItemTooltipFormatter.RarityClass(def));
+                    dot.AddToClassList(GetAccentClass(def));
                     itemWrap.Add(dot);
 
                     var name = new Label(def != null ? def.DisplayName : stack.ItemId);
@@ -327,20 +327,11 @@ namespace Game.Presentation.UI
             if (!stack.IsEmpty)
             {
                 ItemSO def = _database.GetById(stack.ItemId);
-                // Color de la casilla y del nombre = rareza; el tipo va en la etiqueta de la esquina.
-                slot.AddToClassList(ItemTooltipFormatter.RarityClass(def));
-
-                string typeTag = ItemTooltipFormatter.TypeTag(def);
-                if (!string.IsNullOrEmpty(typeTag))
-                {
-                    var tag = new Label(typeTag);
-                    tag.AddToClassList("item-type-tag");
-                    tag.pickingMode = PickingMode.Ignore;
-                    slot.Add(tag);
-                }
+                slot.AddToClassList(GetAccentClass(def));
 
                 var name = new Label(def != null ? def.DisplayName : stack.ItemId);
                 name.AddToClassList("item-name");
+                slot.AddToClassList(ItemTooltipFormatter.RarityClass(def));
                 slot.Add(name);
 
                 if (stack.Quantity > 1)
@@ -401,6 +392,23 @@ namespace Game.Presentation.UI
             }
         }
 
+        private string GetAccentClass(ItemSO def)
+        {
+            if (def is EquipmentItemSO equip)
+            {
+                switch (equip.Slot)
+                {
+                    case EquipmentSlot.Boots: return "accent-green";
+                    case EquipmentSlot.Hat: return "accent-cyan";
+                    case EquipmentSlot.Robe: return "accent-violet";
+                    case EquipmentSlot.Glove: return "accent-gold";
+                    case EquipmentSlot.PocketL:
+                    case EquipmentSlot.PocketR:
+                        return "accent-amber";
+                }
+            }
+            return "accent-loot";
+        }
 
 
         // ---------- Tooltip ----------

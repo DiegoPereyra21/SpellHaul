@@ -37,6 +37,10 @@ namespace Game.Presentation.Bootstrap
         [SerializeField] private string _editorAddress = "127.0.0.1";
         [SerializeField] private ushort _editorPort = 7770;
 
+        // Estos campos solo se usan en el build de servidor (ENABLE_PLAYFABSERVER_API). Se declaran
+        // siempre para que la escena conserve sus valores en cualquier plataforma; en el cliente el
+        // compilador avisa que no se usan (CS0414), y es esperado.
+#pragma warning disable CS0414
         [Header("PlayFab MPS")]
         [Tooltip("Nombre del puerto declarado en la configuración del Build de PlayFab. Debe coincidir exactamente.")]
         [SerializeField] private string _gamePortName = "game_port";
@@ -44,6 +48,7 @@ namespace Game.Presentation.Bootstrap
         [SerializeField] private float _noPlayersShutdownSeconds = 120f;
         [Tooltip("Solo dejar entrar (y reconectar) a los jugadores que PlayFab asignó a este servidor (InitialPlayers). Destildar solo si la nube rechaza jugadores válidos: el log de [Auth] muestra la lista.")]
         [SerializeField] private bool _requireMatchMembership = true;
+#pragma warning restore CS0414
 
         private const string GsdkConfigEnvVar = "GSDK_CONFIG_FILE";
         private const float MaxSaveFlushSeconds = 30f;
