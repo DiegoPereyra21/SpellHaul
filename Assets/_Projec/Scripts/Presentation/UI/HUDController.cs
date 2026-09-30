@@ -376,7 +376,7 @@ namespace Game.Presentation.UI
             if (_hitMarkerAudio != null)
             {
                 AudioClip clip = isKill ? _killMarkerClip : _hitMarkerClip;
-                if (clip != null) _hitMarkerAudio.PlayOneShot(clip);
+                if (clip != null) _hitMarkerAudio.PlayOneShot(clip, Game.Presentation.Audio.AudioVolumes.Effects);
             }
         }
 
@@ -394,7 +394,7 @@ namespace Game.Presentation.UI
             _damageDirectionWorldPos = instigatorWorldPosition;
 
             if (_damageAudio != null && _damageClip != null)
-                _damageAudio.PlayOneShot(_damageClip);
+                _damageAudio.PlayOneShot(_damageClip, Game.Presentation.Audio.AudioVolumes.Effects);
         }
 
 /// <summary>Anima el borde full-screen: blanco caliente al impacto (instante), sangra a rojo

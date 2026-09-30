@@ -6,9 +6,13 @@ using UnityEngine;
 namespace Game.EditorTools.Audio
 {
     /// <summary>
-    /// Crea (o completa) Resources/AudioLibrary con una elección inicial de los packs de Kenney.
-    /// Solo llena los campos VACÍOS: lo que ya se cambió a mano en el asset no se pisa. Para volver
-    /// a la elección por defecto de un campo, vaciarlo y correr el menú de nuevo.
+    /// Crea (o completa) Resources/AudioLibrary con una elección inicial de los packs de Kenney,
+    /// agrupada por familia para que suene coherente:
+    /// - UI y loot: cristalino / mágico (pluck, glass, sweeps).
+    /// - Inventario: físico (tela, cuero, libros).
+    /// - Confirmaciones y errores: la familia confirmation / error del mismo pack.
+    /// "Build" solo llena los campos VACÍOS (lo cambiado a mano no se pisa). "Reset" vuelve todo a
+    /// esta elección por defecto.
     /// </summary>
     public static class AudioLibraryBuilder
     {
@@ -20,8 +24,22 @@ namespace Game.EditorTools.Audio
         private const string Rpg = "Assets/_Projec/Audio/KenneySounds/kenney_rpg-audio/Audio/";
 
         [MenuItem("Game/Audio/Build Default Audio Library")]
-        public static void Build()
+        public static void Build() => Build(overwrite: false);
+
+        [MenuItem("Game/Audio/Reset Audio Library To Defaults")]
+        public static void Reset()
         {
+            if (!EditorUtility.DisplayDialog("Audio Library",
+                    "Reemplaza TODOS los sonidos del AudioLibrary por la elección por defecto (se pierden los cambios hechos a mano).",
+                    "Reset", "Cancel")) return;
+            Build(overwrite: true);
+        }
+
+        private static bool _overwrite;
+
+        private static void Build(bool overwrite)
+        {
+            _overwrite = overwrite;
             if (!AssetDatabase.IsValidFolder(ResourcesFolder))
                 AssetDatabase.CreateFolder("Assets/_Projec", "Resources");
 
@@ -36,22 +54,22 @@ namespace Game.EditorTools.Audio
             int missing = 0;
 
             // UI
-            Fill(ref lib.UiClick, Interface + "click_002.ogg", ref missing);
-            Fill(ref lib.UiHover, Ui + "rollover2.ogg", ref missing);
-            Fill(ref lib.UiOpen, Interface + "open_002.ogg", ref missing);
-            Fill(ref lib.UiClose, Interface + "close_002.ogg", ref missing);
+            Fill(ref lib.UiClick, Interface + "pluck_001.ogg", ref missing);
+            Fill(ref lib.UiHover, Interface + "glass_001.ogg", ref missing);
+            Fill(ref lib.UiOpen, Interface + "maximize_006.ogg", ref missing);
+            Fill(ref lib.UiClose, Interface + "minimize_006.ogg", ref missing);
             Fill(ref lib.UiError, Interface + "error_004.ogg", ref missing);
-            Fill(ref lib.UiNotice, Interface + "question_001.ogg", ref missing);
+            Fill(ref lib.UiNotice, Interface + "glass_003.ogg", ref missing);
             Fill(ref lib.MatchFound, Interface + "confirmation_002.ogg", ref missing);
 
             // Inventario
             Fill(ref lib.InventoryOpen, Rpg + "clothBelt.ogg", ref missing);
             Fill(ref lib.InventoryClose, Rpg + "clothBelt2.ogg", ref missing);
-            Fill(ref lib.ItemMove, Interface + "drop_002.ogg", ref missing);
+            Fill(ref lib.ItemMove, Rpg + "handleSmallLeather2.ogg", ref missing);
             FillArray(ref lib.ItemEquip, ref missing, Rpg + "cloth1.ogg", Rpg + "cloth2.ogg", Rpg + "cloth3.ogg", Rpg + "cloth4.ogg");
             Fill(ref lib.ItemDrop, Rpg + "dropLeather.ogg", ref missing);
             Fill(ref lib.ItemPickup, Rpg + "handleSmallLeather.ogg", ref missing);
-            Fill(ref lib.Sort, Interface + "scroll_002.ogg", ref missing);
+            Fill(ref lib.Sort, Rpg + "bookFlip2.ogg", ref missing);
 
             // Loot
             Fill(ref lib.ContainerOpen, Rpg + "beltHandle1.ogg", ref missing);
@@ -81,13 +99,13 @@ namespace Game.EditorTools.Audio
 
         private static void Fill(ref AudioClip field, string path, ref int missing)
         {
-            if (field != null) return;
+            if (field != null && !_overwrite) return;
             field = Load(path, ref missing);
         }
 
         private static void FillArray(ref AudioClip[] field, ref int missing, params string[] paths)
         {
-            if (field != null && field.Length > 0) return;
+            if (field != null && field.Length > 0 && !_overwrite) return;
             var list = new System.Collections.Generic.List<AudioClip>();
             foreach (var p in paths)
             {

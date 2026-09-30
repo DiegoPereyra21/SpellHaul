@@ -12,6 +12,7 @@
             <ui:VisualElement class="menu-buttons">
                 <ui:Button name="find-match-button" text="Find Run" class="menu-button primary" />
                 <ui:Button name="stash-button" text="Stash" class="menu-button" />
+                <ui:Button name="options-button" text="Options" class="menu-button" />
                 <ui:Button name="quit-button" text="Exit" class="menu-button quit" />
             </ui:VisualElement>
         </ui:VisualElement>
@@ -33,6 +34,15 @@
             <ui:Label name="rejoin-status" text="" class="search-status rejoin-status" />
             <ui:Button name="rejoin-reconnect" text="Reconnect" class="menu-button primary" />
             <ui:Button name="rejoin-abandon" text="Abandon Run" class="menu-button quit" />
+        </ui:VisualElement>
+
+        <!-- Opciones (volúmenes). Oculto por defecto. -->
+        <ui:VisualElement name="options-panel" class="lobby-panel">
+            <ui:Label text="Options" class="lobby-title" />
+            <ui:Slider name="volume-master" label="Master Volume" low-value="0" high-value="1" class="options-slider" />
+            <ui:Slider name="volume-effects" label="Effects" low-value="0" high-value="1" class="options-slider" />
+            <ui:Slider name="volume-interface" label="Interface" low-value="0" high-value="1" class="options-slider" />
+            <ui:Button name="options-close" text="Close" class="menu-button quit options-close" />
         </ui:VisualElement>
 
         <!-- Búsqueda de partida en curso: banner arriba, no bloquea (se puede ordenar el stash). -->

@@ -41,6 +41,9 @@ namespace Game.Presentation.UI
         private VisualElement _backdrop;
         private VisualElement _noticePanel;
         private Label _noticeMessage;
+        private VisualElement _optionsPanel;
+        private Button _optionsButton;
+        private float _lastVolumePreview;
 
         // El menú se dibuja encima del Stash (para que el banner y los avisos se vean con el Stash
         // abierto); mientras el Stash está abierto el menú queda en "modo overlay" (ver USS).
@@ -86,6 +89,15 @@ namespace Game.Presentation.UI
             _noticePanel = root.Q<VisualElement>("notice-panel");
             _noticeMessage = root.Q<Label>("notice-message");
             root.Q<Button>("notice-close").clicked += HideNotice;
+
+            _optionsPanel = root.Q<VisualElement>("options-panel");
+            _optionsButton = root.Q<Button>("options-button");
+            if (_optionsButton != null) _optionsButton.clicked += ShowOptions;
+            var optionsClose = root.Q<Button>("options-close");
+            if (optionsClose != null) optionsClose.clicked += HideOptions;
+            BindVolumeSlider(root.Q<Slider>("volume-master"), () => Game.Presentation.Audio.AudioVolumes.Master, v => Game.Presentation.Audio.AudioVolumes.Master = v);
+            BindVolumeSlider(root.Q<Slider>("volume-effects"), () => Game.Presentation.Audio.AudioVolumes.Effects, v => Game.Presentation.Audio.AudioVolumes.Effects = v);
+            BindVolumeSlider(root.Q<Slider>("volume-interface"), () => Game.Presentation.Audio.AudioVolumes.Interface, v => Game.Presentation.Audio.AudioVolumes.Interface = v);
 
             _document.sortingOrder = SortingOrderAboveStash;
             Game.Presentation.Audio.GameAudio.AttachButtonSounds(root);
@@ -164,6 +176,7 @@ namespace Game.Presentation.UI
         // ---------- Estado del menú ----------
 
         private bool NoticeVisible => _noticePanel != null && _noticePanel.style.display == DisplayStyle.Flex;
+        private bool OptionsVisible => _optionsPanel != null && _optionsPanel.style.display == DisplayStyle.Flex;
         private bool RejoinVisible => _rejoinPanel != null && _rejoinPanel.style.display == DisplayStyle.Flex;
 
         /// <summary>
@@ -176,7 +189,7 @@ namespace Game.Presentation.UI
         {
             if (_document == null) return;
 
-            bool modal = NoticeVisible || RejoinVisible;
+            bool modal = NoticeVisible || RejoinVisible || OptionsVisible;
             bool ready = PlayFabSession.IsReady;
 
             if (_backdrop != null) _backdrop.style.display = modal ? DisplayStyle.Flex : DisplayStyle.None;
@@ -185,6 +198,7 @@ namespace Game.Presentation.UI
             _findMatchButton?.SetEnabled(ready && !modal && !_searchActive);
             _stashButton?.SetEnabled(ready && !modal);
             _quitButton?.SetEnabled(!modal);
+            _optionsButton?.SetEnabled(!modal);
 
             _stashScreen?.SetLoadoutLocked(_searchActive);
 
@@ -434,6 +448,36 @@ namespace Game.Presentation.UI
             if (_noticePanel != null) _noticePanel.style.display = DisplayStyle.Flex;
             Game.Presentation.Audio.GameAudio.Ui(l => l.UiNotice);
             RefreshMenuState();
+        }
+
+        // ---------- Opciones ----------
+
+        private void ShowOptions()
+        {
+            if (_optionsPanel != null) _optionsPanel.style.display = DisplayStyle.Flex;
+            RefreshMenuState();
+        }
+
+        private void HideOptions()
+        {
+            Game.Presentation.Audio.AudioVolumes.Save();
+            if (_optionsPanel != null) _optionsPanel.style.display = DisplayStyle.None;
+            RefreshMenuState();
+        }
+
+        /// <summary>Slider de volumen: arranca con el valor guardado y lo aplica al moverlo (con un
+        /// sonido de prueba, espaciado para no saturar mientras se arrastra).</summary>
+        private void BindVolumeSlider(Slider slider, System.Func<float> get, System.Action<float> set)
+        {
+            if (slider == null) return;
+            slider.SetValueWithoutNotify(get());
+            slider.RegisterValueChangedCallback(evt =>
+            {
+                set(evt.newValue);
+                if (Time.unscaledTime - _lastVolumePreview < 0.15f) return;
+                _lastVolumePreview = Time.unscaledTime;
+                Game.Presentation.Audio.GameAudio.Ui(l => l.UiClick);
+            });
         }
 
         private void HideNotice()

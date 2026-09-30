@@ -240,3 +240,30 @@
     white-space: normal;
     margin-bottom: 20px;
 }
+
+/* ---------- Opciones ---------- */
+
+.options-slider {
+    margin: 10px 0;
+}
+
+.options-slider > .unity-label {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    color: rgb(200, 201, 212);
+    font-size: 16px;
+    min-width: 150px;
+}
+
+.options-slider .unity-base-slider__tracker {
+    background-color: rgba(60, 62, 80, 0.8);
+    border-color: rgba(95, 98, 117, 0.6);
+}
+
+.options-slider .unity-base-slider__dragger {
+    background-color: rgb(186, 146, 253);
+    border-color: rgb(186, 146, 253);
+}
+
+.options-close {
+    margin-top: 16px;
+}

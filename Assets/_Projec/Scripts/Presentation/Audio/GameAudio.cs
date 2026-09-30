@@ -67,7 +67,7 @@ namespace Game.Presentation.Audio
             EnsureInitialized();
             if (clip == null || _source2D == null) return;
             _source2D.pitch = pitchVariance > 0f ? 1f + Random.Range(-pitchVariance, pitchVariance) : 1f;
-            _source2D.PlayOneShot(clip, volume);
+            _source2D.PlayOneShot(clip, volume * AudioVolumes.Interface);
         }
 
         /// <summary>Sonido en el mundo (se oye más fuerte cerca y hacia un lado u otro).</summary>
@@ -81,7 +81,7 @@ namespace Game.Presentation.Audio
 
             src.transform.position = position;
             src.pitch = pitchVariance > 0f ? 1f + Random.Range(-pitchVariance, pitchVariance) : 1f;
-            src.PlayOneShot(clip, volume);
+            src.PlayOneShot(clip, volume * AudioVolumes.Effects);
         }
 
         /// <summary>Uno al azar de un grupo (ej. pasos, equipar).</summary>

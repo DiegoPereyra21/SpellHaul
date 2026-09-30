@@ -81,7 +81,7 @@ namespace Game.Presentation.Combat
             if (clip == null || _sfxPool == null) return;
             AudioSource src = _sfxPool.Get(point, Quaternion.identity);
             src.clip = clip;
-            src.volume = volume;
+            src.volume = volume * Game.Presentation.Audio.AudioVolumes.Effects;
             src.Play();
             StartCoroutine(ReleaseAudioWhenDone(src));
         }
