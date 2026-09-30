@@ -88,6 +88,7 @@ namespace Game.Presentation.UI
             root.Q<Button>("notice-close").clicked += HideNotice;
 
             _document.sortingOrder = SortingOrderAboveStash;
+            Game.Presentation.Audio.GameAudio.AttachButtonSounds(root);
             if (_stashScreen != null)
             {
                 _stashScreen.Shown += RefreshMenuState;
@@ -393,6 +394,7 @@ namespace Game.Presentation.UI
                 case MatchmakingService.State.Matched:
                     _searching = false;
                     _searchStatus.text = "Run found. Connecting...";
+                    Game.Presentation.Audio.GameAudio.Ui(l => l.MatchFound);
                     _ = ConnectToMatchServerAsync();
                     break;
 
@@ -430,6 +432,7 @@ namespace Game.Presentation.UI
             _searchActive = false;
             if (_noticeMessage != null) _noticeMessage.text = message;
             if (_noticePanel != null) _noticePanel.style.display = DisplayStyle.Flex;
+            Game.Presentation.Audio.GameAudio.Ui(l => l.UiNotice);
             RefreshMenuState();
         }
 

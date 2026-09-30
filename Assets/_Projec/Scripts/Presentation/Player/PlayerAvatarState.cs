@@ -20,6 +20,14 @@ namespace Game.Presentation.Player
 
         private bool _controlDisabled;
 
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            // Pasos y aterrizajes (de todos los jugadores, en 3D). Se agrega acá para no tocar el prefab.
+            if (GetComponent<Game.Presentation.Audio.FootstepAudio>() == null)
+                gameObject.AddComponent<Game.Presentation.Audio.FootstepAudio>();
+        }
+
         /// <summary>True si el avatar ya no participa de la run (murió o extrajo). En el servidor
         /// se vuelve true en el mismo instante de la muerte/extracción (el RPC es RunLocally), así
         /// que los ServerRpc lo usan para rechazar acciones de un jugador que ya no está.</summary>

@@ -19,8 +19,8 @@
                 <ui:VisualElement class="pockets-and-usables">
                     <ui:VisualElement class="pockets-toolbar">
                         <ui:Label text="Sort pockets" class="sort-caption" />
-                        <ui:Button name="pockets-sort-type" text="Type" class="sort-btn" />
-                        <ui:Button name="pockets-sort-rarity" text="Rarity" class="sort-btn" />
+                        <ui:Button name="pockets-sort-type" text="Type" class="sort-btn has-ui-sound" />
+                        <ui:Button name="pockets-sort-rarity" text="Rarity" class="sort-btn has-ui-sound" />
                         <ui:Label text="R — last sort" class="sort-hint" />
                     </ui:VisualElement>
                     <ui:VisualElement class="pockets-row">

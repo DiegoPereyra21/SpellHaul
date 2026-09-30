@@ -70,7 +70,10 @@ namespace Game.Presentation.Combat
             if (_interactAction.WasPressedThisFrame())
             {
                 if (_current != null)
+                {
+                    Game.Presentation.Audio.GameAudio.Ui(l => l.ItemPickup);
                     PickupServerRpc(_current);
+                }
                 else if (_currentContainer != null && _inventoryUI != null)
                     _inventoryUI.OpenWithContainer(_currentContainer);
             }

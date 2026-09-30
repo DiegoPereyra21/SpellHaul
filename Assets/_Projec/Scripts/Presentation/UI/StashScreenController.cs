@@ -1,5 +1,6 @@
 using Game.Core.Items;
 using Game.Presentation.Run;
+using Game.Presentation.Audio;
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
@@ -99,6 +100,8 @@ namespace Game.Presentation.UI
             _tooltipDescription = _root.Q<Label>("tooltip-description");
             _tooltipStats = _root.Q<VisualElement>("tooltip-stats");
 
+            GameAudio.AttachButtonSounds(_root);
+
             var closeBtn = _root.Q<Button>("stash-close");
             if (closeBtn != null) closeBtn.clicked += Hide;
 
@@ -152,7 +155,11 @@ namespace Game.Presentation.UI
             bool wasVisible = IsVisible;
             _root.style.display = DisplayStyle.Flex;
             Redraw();
-            if (!wasVisible) Shown?.Invoke();
+            if (!wasVisible)
+            {
+                GameAudio.Ui(l => l.UiOpen);
+                Shown?.Invoke();
+            }
             return true;
         }
 
@@ -163,7 +170,11 @@ namespace Game.Presentation.UI
             HideTooltip();
             bool wasVisible = IsVisible;
             _root.style.display = DisplayStyle.None;
-            if (wasVisible) Hidden?.Invoke();
+            if (wasVisible)
+            {
+                GameAudio.Ui(l => l.UiClose);
+                Hidden?.Invoke();
+            }
         }
 
         private InventorySnapshot Inv => PlayerLoadoutService.Current;
@@ -328,7 +339,9 @@ namespace Game.Presentation.UI
         /// previa (CanShrinkPocketSafely), que cubría solo algunos casos y dejaba otros caminos
         /// que borraban items.
         /// </summary>
-        private bool TryMutate(System.Func<bool> action)
+        private enum MutateSound { Move, Equip, Sort }
+
+        private bool TryMutate(System.Func<bool> action, MutateSound sound = MutateSound.Move)
         {
             var backup = TakeBackup();
             bool ok = action() && NormalizeInventory();
@@ -339,12 +352,26 @@ namespace Game.Presentation.UI
             if (ok)
             {
                 PersistAndRedraw();
+                PlayMutateSound(sound);
                 return true;
             }
 
             RestoreBackup(backup);
             Redraw();
+            GameAudio.Ui(l => l.UiError, 0.6f); // no se pudo: aviso corto
             return false;
+        }
+
+        private static void PlayMutateSound(MutateSound sound)
+        {
+            var lib = GameAudio.Library;
+            if (lib == null) return;
+            switch (sound)
+            {
+                case MutateSound.Equip: GameAudio.Play2D(GameAudio.Pick(lib.ItemEquip), lib.UiVolume, 0.05f); break;
+                case MutateSound.Sort: GameAudio.Play2D(lib.Sort, lib.UiVolume); break;
+                default: GameAudio.Play2D(lib.ItemMove, lib.UiVolume, 0.05f); break;
+            }
         }
 
         /// <summary>Deja Inv consistente: un slot de equipo por EquipmentSlot y cada pocket con su
@@ -455,7 +482,7 @@ namespace Game.Presentation.UI
                 for (int i = 0; i < Stash.Slots.Count; i++)
                     Stash.Slots[i] = i < items.Count ? items[i] : ItemStack.Empty;
                 return true;
-            });
+            }, MutateSound.Sort);
         }
 
         // ---------- Stash ----------
@@ -733,13 +760,13 @@ namespace Game.Presentation.UI
         {
             var list = zone == SlotZone.PocketL ? Inv.PocketL : Inv.PocketR;
             TryMutate(() => index >= 0 && index < list.Count
-                            && TryEquip(list[index], () => list[index] = ItemStack.Empty));
+                            && TryEquip(list[index], () => list[index] = ItemStack.Empty), MutateSound.Equip);
         }
 
         private void EquipFromStash(int stashIndex)
         {
             TryMutate(() => stashIndex >= 0 && stashIndex < Stash.Slots.Count
-                            && TryEquip(Stash.Slots[stashIndex], () => Stash.TakeAt(stashIndex)));
+                            && TryEquip(Stash.Slots[stashIndex], () => Stash.TakeAt(stashIndex)), MutateSound.Equip);
         }
 
         /// <summary>Equipa el stack sacándolo de su origen. Lo que estaba equipado (y cualquier
@@ -820,7 +847,7 @@ namespace Game.Presentation.UI
 
                 Inv.Equipment[equipSlotIndex] = ItemStack.Empty;
                 return StoreSomewhere(stack);
-            });
+            }, MutateSound.Equip);
         }
 
         /// <summary>Guarda el stack en el primer slot libre de los pockets o, si no hay, en el Stash. False si no entró entero.</summary>

@@ -149,6 +149,18 @@ namespace Game.Presentation.Abilities
             return _mana.Current - pending;
         }
 
+        // "Fizzle" al intentar castear sin maná (o si el servidor rechaza el cast). No suena por
+        // apretar en cooldown: spameando sería constante. Con un mínimo entre sonidos.
+        private float _lastRejectSoundTime = -10f;
+
+        private void PlayCastRejectedSound()
+        {
+            if (Time.unscaledTime - _lastRejectSoundTime < 0.4f) return;
+            _lastRejectSoundTime = Time.unscaledTime;
+            var lib = Game.Presentation.Audio.GameAudio.Library;
+            if (lib != null) Game.Presentation.Audio.GameAudio.Play2D(lib.CastRejected, lib.UiVolume * 0.8f);
+        }
+
         private void RecordLocalManaSpend(float cost)
         {
             if (cost > 0f) _localManaSpends.Add((Time.unscaledTime, cost));
@@ -277,7 +289,7 @@ namespace Game.Presentation.Abilities
 
             // Chequeos locales (feedback inmediato, no autoritativos).
             if (IsOnCooldown(_localCooldownEndTick[slot])) return;
-            if (PredictedLocalMana() < ability.ResourceCost) return;
+            if (PredictedLocalMana() < ability.ResourceCost) { PlayCastRejectedSound(); return; }
 
             // Predicción local de cooldown y maná. El maná real lo descuenta y sincroniza el servidor.
             PredictCooldownLocally(slot, ability);
@@ -323,7 +335,7 @@ namespace Game.Presentation.Abilities
             // Chequeos locales (feedback inmediato, no autoritativos). El cooldown de esta
             // habilidad recién se predice al SOLTAR (arranca cuando se dispara, no al cargar).
             if (IsOnCooldown(_localCooldownEndTick[slot])) return;
-            if (PredictedLocalMana() < ability.ResourceCost) return;
+            if (PredictedLocalMana() < ability.ResourceCost) { PlayCastRejectedSound(); return; }
 
             RecordLocalManaSpend(ability.ResourceCost);
             _localCharging[slot] = true;
@@ -620,6 +632,7 @@ namespace Game.Presentation.Abilities
         [TargetRpc]
         private void RejectCastTargetRpc(FishNet.Connection.NetworkConnection conn, int slot, float cooldownRemaining)
         {
+            PlayCastRejectedSound();
             // Llega el tiempo RESTANTE, no un tick absoluto del servidor: el tick del servidor no
             // significa nada en el reloj local del cliente. Se convierte a ticks LOCALES acá.
             _localCooldownEndTick[slot] = cooldownRemaining > 0f ? TicksFromNow(cooldownRemaining) : 0u;

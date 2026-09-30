@@ -123,6 +123,8 @@ namespace Game.Presentation.UI
             _containerLabel = _root.Q<Label>("container-label");
             BuildUsableSlots();
 
+            Game.Presentation.Audio.GameAudio.AttachButtonSounds(_root);
+
             var sortType = _root.Q<Button>("pockets-sort-type");
             if (sortType != null) sortType.clicked += () => SortPockets(ItemSortMode.Type);
             var sortRarity = _root.Q<Button>("pockets-sort-rarity");
@@ -156,11 +158,24 @@ namespace Game.Presentation.UI
         {
             if (_isDragging) EndDrag();
             StashScreenController.LastSortMode = mode;
+            Sfx(l => l.Sort);
             SortPocketsServerRpc((int)mode);
+        }
+
+        // Sonidos de las acciones del inventario: suenan al pedirlas (el servidor las valida después;
+        // esperar la confirmación se sentiría con retraso).
+        private static void Sfx(System.Func<Game.Presentation.Audio.AudioLibrarySO, AudioClip> select)
+            => Game.Presentation.Audio.GameAudio.Ui(select);
+
+        private static void SfxEquip()
+        {
+            var lib = Game.Presentation.Audio.GameAudio.Library;
+            if (lib != null) Game.Presentation.Audio.GameAudio.Play2D(Game.Presentation.Audio.GameAudio.Pick(lib.ItemEquip), lib.UiVolume, 0.05f);
         }
 
         private void SetOpen(bool open)
         {
+            if (open != _isOpen) Sfx(l => open ? l.InventoryOpen : l.InventoryClose);
             _isOpen = open;
             _root.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 
@@ -179,6 +194,25 @@ namespace Game.Presentation.UI
             _openContainer = container;
             if (container != null) container.RegisterChangeCallback(Redraw);
             SetOpen(true);
+            PlayContainerOpenSounds(container);
+        }
+
+        /// <summary>Abrir un contenedor suena; si trae algo raro o épico, además un brillo.</summary>
+        private void PlayContainerOpenSounds(LootContainer container)
+        {
+            var lib = Game.Presentation.Audio.GameAudio.Library;
+            if (lib == null || container == null) return;
+            Sfx(l => l.ContainerOpen);
+
+            Rarity best = Rarity.Common;
+            foreach (var stack in container.Contents)
+            {
+                if (stack.IsEmpty) continue;
+                ItemSO def = _database.GetById(stack.ItemId);
+                if (def != null && def.Rarity > best) best = def.Rarity;
+            }
+            if (best == Rarity.Epic) Sfx(l => l.EpicLoot);
+            else if (best == Rarity.Rare) Sfx(l => l.RareLoot);
         }
 
         private void CloseContainer()
@@ -262,7 +296,8 @@ namespace Game.Presentation.UI
                     slot.RegisterCallback<ClickEvent>(evt =>
                     {
                         if (_dragMoved) { _dragMoved = false; return; }
-                        if (evt.ctrlKey) { DropItemServerRpc((int)SlotZone.Equipment, slotIndex); return; }
+                        if (evt.ctrlKey) { Sfx(l => l.ItemDrop); DropItemServerRpc((int)SlotZone.Equipment, slotIndex); return; }
+                        SfxEquip();
                         UnequipServerRpc(slotIndex);
                     });
 
@@ -298,7 +333,7 @@ namespace Game.Presentation.UI
                     ItemStack stack = list[i];
                     System.Action onClick = null;
                     if (!stack.IsEmpty && _database.GetById(stack.ItemId) is EquipmentItemSO)
-                        onClick = () => QuickEquipServerRpc((int)zone, slotIndex);
+                        onClick = () => { SfxEquip(); QuickEquipServerRpc((int)zone, slotIndex); };
 
                     grid.Add(BuildItemSlot(stack, zone, slotIndex, onClick));
                 }
@@ -332,7 +367,7 @@ namespace Game.Presentation.UI
             {
                 int idx = i;
                 _containerGrid.Add(BuildItemSlot(contents[i], SlotZone.Container, idx,
-                    () => TakeFromContainerServerRpc(_openContainer, idx)));
+                    () => { Sfx(l => l.ItemPickup); TakeFromContainerServerRpc(_openContainer, idx); }));
             }
         }
 
@@ -364,15 +399,16 @@ namespace Game.Presentation.UI
                 slot.RegisterCallback<ClickEvent>(evt =>
                 {
                     if (_dragMoved) { _dragMoved = false; return; }
-                    if (evt.ctrlKey)  { DropItemServerRpc((int)zone, index); return; }
+                    if (evt.ctrlKey)  { Sfx(l => l.ItemDrop); DropItemServerRpc((int)zone, index); return; }
                     if (evt.shiftKey)
                     {
                         if (zone == SlotZone.Container)
                         {
-                            if (_openContainer != null) QuickEquipFromContainerServerRpc(_openContainer, index);
+                            if (_openContainer != null) { SfxEquip(); QuickEquipFromContainerServerRpc(_openContainer, index); }
                         }
                         else
                         {
+                            SfxEquip();
                             QuickEquipServerRpc((int)zone, index);
                         }
                         return;
@@ -534,10 +570,12 @@ namespace Game.Presentation.UI
             if (from.Zone == SlotZone.Container)
             {
                 if (_openContainer == null) return;
+                Sfx(l => l.ItemMove);
                 MoveWithContainerServerRpc((int)from.Zone, from.Index, (int)destZone, destIndex, _openContainer);
             }
             else
             {
+                Sfx(l => l.ItemMove);
                 MoveSlotServerRpc((int)from.Zone, from.Index, (int)destZone, destIndex);
             }
         }
@@ -555,10 +593,14 @@ namespace Game.Presentation.UI
             if (from.Zone == SlotZone.Container)
             {
                 if (_openContainer != null)
+                {
+                    Sfx(l => l.ItemDrop);
                     DropContainerItemToWorldServerRpc(_openContainer, from.Index);
+                }
                 return;
             }
 
+            Sfx(l => l.ItemDrop);
             DropToWorldServerRpc((int)from.Zone, from.Index);
         }
 

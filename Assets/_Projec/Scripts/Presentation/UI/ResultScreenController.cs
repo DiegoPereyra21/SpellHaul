@@ -30,6 +30,7 @@ namespace Game.Presentation.UI
             var returnBtn = _root.Q<Button>("return-button");
             if (returnBtn != null)
                 returnBtn.clicked += OnReturnClicked;
+            Game.Presentation.Audio.GameAudio.AttachButtonSounds(_root);
         }
 
         /// <summary>Muestra la pantalla con el resultado. extracted=true si extrajo, false si murió.</summary>
@@ -39,6 +40,7 @@ namespace Game.Presentation.UI
             NetworkDisconnectHandler.NotifyLocalRunFinished();
 
             _root.style.display = DisplayStyle.Flex;
+            Game.Presentation.Audio.GameAudio.Ui(l => extracted ? l.ExtractionComplete : l.Died);
 
             _title.RemoveFromClassList("extracted");
             _title.RemoveFromClassList("died");

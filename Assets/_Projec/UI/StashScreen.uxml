@@ -28,8 +28,8 @@
                         <ui:Label name="stash-label" text="Stash" class="grid-header" />
                         <ui:VisualElement class="sort-buttons">
                             <ui:Label text="Sort" class="sort-caption" />
-                            <ui:Button name="sort-type" text="Type" class="sort-btn" />
-                            <ui:Button name="sort-rarity" text="Rarity" class="sort-btn" />
+                            <ui:Button name="sort-type" text="Type" class="sort-btn has-ui-sound" />
+                            <ui:Button name="sort-rarity" text="Rarity" class="sort-btn has-ui-sound" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement name="stash-grid" class="grid stash-grid-big" />
