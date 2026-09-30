@@ -69,5 +69,21 @@
             <ui:VisualElement name="crosshair" class="crosshair" />
             <ui:VisualElement name="hitmarker" class="hitmarker" />
         </ui:VisualElement>
+
+        <!-- Menú de pausa (Esc). La partida sigue: es solo un menú, no detiene el juego. -->
+        <ui:VisualElement name="pause-root" class="pause-root">
+            <ui:VisualElement class="pause-panel">
+                <ui:Label text="Paused" class="pause-title" />
+                <ui:Label text="The run keeps going while this menu is open." class="pause-hint" />
+
+                <ui:Slider name="pause-volume-master" label="Master Volume" low-value="0" high-value="1" class="pause-slider" />
+                <ui:Slider name="pause-volume-effects" label="Effects" low-value="0" high-value="1" class="pause-slider" />
+                <ui:Slider name="pause-volume-interface" label="Interface" low-value="0" high-value="1" class="pause-slider" />
+                <ui:Slider name="pause-sensitivity" label="Mouse Sensitivity" low-value="0.2" high-value="3" class="pause-slider" />
+
+                <ui:Button name="pause-resume" text="Resume" class="pause-button primary" />
+                <ui:Button name="pause-leave" text="Leave Run" class="pause-button danger" />
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

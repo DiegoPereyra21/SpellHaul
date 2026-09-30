@@ -146,6 +146,7 @@ namespace Game.Presentation.UI
         private void Update()
         {
             if (!base.IsOwner) return;
+            if (PauseMenuController.IsPaused) return; // con el menú de pausa abierto, Tab no hace nada
             if (_toggleAction.WasPressedThisFrame()) SetOpen(!_isOpen);
 
             // R con el inventario abierto: ordenar los pockets con el último criterio usado.
@@ -187,6 +188,14 @@ namespace Game.Presentation.UI
 
             if (open) Redraw();
             else CloseContainer();
+        }
+
+        public bool IsOpen => _isOpen;
+
+        /// <summary>Cierra el inventario (Esc lo usa antes de abrir el menú de pausa).</summary>
+        public void Close()
+        {
+            if (_isOpen) SetOpen(false);
         }
 
         public void OpenWithContainer(LootContainer container)

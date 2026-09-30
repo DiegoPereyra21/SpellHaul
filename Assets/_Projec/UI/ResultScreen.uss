@@ -42,3 +42,82 @@
 .return-button:hover {
     background-color: rgba(120, 95, 180, 0.95);
 }
+/* ---------- Resumen ---------- */
+
+.result-panel {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Regular.ttf");
+    width: 640px;
+    background-color: rgba(14, 14, 24, 0.92);
+    border-width: 1px;
+    border-color: rgba(68, 70, 88, 0.5);
+    border-radius: 16px;
+}
+
+.result-stats {
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.result-stat {
+    align-items: center;
+    margin: 0 26px;
+}
+
+.result-stat-value {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Cinzel-Medium.ttf");
+    font-size: 30px;
+    color: rgb(237, 238, 245);
+}
+
+.result-stat-label {
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: rgb(131, 133, 146);
+}
+
+.result-items-header {
+    align-self: flex-start;
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: rgb(131, 133, 146);
+    margin-bottom: 6px;
+}
+
+.result-items {
+    align-self: stretch;
+    max-height: 300px;
+    margin-bottom: 28px;
+    background-color: rgba(8, 8, 17, 0.6);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+.result-item-row {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 6px 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(48, 49, 66, 0.35);
+}
+
+.result-item-name {
+    font-size: 16px;
+    -unity-font-style: bold;
+}
+
+.result-item-qty {
+    font-size: 15px;
+    color: rgb(170, 172, 185);
+}
+
+.result-items-empty {
+    font-size: 15px;
+    -unity-font-style: italic;
+    color: rgb(111, 113, 125);
+    padding: 8px 4px;
+}
+
+.rarity-common { color: rgb(227, 228, 235); }
+.rarity-rare   { color: rgb(90, 180, 255); }
+.rarity-epic   { color: rgb(210, 110, 245); }

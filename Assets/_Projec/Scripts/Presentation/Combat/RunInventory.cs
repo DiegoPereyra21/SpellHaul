@@ -159,7 +159,10 @@ namespace Game.Presentation.Combat
             _pocketR.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
             _equipment.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
             if (base.IsOwner)
+            {
+                Game.Presentation.UI.RunSummary.BeginRun(_database);
                 _ = ClientPushLoadoutAsync();
+            }
         }
 
         /// <summary>Client-only (dueño). Asegura el loadout persistente cargado (PlayFab/local)
@@ -842,6 +845,7 @@ namespace Game.Presentation.Combat
         [TargetRpc]
         private void SaveLoadoutTargetRpc(FishNet.Connection.NetworkConnection conn, Game.Core.Items.InventorySnapshot snapshot)
         {
+            Game.Presentation.UI.RunSummary.SetExtracted(snapshot);
             Game.Presentation.Run.PlayerLoadoutService.ApplyRunResult(snapshot);
         }
 

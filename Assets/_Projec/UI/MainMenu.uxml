@@ -42,6 +42,7 @@
             <ui:Slider name="volume-master" label="Master Volume" low-value="0" high-value="1" class="options-slider" />
             <ui:Slider name="volume-effects" label="Effects" low-value="0" high-value="1" class="options-slider" />
             <ui:Slider name="volume-interface" label="Interface" low-value="0" high-value="1" class="options-slider" />
+            <ui:Slider name="mouse-sensitivity" label="Mouse Sensitivity" low-value="0.2" high-value="3" class="options-slider" />
             <ui:Button name="options-close" text="Close" class="menu-button quit options-close" />
         </ui:VisualElement>
 

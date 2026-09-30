@@ -251,7 +251,7 @@
     -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
     color: rgb(200, 201, 212);
     font-size: 16px;
-    min-width: 150px;
+    min-width: 170px;
 }
 
 .options-slider .unity-base-slider__tracker {

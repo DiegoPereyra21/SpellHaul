@@ -53,13 +53,84 @@ namespace Game.Presentation.UI
             }
             else
             {
-                _title.text = "ELIMINATED";
+                bool left = RunSummary.DeathCause == "You left the run.";
+                _title.text = left ? "RUN ABANDONED" : "ELIMINATED";
                 _title.AddToClassList("died");
-                _subtitle.text = "You fell in the run. You lost what you carried.";
+                _subtitle.text = string.IsNullOrEmpty(RunSummary.DeathCause)
+                    ? "You fell in the run. You lost what you carried."
+                    : $"{RunSummary.DeathCause} You lost what you carried.";
             }
+
+            FillSummary(extracted);
 
             UnityEngine.Cursor.lockState = CursorLockMode.None;
             UnityEngine.Cursor.visible = true;
+        }
+
+        /// <summary>Tiempo, enemigos derrotados y la lista de lo que sacó (o perdió), con color de rareza.</summary>
+        private void FillSummary(bool extracted)
+        {
+            var root = _root;
+            int seconds = Mathf.FloorToInt(RunSummary.ElapsedSeconds);
+            SetText(root, "stat-time", $"{seconds / 60:00}:{seconds % 60:00}");
+            SetText(root, "stat-kills", RunSummary.Kills.ToString());
+
+            var snapshot = extracted ? RunSummary.ExtractedItems : RunSummary.LostItems;
+            var items = new System.Collections.Generic.List<Game.Core.Items.ItemStack>();
+            if (snapshot != null)
+            {
+                foreach (var s in snapshot.Equipment) if (!s.IsEmpty) items.Add(s);
+                foreach (var s in snapshot.PocketL) if (!s.IsEmpty) items.Add(s);
+                foreach (var s in snapshot.PocketR) if (!s.IsEmpty) items.Add(s);
+            }
+
+            var db = RunSummary.Database;
+            if (db != null)
+                items.Sort((a, b) => Game.Core.Items.ItemSorting.Compare(a, db.GetById(a.ItemId), b, db.GetById(b.ItemId), Game.Core.Items.ItemSortMode.Rarity));
+
+            int total = 0;
+            foreach (var s in items) total += s.Quantity;
+            SetText(root, "stat-items", total.ToString());
+            SetText(root, "stat-items-label", extracted ? "Items extracted" : "Items lost");
+            SetText(root, "items-header", extracted ? "EXTRACTED" : "LOST");
+
+            var list = root.Q<ScrollView>("items-list");
+            if (list == null) return;
+            list.Clear();
+
+            if (items.Count == 0)
+            {
+                var empty = new Label(extracted ? "You came back empty-handed." : "You carried nothing.");
+                empty.AddToClassList("result-items-empty");
+                list.Add(empty);
+                return;
+            }
+
+            foreach (var stack in items)
+            {
+                var def = db != null ? db.GetById(stack.ItemId) : null;
+                var row = new VisualElement();
+                row.AddToClassList("result-item-row");
+
+                var name = new Label(def != null ? def.DisplayName : stack.ItemId);
+                name.AddToClassList("result-item-name");
+                name.AddToClassList(ItemTooltipFormatter.RarityClass(def));
+                row.Add(name);
+
+                if (stack.Quantity > 1)
+                {
+                    var qty = new Label($"x{stack.Quantity}");
+                    qty.AddToClassList("result-item-qty");
+                    row.Add(qty);
+                }
+                list.Add(row);
+            }
+        }
+
+        private static void SetText(VisualElement root, string name, string text)
+        {
+            var label = root.Q<Label>(name);
+            if (label != null) label.text = text;
         }
 
             private void OnReturnClicked()

@@ -303,3 +303,96 @@
     right: 0;
     bottom: 0;
 }
+/* ---------- Menú de pausa ---------- */
+
+.pause-root {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(4, 4, 9, 0.72);
+}
+
+.pause-panel {
+    width: 540px;
+    padding: 30px 36px;
+    background-color: rgba(14, 14, 24, 0.97);
+    border-width: 1px;
+    border-color: rgba(68, 70, 88, 0.5);
+    border-radius: 14px;
+}
+
+.pause-title {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Cinzel-Medium.ttf");
+    font-size: 30px;
+    color: rgb(243, 244, 252);
+    -unity-text-align: upper-center;
+}
+
+.pause-hint {
+    font-size: 14px;
+    color: rgb(131, 133, 146);
+    -unity-text-align: upper-center;
+    margin-bottom: 18px;
+}
+
+.pause-slider {
+    margin: 8px 0;
+}
+
+.pause-slider > .unity-label {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    color: rgb(200, 201, 212);
+    font-size: 16px;
+    min-width: 170px;
+}
+
+.pause-slider .unity-base-slider__tracker {
+    background-color: rgba(60, 62, 80, 0.8);
+    border-color: rgba(95, 98, 117, 0.6);
+}
+
+.pause-slider .unity-base-slider__dragger {
+    background-color: rgb(186, 146, 253);
+    border-color: rgb(186, 146, 253);
+}
+
+.pause-button {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    font-size: 18px;
+    letter-spacing: 1px;
+    padding: 14px 20px;
+    margin: 8px 0 0 0;
+    border-width: 1px;
+    border-radius: 10px;
+    color: rgb(220, 221, 229);
+    background-color: rgba(25, 26, 36, 0.6);
+    border-color: rgba(95, 98, 117, 0.5);
+}
+
+.pause-button:hover {
+    border-color: rgba(181, 139, 249, 0.6);
+}
+
+.pause-button.primary {
+    margin-top: 20px;
+    color: rgb(8, 8, 17);
+    background-color: rgb(186, 146, 253);
+    border-color: rgb(186, 146, 253);
+}
+
+.pause-button.danger {
+    color: rgb(240, 110, 108);
+    background-color: transparent;
+    border-color: rgba(210, 70, 70, 0.5);
+}
+
+.pause-button.danger.armed {
+    color: white;
+    background-color: rgba(190, 50, 50, 0.9);
+    border-color: rgb(230, 90, 90);
+}

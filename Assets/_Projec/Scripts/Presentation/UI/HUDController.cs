@@ -169,6 +169,14 @@ namespace Game.Presentation.UI
                 _cooldownTexts[i] = root.Q<Label>($"slot-{i}-cd-text");
 
             _dangerFrame = root.Q<VisualElement>("danger-frame");
+
+            // Menú de pausa (Esc), solo para el dueño.
+            if (root.Q<VisualElement>("pause-root") != null)
+            {
+                var pause = GetComponent<PauseMenuController>();
+                if (pause == null) pause = gameObject.AddComponent<PauseMenuController>();
+                pause.Init(root);
+            }
         }
 
         public override void OnStopClient()
@@ -369,6 +377,7 @@ namespace Game.Presentation.UI
         /// <summary>Llamado (owner-only) cuando el servidor confirma que un ataque propio conectó.</summary>
         private void PlayHitMarker(bool isKill)
         {
+            if (isKill) RunSummary.AddKill();
             _hitMarkerStartTime = Time.unscaledTime;
             _hitMarkerIsKill = isKill;
             _hitMarkerActive = true;

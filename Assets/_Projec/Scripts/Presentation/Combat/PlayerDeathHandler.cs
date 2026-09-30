@@ -35,7 +35,59 @@ namespace Game.Presentation.Combat
         {
             if (Game.Presentation.Run.RunManager.Instance != null)
                 Game.Presentation.Run.RunManager.Instance.SetDead(base.ObjectId);
+
+            // Resumen para la pantalla de resultados del dueño, ANTES de soltar el loot (DropAll
+            // corre en DieObserversRpc y vacía el inventario). Mismo canal confiable: llega primero.
+            if (base.Owner.IsActive && TryGetComponent(out RunInventory inventory))
+                DeathSummaryTargetRpc(base.Owner, DescribeDeathCause(instigatorNetworkId), inventory.TakeSnapshot());
+
+            _leavingRun = false;
             DieObserversRpc();
+        }
+
+        // ---------- Salir de la run (menú de pausa) ----------
+
+        private bool _leavingRun;
+
+        /// <summary>
+        /// El jugador abandona la run desde el menú de pausa: es una muerte (suelta todo lo que lleva
+        /// en un contenedor y pierde el equipo), con su propio texto en la pantalla de resultados.
+        /// </summary>
+        [ServerRpc]
+        public void LeaveRunServerRpc()
+        {
+            if (_health == null || _health.IsDead) return;
+            if (_avatar != null && _avatar.IsControlDisabled) return; // ya extrajo
+            _leavingRun = true;
+            _health.ApplyDamage(1_000_000f, base.ObjectId);
+            _leavingRun = false; // si algo impidió la muerte, que no quede marcado
+        }
+
+        [Server]
+        private string DescribeDeathCause(int instigatorNetworkId)
+        {
+            if (instigatorNetworkId == base.ObjectId)
+            {
+                if (_leavingRun) return "You left the run.";
+                var run = Game.Presentation.Run.RunManager.Instance;
+                if (run != null && run.Phase == Game.Core.Run.RunPhase.DangerPhase) return "The danger phase caught you.";
+                return "You fell to your death.";
+            }
+
+            if (!FishNet.InstanceFinder.ServerManager.Objects.Spawned.TryGetValue(instigatorNetworkId, out NetworkObject killer))
+                return "You were killed.";
+
+            if (killer.GetComponent<PlayerAvatarState>() != null) return "Killed by another mage.";
+            if (killer.GetComponent<PlantGuardianAI>() != null) return "Killed by a Plant Guardian.";
+            if (killer.GetComponent<RangedEnemyAI>() != null) return "Killed by a ranged enemy.";
+            if (killer.GetComponent<EnemyAI>() != null) return "Killed by a melee enemy.";
+            return "You were killed.";
+        }
+
+        [TargetRpc]
+        private void DeathSummaryTargetRpc(FishNet.Connection.NetworkConnection conn, string cause, Game.Core.Items.InventorySnapshot carried)
+        {
+            Game.Presentation.UI.RunSummary.SetDeath(cause, carried);
         }
 
         [ObserversRpc(RunLocally = true)]

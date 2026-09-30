@@ -98,6 +98,12 @@ namespace Game.Presentation.UI
             BindVolumeSlider(root.Q<Slider>("volume-master"), () => Game.Presentation.Audio.AudioVolumes.Master, v => Game.Presentation.Audio.AudioVolumes.Master = v);
             BindVolumeSlider(root.Q<Slider>("volume-effects"), () => Game.Presentation.Audio.AudioVolumes.Effects, v => Game.Presentation.Audio.AudioVolumes.Effects = v);
             BindVolumeSlider(root.Q<Slider>("volume-interface"), () => Game.Presentation.Audio.AudioVolumes.Interface, v => Game.Presentation.Audio.AudioVolumes.Interface = v);
+            var sensitivity = root.Q<Slider>("mouse-sensitivity");
+            if (sensitivity != null)
+            {
+                sensitivity.SetValueWithoutNotify(Game.Presentation.Player.LookSettings.Sensitivity);
+                sensitivity.RegisterValueChangedCallback(evt => Game.Presentation.Player.LookSettings.Sensitivity = evt.newValue);
+            }
 
             _document.sortingOrder = SortingOrderAboveStash;
             Game.Presentation.Audio.GameAudio.AttachButtonSounds(root);

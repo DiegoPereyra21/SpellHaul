@@ -216,8 +216,11 @@ namespace Game.Presentation.Player
             if (!_inputBlocked)
             {
                 Vector2 look = _lookAction.ReadValue<Vector2>();
-                float yawDelta = look.x * _mouseSensitivity;
-                float pitchDelta = -look.y * _mouseSensitivity;
+                // Sensibilidad del jugador (opciones) sobre la base del prefab. Solo escala la mirada
+                // local antes de convertirla en input: prediction/reconcile no cambian.
+                float sensitivity = _mouseSensitivity * LookSettings.Sensitivity;
+                float yawDelta = look.x * sensitivity;
+                float pitchDelta = -look.y * sensitivity;
 
                 transform.Rotate(Vector3.up, yawDelta);
                 if (_cameraLook != null)

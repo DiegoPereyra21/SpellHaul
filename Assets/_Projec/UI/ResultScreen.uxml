@@ -4,7 +4,26 @@
         <ui:VisualElement class="result-panel">
             <ui:Label name="result-title" text="" class="result-title" />
             <ui:Label name="result-subtitle" text="" class="result-subtitle" />
-            <ui:Button name="return-button" text="Volver al menú" class="return-button" />
+
+            <ui:VisualElement class="result-stats">
+                <ui:VisualElement class="result-stat">
+                    <ui:Label name="stat-time" text="00:00" class="result-stat-value" />
+                    <ui:Label text="Time in run" class="result-stat-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="result-stat">
+                    <ui:Label name="stat-kills" text="0" class="result-stat-value" />
+                    <ui:Label text="Enemies defeated" class="result-stat-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="result-stat">
+                    <ui:Label name="stat-items" text="0" class="result-stat-value" />
+                    <ui:Label name="stat-items-label" text="Items" class="result-stat-label" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:Label name="items-header" text="" class="result-items-header" />
+            <ui:ScrollView name="items-list" class="result-items" />
+
+            <ui:Button name="return-button" text="Return to Menu" class="return-button" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
