@@ -102,7 +102,6 @@
 }
 
 .equip-item-name {
-    color: rgb(227, 228, 235);
     font-size: 16px;
     -unity-font-style: bold;
     margin-left: 8px;
@@ -182,21 +181,8 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
-/* ---------- Acentos por slot / tipo de item ---------- */
 
-.accent-dot.accent-green   { background-color: rgb(103, 210, 131); }
-.accent-dot.accent-cyan    { background-color: rgb(62, 204, 226); }
-.accent-dot.accent-violet  { background-color: rgb(181, 139, 249); }
-.accent-dot.accent-gold    { background-color: rgb(228, 183, 80); }
-.accent-dot.accent-amber   { background-color: rgb(237, 131, 94); }
-.accent-dot.accent-loot    { background-color: rgb(226, 73, 71); }
 
-.item-slot.accent-green  { background-color: rgba(103, 210, 131, 0.18); border-color: rgba(103, 210, 131, 0.55); }
-.item-slot.accent-cyan   { background-color: rgba(62, 204, 226, 0.18); border-color: rgba(62, 204, 226, 0.55); }
-.item-slot.accent-violet { background-color: rgba(181, 139, 249, 0.18); border-color: rgba(181, 139, 249, 0.55); }
-.item-slot.accent-gold   { background-color: rgba(228, 183, 80, 0.18); border-color: rgba(228, 183, 80, 0.55); }
-.item-slot.accent-amber  { background-color: rgba(237, 131, 94, 0.18); border-color: rgba(237, 131, 94, 0.55); }
-.item-slot.accent-loot   { background-color: rgba(226, 73, 71, 0.18); border-color: rgba(226, 73, 71, 0.6); }
 
 .hint {
     color: rgb(97, 98, 111);
@@ -277,9 +263,6 @@
 .tooltip-stat-positive { color: rgb(80, 210, 100); }
 .tooltip-stat-negative { color: rgb(240, 90, 88); }
 .tooltip-stat-neutral  { color: rgb(210, 211, 219); }
-.rarity-common { color: rgb(227, 228, 235); }
-.rarity-rare   { color: rgb(70, 165, 235); }
-.rarity-epic   { color: rgb(197, 96, 232); }
 /* ---------- Grupo "Bags" (pockets) en la lista de equipo ---------- */
 
 .equip-group-header {
@@ -343,3 +326,55 @@
     background-color: rgba(35, 36, 48, 0.8);
     border-color: rgba(181, 139, 249, 0.6);
 }
+
+/* ---------- Colores por rareza (casilla, nombre y punto) ----------
+   La rareza manda el color: común gris, raro azul, épico violeta. El tipo se lee en la
+   etiqueta de la esquina de cada casilla (HAT, ROBE, GLOVES, BOOTS, BAG, MAT, RES). */
+
+.item-slot.rarity-common {
+    background-color: rgba(125, 128, 142, 0.12);
+    border-color: rgba(150, 153, 168, 0.5);
+}
+.item-slot.rarity-rare {
+    background-color: rgba(64, 146, 245, 0.16);
+    border-color: rgb(78, 160, 250);
+    border-width: 2px;
+}
+.item-slot.rarity-epic {
+    background-color: rgba(176, 92, 245, 0.18);
+    border-color: rgb(190, 110, 250);
+    border-width: 2px;
+}
+
+.item-slot.rarity-common .item-name { color: rgb(222, 224, 232); }
+.item-slot.rarity-rare .item-name   { color: rgb(135, 196, 255); }
+.item-slot.rarity-epic .item-name   { color: rgb(219, 158, 255); }
+
+.accent-dot.rarity-common { background-color: rgb(170, 173, 186); }
+.accent-dot.rarity-rare   { background-color: rgb(78, 160, 250); }
+.accent-dot.rarity-epic   { background-color: rgb(190, 110, 250); }
+
+/* Rareza en texto (nombres del loadout y título del tooltip). */
+.rarity-common { color: rgb(222, 224, 232); }
+.rarity-rare   { color: rgb(120, 188, 255); }
+.rarity-epic   { color: rgb(212, 140, 255); }
+
+.item-type-tag {
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    -unity-font-style: bold;
+    color: rgba(205, 207, 220, 0.6);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* Al final para ganarle al borde de rareza. */
+.item-slot:hover {
+    border-color: rgba(237, 238, 245, 0.85);
+}
+
+.equip-item-name.rarity-common { color: rgb(222, 224, 232); }
+.equip-item-name.rarity-rare   { color: rgb(120, 188, 255); }
+.equip-item-name.rarity-epic   { color: rgb(212, 140, 255); }

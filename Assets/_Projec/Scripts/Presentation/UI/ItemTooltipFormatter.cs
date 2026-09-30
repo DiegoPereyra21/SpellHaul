@@ -32,6 +32,34 @@ namespace Game.Presentation.UI
             return (type, stats);
         }
 
+        /// <summary>
+        /// Etiqueta corta del tipo de item, para la esquina de las casillas (el color de la casilla
+        /// es de la rareza; el tipo se lee acá).
+        /// </summary>
+        public static string TypeTag(ItemSO def)
+        {
+            if (def == null) return string.Empty;
+            if (def is EquipmentItemSO eq)
+            {
+                return eq.Slot switch
+                {
+                    EquipmentSlot.Hat => "HAT",
+                    EquipmentSlot.Robe => "ROBE",
+                    EquipmentSlot.Glove => "GLOVES",
+                    EquipmentSlot.Boots => "BOOTS",
+                    EquipmentSlot.PocketL or EquipmentSlot.PocketR => "BAG",
+                    _ => eq.Slot.ToString().ToUpperInvariant(),
+                };
+            }
+            return def.Category switch
+            {
+                ItemCategory.Material => "MAT",
+                ItemCategory.Resource => "RES",
+                ItemCategory.Consumable => "USE",
+                _ => string.Empty,
+            };
+        }
+
         /// <summary>Clase CSS de color según rareza. Común = color por defecto (sin clase especial).</summary>
         public static string RarityClass(ItemSO def)
         {

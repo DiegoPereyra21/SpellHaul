@@ -240,11 +240,12 @@ namespace Game.Presentation.UI
 
                     var dot = new VisualElement();
                     dot.AddToClassList("accent-dot");
-                    dot.AddToClassList(GetAccentClass(def));
+                    dot.AddToClassList(ItemTooltipFormatter.RarityClass(def));
                     itemWrap.Add(dot);
 
                     var name = new Label(def != null ? def.DisplayName : stack.ItemId);
                     name.AddToClassList("equip-item-name");
+                    name.AddToClassList(ItemTooltipFormatter.RarityClass(def));
                     itemWrap.Add(name);
 
                     row.Add(itemWrap);
@@ -435,7 +436,8 @@ namespace Game.Presentation.UI
         /// junta pilas incompletas del mismo item (misma durabilidad), después ordena:
         /// - Por tipo: equipo en el orden de la lista de equipo (sombrero → túnica → guantes →
         ///   botas → bolsas), después el resto por categoría; dentro de cada tipo, rareza mayor primero.
-        /// - Por rareza: épico → raro → común; dentro de cada rareza, por tipo.
+        /// - Por rareza: primero los equipables y después el resto (sin mezclarse); dentro de cada
+        ///   grupo épico → raro → común, y dentro de cada rareza, por tipo.
         /// Empate: nombre y después cantidad (mayor primero). Los slots vacíos quedan al final.
         /// </summary>
         private void SortStash(bool byRarity)
@@ -452,6 +454,12 @@ namespace Game.Presentation.UI
                     ItemSO da = Resolve(a.ItemId), db = Resolve(b.ItemId);
                     int byType = TypeRank(da).CompareTo(TypeRank(db));
                     int byRare = RarityRank(db).CompareTo(RarityRank(da)); // mayor primero
+                    // Por rareza, igual los equipables van antes que el resto (sin mezclarse).
+                    if (byRarity)
+                    {
+                        int group = (da is EquipmentItemSO ? 0 : 1).CompareTo(db is EquipmentItemSO ? 0 : 1);
+                        if (group != 0) return group;
+                    }
                     int first = byRarity ? byRare : byType;
                     if (first != 0) return first;
                     int second = byRarity ? byType : byRare;
@@ -529,11 +537,20 @@ namespace Game.Presentation.UI
             if (!stack.IsEmpty)
             {
                 ItemSO def = _database.GetById(stack.ItemId);
-                slot.AddToClassList(GetAccentClass(def));
+                // Color de la casilla y del nombre = rareza; el tipo va en la etiqueta de la esquina.
+                slot.AddToClassList(ItemTooltipFormatter.RarityClass(def));
+
+                string typeTag = ItemTooltipFormatter.TypeTag(def);
+                if (!string.IsNullOrEmpty(typeTag))
+                {
+                    var tag = new Label(typeTag);
+                    tag.AddToClassList("item-type-tag");
+                    tag.pickingMode = PickingMode.Ignore;
+                    slot.Add(tag);
+                }
 
                 var name = new Label(def != null ? def.DisplayName : stack.ItemId);
                 name.AddToClassList("item-name");
-                slot.AddToClassList(ItemTooltipFormatter.RarityClass(def));
                 slot.Add(name);
 
                 if (stack.Quantity > 1)
@@ -564,23 +581,6 @@ namespace Game.Presentation.UI
             return slot;
         }
 
-        private string GetAccentClass(ItemSO def)
-        {
-            if (def is EquipmentItemSO equip)
-            {
-                switch (equip.Slot)
-                {
-                    case EquipmentSlot.Boots: return "accent-green";
-                    case EquipmentSlot.Hat: return "accent-cyan";
-                    case EquipmentSlot.Robe: return "accent-violet";
-                    case EquipmentSlot.Glove: return "accent-gold";
-                    case EquipmentSlot.PocketL:
-                    case EquipmentSlot.PocketR:
-                        return "accent-amber";
-                }
-            }
-            return "accent-loot";
-        }
 
         // ---------- Tooltip ----------
         private void ShowTooltip(VisualElement anchor, ItemSO def)
