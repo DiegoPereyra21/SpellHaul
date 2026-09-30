@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1aa6f811f78ce8e438a4d7c7601d8eaf, type: 3}
   m_Name: AudioLibrary
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Audio.AudioLibrarySO
-  UiClick: {fileID: 8300000, guid: c7080568f2a2b0a49afd245c800aea4e, type: 3}
-  UiHover: {fileID: 8300000, guid: 4b94a916f33547a469a012d81085fbf1, type: 3}
-  UiOpen: {fileID: 8300000, guid: 5123a9e6e35c9bb46b485355096a5fe8, type: 3}
-  UiClose: {fileID: 8300000, guid: dbccc1e1fa2d62d488b995ecec30f153, type: 3}
+  UiClick: {fileID: 8300000, guid: c2f33f0281131e04eba60b0e7946490f, type: 3}
+  UiHover: {fileID: 8300000, guid: e772aa9d62f601d4398e1694473f2a55, type: 3}
+  UiOpen: {fileID: 8300000, guid: 4ec4bdec3d9420b4a9630bc603645c6f, type: 3}
+  UiClose: {fileID: 8300000, guid: e00d6979d4431574abdeb188d9bd7773, type: 3}
   UiError: {fileID: 8300000, guid: 5eb664b997b577c4da8db5fbe5977239, type: 3}
-  UiNotice: {fileID: 8300000, guid: 5ac1c904be1c0234390ef29937da8c3f, type: 3}
+  UiNotice: {fileID: 8300000, guid: cb5777e76b43fbd499a76c69021b1f15, type: 3}
   MatchFound: {fileID: 8300000, guid: d793f4231ed348e41b6d800f10def6d4, type: 3}
   InventoryOpen: {fileID: 8300000, guid: 31de7d705694a94409df11cdfa2aac82, type: 3}
   InventoryClose: {fileID: 8300000, guid: 528b279e82096554d828f87c42b24a46, type: 3}
-  ItemMove: {fileID: 8300000, guid: e3d30b6ab0903074487001eeab6d7c85, type: 3}
+  ItemMove: {fileID: 8300000, guid: de64c00cee4044044893c4ea87508471, type: 3}
   ItemEquip:
   - {fileID: 8300000, guid: 3e5a86b7a9519f44fa7124003aba8d87, type: 3}
   - {fileID: 8300000, guid: 823bf40233a979a4294724539b40d5c0, type: 3}
@@ -29,7 +29,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 94039e4b704b1184cbe5e677b5b67d46, type: 3}
   ItemDrop: {fileID: 8300000, guid: 20526fe01b71aaa43935bf82995304c2, type: 3}
   ItemPickup: {fileID: 8300000, guid: e63d23bddfad9134a9a323d1aa94b304, type: 3}
-  Sort: {fileID: 8300000, guid: b847275e2363e2646b2632217f6473c7, type: 3}
+  Sort: {fileID: 8300000, guid: b868b41c7ac197943a5657d43cf30c5c, type: 3}
   ContainerOpen: {fileID: 8300000, guid: 92124bb85ce31fb4bad5866cfa22daf1, type: 3}
   RareLoot: {fileID: 8300000, guid: 81cbeb358ea82cd48a740b113b0174d7, type: 3}
   EpicLoot: {fileID: 8300000, guid: b651f1dd1eaedc3459e2c617e177d7b7, type: 3}
