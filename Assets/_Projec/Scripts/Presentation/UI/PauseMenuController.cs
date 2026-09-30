@@ -65,14 +65,13 @@ namespace Game.Presentation.UI
 
         private void Update()
         {
-            // Murió o extrajo con el menú abierto: la pantalla de resultados toma el control.
+            // Murió, extrajo o salió de la run: la pantalla de resultados toma el control.
+            if (_leaving) return;
             if (_avatar != null && _avatar.IsControlDisabled)
             {
-                if (IsPaused || _leaving) HideWithoutResuming();
+                if (IsPaused) HideWithoutResuming();
                 return;
             }
-
-            if (_leaving) return; // esperando que el servidor procese la salida
             if (Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame) return;
 
             if (IsPaused) { SetPaused(false); return; }
@@ -128,10 +127,34 @@ namespace Game.Presentation.UI
             }
 
             if (_deathHandler == null) return;
+
+            // Desde acá la run terminó para este jugador: nada más que hacer en ella. No se espera
+            // al servidor para mostrarlo (que lo resuelve como una muerte: suelta el equipo y lo
+            // pierde); su confirmación solo actualiza la misma pantalla.
             _leaving = true;
-            _leaveButton.SetEnabled(false);
-            _leaveButton.text = "Leaving...";
-            _deathHandler.LeaveRunServerRpc(); // el servidor lo resuelve como una muerte
+            _deathHandler.LeaveRunServerRpc();
+
+            RunSummary.SetDeath("You left the run.", SnapshotLocalInventory());
+            HideWithoutResuming();
+            _leaving = true; // HideWithoutResuming lo limpia: sigue saliendo
+
+            if (_inventory != null) _inventory.Close();
+            if (_avatar != null) _avatar.DisableControl(); // local: sin control ni cuerpo visible
+
+            var result = FindFirstObjectByType<ResultScreenController>();
+            if (result != null) result.Show(false);
+        }
+
+        /// <summary>Lo que el jugador lleva según su copia sincronizada del inventario.</summary>
+        private Game.Core.Items.InventorySnapshot SnapshotLocalInventory()
+        {
+            var snap = new Game.Core.Items.InventorySnapshot();
+            var inv = GetComponent<RunInventory>();
+            if (inv == null) return snap;
+            foreach (var s in inv.Equipment) snap.Equipment.Add(s);
+            foreach (var s in inv.PocketL) if (!s.IsEmpty) snap.PocketL.Add(s);
+            foreach (var s in inv.PocketR) if (!s.IsEmpty) snap.PocketR.Add(s);
+            return snap;
         }
 
         private void DisarmLeave()

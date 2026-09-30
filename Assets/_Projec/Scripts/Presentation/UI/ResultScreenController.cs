@@ -39,8 +39,12 @@ namespace Game.Presentation.UI
             // Desde acá, que el servidor corte la conexión (fin de la run) es lo esperado.
             NetworkDisconnectHandler.NotifyLocalRunFinished();
 
+            // Puede llegar dos veces (salir de la run lo muestra al instante y después llega la
+            // confirmación del servidor): la segunda solo actualiza el contenido.
+            bool alreadyShown = _root.style.display == DisplayStyle.Flex;
             _root.style.display = DisplayStyle.Flex;
-            Game.Presentation.Audio.GameAudio.Ui(l => extracted ? l.ExtractionComplete : l.Died);
+            if (!alreadyShown)
+                Game.Presentation.Audio.GameAudio.Ui(l => extracted ? l.ExtractionComplete : l.Died);
 
             _title.RemoveFromClassList("extracted");
             _title.RemoveFromClassList("died");
