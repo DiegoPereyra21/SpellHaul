@@ -211,7 +211,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584109863416407386
+  _initializedTimestamp: -8584108575811521248
 --- !u!114 &4297230460876061587
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -277,7 +277,7 @@ MonoBehaviour:
   _closeRangeRadius: 17
   _visionBlockMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   _eyeHeight: 1.5
   _burstProjectilePrefab: {fileID: 9077845970666463845, guid: 007947feaa3cedf4b975548e3fa50a77, type: 3}
   _burstCount: 3

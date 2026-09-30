@@ -307,7 +307,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584109863416407386
+  _initializedTimestamp: -8584108575811521248
 --- !u!114 &811073443594022513
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -333,7 +333,7 @@ MonoBehaviour:
   _patrolWaitMax: 5
   _visionBlockMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   _eyeHeight: 1.6
   _attackRange: 3
   _attackWindup: 0.4

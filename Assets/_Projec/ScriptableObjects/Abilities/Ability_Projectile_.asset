@@ -15,7 +15,7 @@ MonoBehaviour:
   _abilityId: id_proyectile
   _displayName: Proyectile
   _icon: {fileID: 0}
-  _cooldown: 0.7
+  _cooldown: 1
   _resourceCost: 13
   _windupDuration: 0
   _muzzlePrefab: {fileID: 69906001918393858, guid: e6dd55251f893294c9a27e9e669cd3a4, type: 3}

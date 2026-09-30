@@ -29346,7 +29346,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 6
+  <PrefabId>k__BackingField: 8
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 14938344733252342986
   SceneId: 0
@@ -29374,7 +29374,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 1
-  _initializedTimestamp: -8584152022003018928
+  _initializedTimestamp: -8584108575811521248
 --- !u!114 &1193530342131679477
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29396,6 +29396,10 @@ MonoBehaviour:
     m_Bits: 576
   _maxCatchUpTicks: 12
   _maxRewindTicks: 20
+  _maxPlayerRewindTicks: 7
+  _coverMask:
+    serializedVersion: 2
+    m_Bits: 64
   _visual: {fileID: 8942972072319118501}
 --- !u!135 &6509815930719459171
 SphereCollider:
