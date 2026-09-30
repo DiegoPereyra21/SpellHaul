@@ -430,84 +430,33 @@ namespace Game.Presentation.UI
 
         // ---------- Ordenar stash ----------
 
+        /// <summary>Último criterio usado (compartido con los pockets de la run). Tipo si nunca se ordenó.</summary>
+        public const string SortModePrefKey = "SpellHaul.SortMode";
+
+        public static ItemSortMode LastSortMode
+        {
+            get => (ItemSortMode)PlayerPrefs.GetInt(SortModePrefKey, (int)ItemSortMode.Type);
+            set { PlayerPrefs.SetInt(SortModePrefKey, (int)value); PlayerPrefs.Save(); }
+        }
+
         /// <summary>
-        /// Ordena el stash (el loadout no se toca, así que también vale buscando partida). Primero
-        /// junta pilas incompletas del mismo item (misma durabilidad), después ordena:
-        /// - Por tipo: equipo en el orden de la lista de equipo (sombrero → túnica → guantes →
-        ///   botas → bolsas), después el resto por categoría; dentro de cada tipo, rareza mayor primero.
-        /// - Por rareza: primero los equipables y después el resto (sin mezclarse); dentro de cada
-        ///   grupo épico → raro → común, y dentro de cada rareza, por tipo.
-        /// Empate: nombre y después cantidad (mayor primero). Los slots vacíos quedan al final.
+        /// Ordena el stash (el loadout no se toca, así que también vale buscando partida). Junta
+        /// pilas incompletas y ordena con las reglas de ItemSorting; los vacíos quedan al final.
         /// </summary>
         private void SortStash(bool byRarity)
         {
             if (_isDragging) CancelDrag();
+            var mode = byRarity ? ItemSortMode.Rarity : ItemSortMode.Type;
+            LastSortMode = mode;
             TryMutate(() =>
             {
-                var items = new List<ItemStack>();
-                foreach (var s in Stash.Slots)
-                    if (!s.IsEmpty) AddMerged(items, s);
-
-                items.Sort((a, b) =>
-                {
-                    ItemSO da = Resolve(a.ItemId), db = Resolve(b.ItemId);
-                    int byType = TypeRank(da).CompareTo(TypeRank(db));
-                    int byRare = RarityRank(db).CompareTo(RarityRank(da)); // mayor primero
-                    // Por rareza, igual los equipables van antes que el resto (sin mezclarse).
-                    if (byRarity)
-                    {
-                        int group = (da is EquipmentItemSO ? 0 : 1).CompareTo(db is EquipmentItemSO ? 0 : 1);
-                        if (group != 0) return group;
-                    }
-                    int first = byRarity ? byRare : byType;
-                    if (first != 0) return first;
-                    int second = byRarity ? byType : byRare;
-                    if (second != 0) return second;
-                    int byName = string.CompareOrdinal(da != null ? da.DisplayName : a.ItemId, db != null ? db.DisplayName : b.ItemId);
-                    return byName != 0 ? byName : b.Quantity.CompareTo(a.Quantity);
-                });
-
+                var items = ItemSorting.MergeAndSort(Stash.Slots, Resolve, mode);
                 if (items.Count > Stash.Slots.Count) return false; // no debería pasar: juntar nunca agrega pilas
                 for (int i = 0; i < Stash.Slots.Count; i++)
                     Stash.Slots[i] = i < items.Count ? items[i] : ItemStack.Empty;
                 return true;
             });
         }
-
-        /// <summary>Agrega el stack juntándolo con pilas incompletas del mismo item y durabilidad.</summary>
-        private void AddMerged(List<ItemStack> items, ItemStack stack)
-        {
-            ItemSO def = Resolve(stack.ItemId);
-            int remaining = stack.Quantity;
-            if (def != null && def.IsStackable)
-            {
-                for (int i = 0; i < items.Count && remaining > 0; i++)
-                {
-                    var s = items[i];
-                    if (s.ItemId != stack.ItemId || !Mathf.Approximately(s.Durability, stack.Durability)) continue;
-                    int add = Mathf.Min(def.MaxStack - s.Quantity, remaining);
-                    if (add <= 0) continue;
-                    items[i] = new ItemStack(s.ItemId, s.Quantity + add, s.Durability);
-                    remaining -= add;
-                }
-            }
-            if (remaining > 0) items.Add(new ItemStack(stack.ItemId, remaining, stack.Durability));
-        }
-
-        /// <summary>Equipo primero, en el orden de la lista de equipo; después el resto por categoría.</summary>
-        private static int TypeRank(ItemSO def)
-        {
-            if (def == null) return int.MaxValue;
-            if (def is EquipmentItemSO equip)
-            {
-                // Los dos lados de pocket son el mismo tipo (bolsa).
-                EquipmentSlot slot = equip.Slot.IsPocket() ? EquipmentSlot.PocketL : equip.Slot;
-                return slot.DisplayRank();
-            }
-            return 100 + (int)def.Category;
-        }
-
-        private static int RarityRank(ItemSO def) => def != null ? (int)def.Rarity : -1;
 
         // ---------- Stash ----------
         private void DrawStash()

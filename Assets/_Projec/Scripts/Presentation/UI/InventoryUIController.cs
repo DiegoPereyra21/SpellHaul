@@ -123,6 +123,11 @@ namespace Game.Presentation.UI
             _containerLabel = _root.Q<Label>("container-label");
             BuildUsableSlots();
 
+            var sortType = _root.Q<Button>("pockets-sort-type");
+            if (sortType != null) sortType.clicked += () => SortPockets(ItemSortMode.Type);
+            var sortRarity = _root.Q<Button>("pockets-sort-rarity");
+            if (sortRarity != null) sortRarity.clicked += () => SortPockets(ItemSortMode.Rarity);
+
             _inventory.OnInventoryChanged += Redraw;
             _toggleAction.Enable();
 
@@ -140,6 +145,18 @@ namespace Game.Presentation.UI
         {
             if (!base.IsOwner) return;
             if (_toggleAction.WasPressedThisFrame()) SetOpen(!_isOpen);
+
+            // R con el inventario abierto: ordenar los pockets con el último criterio usado.
+            if (_isOpen && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+                SortPockets(StashScreenController.LastSortMode);
+        }
+
+        /// <summary>Ordena los pockets (lo hace el servidor) y recuerda el criterio para la tecla R.</summary>
+        private void SortPockets(ItemSortMode mode)
+        {
+            if (_isDragging) EndDrag();
+            StashScreenController.LastSortMode = mode;
+            SortPocketsServerRpc((int)mode);
         }
 
         private void SetOpen(bool open)
@@ -626,6 +643,14 @@ namespace Game.Presentation.UI
         {
             if (!ServerCanUseContainer(container)) return;
             _inventory.TryEquipFromContainer(container, index);
+        }
+
+        [ServerRpc]
+        private void SortPocketsServerRpc(int mode)
+        {
+            if (!ServerCanAct()) return;
+            if (mode != (int)ItemSortMode.Type && mode != (int)ItemSortMode.Rarity) return;
+            _inventory.TrySortPockets((ItemSortMode)mode);
         }
 
         [ServerRpc]

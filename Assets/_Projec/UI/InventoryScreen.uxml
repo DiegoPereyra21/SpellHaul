@@ -17,6 +17,12 @@
                 </ui:VisualElement>
 
                 <ui:VisualElement class="pockets-and-usables">
+                    <ui:VisualElement class="pockets-toolbar">
+                        <ui:Label text="Sort pockets" class="sort-caption" />
+                        <ui:Button name="pockets-sort-type" text="Type" class="sort-btn" />
+                        <ui:Button name="pockets-sort-rarity" text="Rarity" class="sort-btn" />
+                        <ui:Label text="R — last sort" class="sort-hint" />
+                    </ui:VisualElement>
                     <ui:VisualElement class="pockets-row">
                         <ui:VisualElement class="pocket-column">
                             <ui:Label text="Pocket L" class="column-title" />
@@ -38,7 +44,7 @@
 
             </ui:VisualElement>
 
-            <ui:Label text="Tab — Close · Drag — Move · Shift+Click — Auto-Equip · Ctrl+Click — Drop to World" class="hint" />
+            <ui:Label text="Tab — Close · Drag — Move · Shift+Click — Auto-Equip · Ctrl+Click — Drop to World · R — Sort Pockets" class="hint" />
 
         </ui:VisualElement>
         <ui:VisualElement name="item-tooltip" class="item-tooltip" picking-mode="Ignore">

@@ -322,3 +322,41 @@
 .equip-slot-bag .equip-slot-label {
     color: rgb(150, 132, 190);
 }
+
+/* ---------- Ordenar pockets ---------- */
+
+.pockets-toolbar {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.sort-caption {
+    color: rgb(97, 98, 111);
+    font-size: 15px;
+    letter-spacing: 1px;
+    margin-right: 8px;
+}
+
+.sort-btn {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    font-size: 14px;
+    padding: 6px 14px;
+    margin: 0 0 0 6px;
+    color: rgb(200, 201, 212);
+    background-color: rgba(25, 26, 36, 0.6);
+    border-width: 1px;
+    border-color: rgba(95, 98, 117, 0.5);
+    border-radius: 6px;
+}
+
+.sort-btn:hover {
+    background-color: rgba(35, 36, 48, 0.8);
+    border-color: rgba(181, 139, 249, 0.6);
+}
+
+.sort-hint {
+    color: rgb(83, 84, 97);
+    font-size: 13px;
+    margin-left: 12px;
+}

@@ -426,6 +426,27 @@ namespace Game.Presentation.Combat
             return remaining;
         }
 
+        /// <summary>
+        /// Server-only. Ordena el contenido de los dos pockets juntos (mismas reglas que el Stash,
+        /// ver ItemSorting): junta pilas incompletas y llena Pocket L y después Pocket R. Nunca
+        /// crea ni pierde items; si por algo no entrara, no toca nada.
+        /// </summary>
+        [Server]
+        public bool TrySortPockets(ItemSortMode mode)
+        {
+            var all = new List<ItemStack>();
+            foreach (var s in _pocketL) if (!s.IsEmpty) all.Add(s);
+            foreach (var s in _pocketR) if (!s.IsEmpty) all.Add(s);
+
+            var sorted = ItemSorting.MergeAndSort(all, _database.GetById, mode);
+            if (sorted.Count > _pocketL.Count + _pocketR.Count) return false;
+
+            int n = 0;
+            for (int i = 0; i < _pocketL.Count; i++) _pocketL[i] = n < sorted.Count ? sorted[n++] : ItemStack.Empty;
+            for (int i = 0; i < _pocketR.Count; i++) _pocketR[i] = n < sorted.Count ? sorted[n++] : ItemStack.Empty;
+            return true;
+        }
+
         /// <summary>Server-only. Crea un snapshot del inventario actual (para persistir al extraer).</summary>
         [Server]
         public Game.Core.Items.InventorySnapshot TakeSnapshot()

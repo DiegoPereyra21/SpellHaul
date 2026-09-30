@@ -35,6 +35,12 @@ namespace Game.Presentation.Abilities
         private bool _initialized;
         private bool _caughtUp;
 
+        // Lag compensation durante TODO el vuelo: el proyectil choca contra las posiciones que el
+        // tirador veía (presente - _viewDelayTicks), no contra las del servidor. Antes solo se
+        // rebobinaba en el primer tick: contra un enemigo moviéndose de costado, el cliente veía
+        // el impacto (su proyectil cosmético pegaba donde él lo veía) y el real pasaba de largo.
+        private uint _viewDelayTicks;
+
         // Buffer compartido para el OverlapSphere sin allocations. Los proyectiles corren
         // en el tick del server (single-thread), así que reutilizarlo secuencialmente es seguro.
         private static readonly Collider[] _overlapBuffer = new Collider[16];
@@ -79,6 +85,7 @@ namespace Game.Presentation.Abilities
             _slot        = slot;
             _aliveTime   = 0f;
             _caughtUp    = false;
+            _viewDelayTicks = 0;
             _initialized = true;
         }
 
@@ -97,7 +104,7 @@ namespace Game.Presentation.Abilities
             float stepDistance = _speed * delta;
             Vector3 startPos = transform.position;
 
-            if (TryImpact(startPos, stepDistance)) return;
+            if (TryImpactCompensated(startPos, stepDistance)) return;
 
             transform.position = startPos + _direction * stepDistance;
 
@@ -124,26 +131,48 @@ namespace Game.Presentation.Abilities
             uint oldestAllowed = now > maxRewind ? now - maxRewind : 0u;
             uint rewindTick = _fireTick < oldestAllowed ? oldestAllowed : (_fireTick > now ? now : _fireTick);
 
-            // Rewind único al tick de disparo: overlap en el cañón contra las posiciones históricas.
-            RollbackManager rbm = base.NetworkManager != null ? base.NetworkManager.RollbackManager : null;
-            if (rbm != null)
-            {
-                rbm.Rollback(new PreciseTick(rewindTick), RollbackPhysicsType.Physics, false);
-                bool hit = TryImpact(transform.position, 0f); // solo overlap (sin sweep)
-                rbm.Return();                                  // SIEMPRE restaurar antes de salir
-                if (hit) return true;
-            }
+            // Cuánto atrasado ve el mundo el tirador: se mantiene todo el vuelo.
+            _viewDelayTicks = now - rewindTick;
 
-            // Catch-up: adelantar el proyectil los ticks de retardo (en presente), barriendo el tramo.
+            // Overlap en el cañón al tick de disparo (objetivo point-blank / cruzando al disparar).
+            if (TryImpactCompensated(transform.position, 0f)) return true;
+
+            // Catch-up: adelantar el proyectil los ticks de retardo, barriendo el tramo contra las
+            // posiciones que veía el tirador.
             long rawD = (long)base.TimeManager.Tick - _fireTick;
             int d = (int)Mathf.Clamp(rawD, 0, _maxCatchUpTicks);
             if (d <= 0) return false;
 
             float catchDist = _speed * tickDelta * d;
-            if (TryImpact(transform.position, catchDist)) return true;
+            if (TryImpactCompensated(transform.position, catchDist)) return true;
 
             transform.position += _direction * catchDist;
             return false;
+        }
+
+        /// <summary>
+        /// TryImpact con los objetivos rebobinados a lo que veía el tirador (si el proyectil es de
+        /// un jugador y hay RollbackManager). La geometría no se mueve, así que las paredes siguen
+        /// frenándolo igual. Siempre restaura el presente antes de salir.
+        /// </summary>
+        private bool TryImpactCompensated(Vector3 fromPos, float stepDistance)
+        {
+            RollbackManager rbm = base.NetworkManager != null ? base.NetworkManager.RollbackManager : null;
+            if (_fireTick == 0 || _viewDelayTicks == 0 || rbm == null)
+                return TryImpact(fromPos, stepDistance);
+
+            uint now = base.TimeManager.Tick;
+            uint viewTick = now > _viewDelayTicks ? now - _viewDelayTicks : 0u;
+
+            // El impacto (daño, despawn) se resuelve después de volver al presente: con los
+            // colliders rebobinados solo se decide QUÉ tocó.
+            rbm.Rollback(new PreciseTick(viewTick), RollbackPhysicsType.Physics, false);
+            bool found = FindImpact(fromPos, stepDistance, out Vector3 point, out Vector3 normal, out IDamageable target);
+            rbm.Return();
+
+            if (!found) return false;
+            ResolveImpact(point, normal, target);
+            return true;
         }
 
         /// <summary>
@@ -152,6 +181,20 @@ namespace Game.Presentation.Abilities
         /// </summary>
         private bool TryImpact(Vector3 fromPos, float stepDistance)
         {
+            if (!FindImpact(fromPos, stepDistance, out Vector3 point, out Vector3 normal, out IDamageable target))
+                return false;
+            ResolveImpact(point, normal, target);
+            return true;
+        }
+
+        /// <summary>
+        /// Busca colisión desde fromPos sin aplicar nada: primero OverlapSphere (objetivos que ya
+        /// solapan el origen), luego SphereCast por el tramo. target null = geometría (Ground).
+        /// </summary>
+        private bool FindImpact(Vector3 fromPos, float stepDistance, out Vector3 point, out Vector3 normal, out IDamageable target)
+        {
+            point = default; normal = default; target = null;
+
             int count = Physics.OverlapSphereNonAlloc(fromPos, _radius, _overlapBuffer, _hitMask, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
             {
@@ -161,8 +204,9 @@ namespace Game.Presentation.Abilities
                 NetworkObject nob = col.GetComponentInParent<NetworkObject>();   // hittable es hijo; root tiene NObj/Health
                 if (nob != null && nob.ObjectId == _casterNetworkId) continue;   // el caster
 
-                IDamageable dmg = nob != null ? nob.GetComponent<IDamageable>() : null; // null = geometría (Ground)
-                ResolveImpact(fromPos, -_direction, dmg);
+                target = nob != null ? nob.GetComponent<IDamageable>() : null;  // null = geometría (Ground)
+                point = fromPos;
+                normal = -_direction;
                 return true;
             }
 
@@ -173,8 +217,9 @@ namespace Game.Presentation.Abilities
                 if (hitNob != null && hitNob.ObjectId == _casterNetworkId)
                     return false; // atravesar al caster; el que llama avanza el tramo
 
-                IDamageable damageable = hitNob != null ? hitNob.GetComponent<IDamageable>() : null; // null = pared
-                ResolveImpact(hit.point, hit.normal, damageable);
+                target = hitNob != null ? hitNob.GetComponent<IDamageable>() : null; // null = pared
+                point = hit.point;
+                normal = hit.normal;
                 return true;
             }
 
