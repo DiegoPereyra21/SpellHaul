@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aa6f811f78ce8e438a4d7c7601d8eaf, type: 3}
+  m_Name: AudioLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Audio.AudioLibrarySO
+  UiClick: {fileID: 8300000, guid: c7080568f2a2b0a49afd245c800aea4e, type: 3}
+  UiHover: {fileID: 8300000, guid: 4b94a916f33547a469a012d81085fbf1, type: 3}
+  UiOpen: {fileID: 8300000, guid: 5123a9e6e35c9bb46b485355096a5fe8, type: 3}
+  UiClose: {fileID: 8300000, guid: dbccc1e1fa2d62d488b995ecec30f153, type: 3}
+  UiError: {fileID: 8300000, guid: 5eb664b997b577c4da8db5fbe5977239, type: 3}
+  UiNotice: {fileID: 8300000, guid: 5ac1c904be1c0234390ef29937da8c3f, type: 3}
+  MatchFound: {fileID: 8300000, guid: d793f4231ed348e41b6d800f10def6d4, type: 3}
+  InventoryOpen: {fileID: 8300000, guid: 31de7d705694a94409df11cdfa2aac82, type: 3}
+  InventoryClose: {fileID: 8300000, guid: 528b279e82096554d828f87c42b24a46, type: 3}
+  ItemMove: {fileID: 8300000, guid: e3d30b6ab0903074487001eeab6d7c85, type: 3}
+  ItemEquip:
+  - {fileID: 8300000, guid: 3e5a86b7a9519f44fa7124003aba8d87, type: 3}
+  - {fileID: 8300000, guid: 823bf40233a979a4294724539b40d5c0, type: 3}
+  - {fileID: 8300000, guid: efb71d51c54270b459560328c44184d3, type: 3}
+  - {fileID: 8300000, guid: 94039e4b704b1184cbe5e677b5b67d46, type: 3}
+  ItemDrop: {fileID: 8300000, guid: 20526fe01b71aaa43935bf82995304c2, type: 3}
+  ItemPickup: {fileID: 8300000, guid: e63d23bddfad9134a9a323d1aa94b304, type: 3}
+  Sort: {fileID: 8300000, guid: b847275e2363e2646b2632217f6473c7, type: 3}
+  ContainerOpen: {fileID: 8300000, guid: 92124bb85ce31fb4bad5866cfa22daf1, type: 3}
+  RareLoot: {fileID: 8300000, guid: 81cbeb358ea82cd48a740b113b0174d7, type: 3}
+  EpicLoot: {fileID: 8300000, guid: b651f1dd1eaedc3459e2c617e177d7b7, type: 3}
+  CastRejected: {fileID: 8300000, guid: 2ed0534ab3501e242acdc04437a674cc, type: 3}
+  Footsteps:
+  - {fileID: 8300000, guid: db271595a8b7f054cb115c3ff4ac7201, type: 3}
+  - {fileID: 8300000, guid: fe697d7249593f748912bd81df059365, type: 3}
+  - {fileID: 8300000, guid: 054ae00f3cbbdde47be494ecef8f22af, type: 3}
+  - {fileID: 8300000, guid: bca6431e3c8a401478e1fd576034c5d3, type: 3}
+  - {fileID: 8300000, guid: fba36aa94e3c7e64fb4bb2055d5c10bc, type: 3}
+  - {fileID: 8300000, guid: 280d75466d2689e438e238bc5b2bcdc3, type: 3}
+  - {fileID: 8300000, guid: b96c914ce1027a1469b01224cfa1204a, type: 3}
+  - {fileID: 8300000, guid: a9a51724c463b0242a4fff801b003115, type: 3}
+  - {fileID: 8300000, guid: afcb65c0975438c438876c9e7dfcabc8, type: 3}
+  - {fileID: 8300000, guid: 170652241b8a761459a6a32c4b3350c4, type: 3}
+  Land: {fileID: 8300000, guid: 280d75466d2689e438e238bc5b2bcdc3, type: 3}
+  ExtractionComplete: {fileID: 8300000, guid: 2ae3a86e98a68654aa33ff92b48f85aa, type: 3}
+  Died: {fileID: 8300000, guid: 57505cd5237b79247845bb30d60e74d8, type: 3}
+  UiVolume: 0.6
+  HoverVolume: 0.25
+  FootstepVolume: 0.45
