@@ -4,6 +4,7 @@ using FishNet.Managing.Timing;
 using FishNet.Component.ColliderRollback;
 using Game.Core.Abilities;
 using Game.Presentation.Combat;
+using Game.Presentation.Player;
 using UnityEngine;
 
 namespace Game.Presentation.Abilities
@@ -20,6 +21,10 @@ namespace Game.Presentation.Abilities
         [SerializeField] private int _maxCatchUpTicks = 12;
         [Tooltip("Techo de ticks de rewind (lag comp). El tick de disparo lo manda el cliente: sin techo, un cliente podía pedir impactos contra posiciones de hasta 1,25 s atrás (máximo del RollbackManager). A 60 Hz, 20 ≈ 333 ms (latencia + interpolación).")]
         [SerializeField] private int _maxRewindTicks = 20;
+        [Tooltip("Techo de rewind contra JUGADORES (contra enemigos de la IA se usa _maxRewindTicks). Cubre el ping normal sin estirarse a latencias altas. A 60 Hz, 7 ≈ 117 ms. Además, un jugador que en el presente ya está detrás de una pared no recibe el golpe.")]
+        [SerializeField] private int _maxPlayerRewindTicks = 7;
+        [Tooltip("Qué cuenta como cobertura para la regla de la cobertura. Si queda vacío se usa Ground.")]
+        [SerializeField] private LayerMask _coverMask;
         [Tooltip("Hijo visual (mesh/trail) que se oculta al tirador (él ve su cosmético local).")]
         [SerializeField] private GameObject _visual;
 
@@ -41,6 +46,8 @@ namespace Game.Presentation.Abilities
         // el impacto (su proyectil cosmético pegaba donde él lo veía) y el real pasaba de largo.
         private uint _viewDelayTicks;
 
+        private static readonly RaycastHit[] _castBuffer = new RaycastHit[16];
+
         // Buffer compartido para el OverlapSphere sin allocations. Los proyectiles corren
         // en el tick del server (single-thread), así que reutilizarlo secuencialmente es seguro.
         private static readonly Collider[] _overlapBuffer = new Collider[16];
@@ -50,6 +57,8 @@ namespace Game.Presentation.Abilities
             // Red de seguridad: si el prefab todavía no tiene la máscara seteada, la resolvemos por nombre.
             if (_hitMask.value == 0)
                 _hitMask = LayerMask.GetMask("Hitbox", "Ground");
+            if (_coverMask.value == 0)
+                _coverMask = LayerMask.GetMask("Ground");
         }
 
         public override void OnStartClient()
@@ -151,9 +160,13 @@ namespace Game.Presentation.Abilities
         }
 
         /// <summary>
-        /// TryImpact con los objetivos rebobinados a lo que veía el tirador (si el proyectil es de
-        /// un jugador y hay RollbackManager). La geometría no se mueve, así que las paredes siguen
-        /// frenándolo igual. Siempre restaura el presente antes de salir.
+        /// Lag compensation híbrida (ver _maxPlayerRewindTicks):
+        /// - Contra enemigos de la IA (y paredes) se usa todo el atraso del tirador: si en su
+        ///   pantalla le pegó, cuenta.
+        /// - Contra jugadores el atraso se acota a _maxPlayerRewindTicks (ping normal) y además rige
+        ///   la regla de la cobertura: si en el presente la víctima ya está detrás de una pared, el
+        ///   golpe no cuenta. Nadie recibe un hechizo después de haberse cubierto.
+        /// El daño y el despawn se resuelven después de volver al presente.
         /// </summary>
         private bool TryImpactCompensated(Vector3 fromPos, float stepDistance)
         {
@@ -161,39 +174,96 @@ namespace Game.Presentation.Abilities
             if (_fireTick == 0 || _viewDelayTicks == 0 || rbm == null)
                 return TryImpact(fromPos, stepDistance);
 
-            uint now = base.TimeManager.Tick;
-            uint viewTick = now > _viewDelayTicks ? now - _viewDelayTicks : 0u;
+            uint fullDelay = _viewDelayTicks;
+            uint playerDelay = (uint)Mathf.Clamp(_maxPlayerRewindTicks, 0, (int)fullDelay);
 
-            // El impacto (daño, despawn) se resuelve después de volver al presente: con los
-            // colliders rebobinados solo se decide QUÉ tocó.
-            rbm.Rollback(new PreciseTick(viewTick), RollbackPhysicsType.Physics, false);
-            bool found = FindImpact(fromPos, stepDistance, out Vector3 point, out Vector3 normal, out IDamageable target);
-            rbm.Return();
+            bool found;
+            ImpactInfo impact;
+            if (playerDelay == fullDelay)
+            {
+                found = FindImpactAt(rbm, fullDelay, fromPos, stepDistance, HitFilter.Any, out impact);
+            }
+            else
+            {
+                // Dos mundos: enemigos donde los veía el tirador; jugadores con el atraso acotado.
+                bool e = FindImpactAt(rbm, fullDelay, fromPos, stepDistance, HitFilter.NonPlayers, out ImpactInfo ie);
+                bool pl = FindImpactAt(rbm, playerDelay, fromPos, stepDistance, HitFilter.PlayersAndGeometry, out ImpactInfo ip);
+                found = e || pl;
+                impact = e && pl ? (ip.Distance < ie.Distance ? ip : ie) : (pl ? ip : ie);
+            }
 
             if (!found) return false;
-            ResolveImpact(point, normal, target);
+
+            // Regla de la cobertura (en el presente): si la víctima ya se cubrió, sigue de largo; el
+            // proyectil continúa y, si corresponde, choca con la pared en su propio recorrido.
+            if (impact.IsPlayer && IsBehindCoverNow(fromPos, impact.Collider)) return false;
+
+            ResolveImpact(impact.Point, impact.Normal, impact.Target);
             return true;
+        }
+
+        /// <summary>FindImpact con los objetivos rebobinados delay ticks (0 = presente). Siempre restaura.</summary>
+        private bool FindImpactAt(RollbackManager rbm, uint delay, Vector3 fromPos, float stepDistance, HitFilter filter, out ImpactInfo impact)
+        {
+            if (delay == 0) return FindImpact(fromPos, stepDistance, filter, out impact);
+
+            uint now = base.TimeManager.Tick;
+            uint viewTick = now > delay ? now - delay : 0u;
+            rbm.Rollback(new PreciseTick(viewTick), RollbackPhysicsType.Physics, false);
+            bool found = FindImpact(fromPos, stepDistance, filter, out impact);
+            rbm.Return();
+            return found;
+        }
+
+        /// <summary>True si entre el proyectil y la víctima (posición actual) hay geometría.</summary>
+        private bool IsBehindCoverNow(Vector3 fromPos, Collider victimCollider)
+        {
+            if (victimCollider == null) return false;
+            Vector3 victimCenter = victimCollider.bounds.center; // ya en el presente (Return hecho)
+            return Physics.Linecast(fromPos, victimCenter, _coverMask, QueryTriggerInteraction.Ignore);
         }
 
         /// <summary>
         /// Resuelve colisión desde fromPos: primero OverlapSphere (objetivos que ya solapan el origen),
         /// luego SphereCast por el tramo. Devuelve true si impactó (ya aplicó daño y despawneó).
+        /// Sin compensación: todo en el presente.
         /// </summary>
         private bool TryImpact(Vector3 fromPos, float stepDistance)
         {
-            if (!FindImpact(fromPos, stepDistance, out Vector3 point, out Vector3 normal, out IDamageable target))
+            if (!FindImpact(fromPos, stepDistance, HitFilter.Any, out ImpactInfo impact))
                 return false;
-            ResolveImpact(point, normal, target);
+            ResolveImpact(impact.Point, impact.Normal, impact.Target);
             return true;
         }
 
+        private enum HitFilter { Any, NonPlayers, PlayersAndGeometry }
+
+        private struct ImpactInfo
+        {
+            public Vector3 Point, Normal;
+            public IDamageable Target;   // null = geometría (Ground)
+            public Collider Collider;
+            public float Distance;       // a lo largo del tramo (0 = ya solapaba)
+            public bool IsPlayer;
+        }
+
+        private static bool IsPlayerCollider(Collider col) => col.GetComponentInParent<PlayerAvatarState>() != null;
+
+        private static bool Accepts(HitFilter filter, bool isPlayer, bool isGeometry) => filter switch
+        {
+            HitFilter.NonPlayers => !isPlayer,
+            HitFilter.PlayersAndGeometry => isPlayer || isGeometry,
+            _ => true,
+        };
+
         /// <summary>
         /// Busca colisión desde fromPos sin aplicar nada: primero OverlapSphere (objetivos que ya
-        /// solapan el origen), luego SphereCast por el tramo. target null = geometría (Ground).
+        /// solapan el origen), luego el impacto más cercano del SphereCast por el tramo. Ignora al
+        /// propio proyectil, al caster y lo que el filtro descarte.
         /// </summary>
-        private bool FindImpact(Vector3 fromPos, float stepDistance, out Vector3 point, out Vector3 normal, out IDamageable target)
+        private bool FindImpact(Vector3 fromPos, float stepDistance, HitFilter filter, out ImpactInfo impact)
         {
-            point = default; normal = default; target = null;
+            impact = default;
 
             int count = Physics.OverlapSphereNonAlloc(fromPos, _radius, _overlapBuffer, _hitMask, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
@@ -204,26 +274,37 @@ namespace Game.Presentation.Abilities
                 NetworkObject nob = col.GetComponentInParent<NetworkObject>();   // hittable es hijo; root tiene NObj/Health
                 if (nob != null && nob.ObjectId == _casterNetworkId) continue;   // el caster
 
-                target = nob != null ? nob.GetComponent<IDamageable>() : null;  // null = geometría (Ground)
-                point = fromPos;
-                normal = -_direction;
+                IDamageable dmg = nob != null ? nob.GetComponent<IDamageable>() : null; // null = geometría (Ground)
+                bool isPlayer = dmg != null && IsPlayerCollider(col);
+                if (!Accepts(filter, isPlayer, dmg == null)) continue;
+
+                impact = new ImpactInfo { Point = fromPos, Normal = -_direction, Target = dmg, Collider = col, Distance = 0f, IsPlayer = isPlayer };
                 return true;
             }
 
-            if (stepDistance > 0f &&
-                Physics.SphereCast(fromPos, _radius, _direction, out RaycastHit hit, stepDistance, _hitMask, QueryTriggerInteraction.Ignore))
+            if (stepDistance <= 0f) return false;
+
+            int hits = Physics.SphereCastNonAlloc(fromPos, _radius, _direction, _castBuffer, stepDistance, _hitMask, QueryTriggerInteraction.Ignore);
+            float best = float.MaxValue;
+            bool found = false;
+            for (int i = 0; i < hits; i++)
             {
+                RaycastHit hit = _castBuffer[i];
+                if (hit.distance >= best) continue;
+                if (hit.collider.transform.IsChildOf(transform)) continue;
+
                 NetworkObject hitNob = hit.collider.GetComponentInParent<NetworkObject>();
-                if (hitNob != null && hitNob.ObjectId == _casterNetworkId)
-                    return false; // atravesar al caster; el que llama avanza el tramo
+                if (hitNob != null && hitNob.ObjectId == _casterNetworkId) continue; // atraviesa al caster
 
-                target = hitNob != null ? hitNob.GetComponent<IDamageable>() : null; // null = pared
-                point = hit.point;
-                normal = hit.normal;
-                return true;
+                IDamageable dmg = hitNob != null ? hitNob.GetComponent<IDamageable>() : null; // null = pared
+                bool isPlayer = dmg != null && IsPlayerCollider(hit.collider);
+                if (!Accepts(filter, isPlayer, dmg == null)) continue;
+
+                best = hit.distance;
+                impact = new ImpactInfo { Point = hit.point, Normal = hit.normal, Target = dmg, Collider = hit.collider, Distance = hit.distance, IsPlayer = isPlayer };
+                found = true;
             }
-
-            return false;
+            return found;
         }
 
         /// <summary>
