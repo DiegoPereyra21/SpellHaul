@@ -319,7 +319,7 @@ GameObject:
   - component: {fileID: 279299778}
   - component: {fileID: 279299779}
   m_Layer: 0
-  m_Name: EnemyRanged
+  m_Name: PlantGuardian
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -477,6 +477,10 @@ Transform:
   - {fileID: 1305760058}
   - {fileID: 1797227585}
   - {fileID: 946464659}
+  - {fileID: 1346981849}
+  - {fileID: 782256664}
+  - {fileID: 1959892196}
+  - {fileID: 1131388199}
   - {fileID: 502105468}
   - {fileID: 2036694810}
   - {fileID: 371807385}
@@ -703,6 +707,51 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &782256663
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 782256664}
+  - component: {fileID: 782256665}
+  m_Layer: 0
+  m_Name: RangedEnemy (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &782256664
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 782256663}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.37217808, z: -0, w: 0.9281613}
+  m_LocalPosition: {x: 16.76, y: 3.36, z: 36.53}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 507303442}
+  m_LocalEulerAnglesHint: {x: 0, y: 43.7, z: 0}
+--- !u!114 &782256665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 782256663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0aab31ac81433d40acd8b1acb49ed75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.EnemySpawnPoint
+  _enemyPrefab: {fileID: 6363106951221882465, guid: bd528a468c312e047a24cf6dd61340a0, type: 3}
 --- !u!1 &786703885
 GameObject:
   m_ObjectHideFlags: 0
@@ -1306,6 +1355,51 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15eeb2da01c4f8c4d9aa5e7bbdbe3348, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Bootstrap.PlayerSpawnPoint
+--- !u!1 &1131388198
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1131388199}
+  - component: {fileID: 1131388200}
+  m_Layer: 0
+  m_Name: RangedEnemy (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1131388199
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1131388198}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.9989982, z: -0, w: -0.044750273}
+  m_LocalPosition: {x: -30.528, y: 7.725, z: -5.786}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 507303442}
+  m_LocalEulerAnglesHint: {x: 0, y: -185.13, z: 0}
+--- !u!114 &1131388200
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1131388198}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0aab31ac81433d40acd8b1acb49ed75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.EnemySpawnPoint
+  _enemyPrefab: {fileID: 6363106951221882465, guid: bd528a468c312e047a24cf6dd61340a0, type: 3}
 --- !u!1 &1226519077
 GameObject:
   m_ObjectHideFlags: 0
@@ -1450,7 +1544,7 @@ GameObject:
   - component: {fileID: 1305760058}
   - component: {fileID: 1305760059}
   m_Layer: 0
-  m_Name: EnemyRanged
+  m_Name: PlantGuardian
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1484,6 +1578,51 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.EnemySpawnPoint
   _enemyPrefab: {fileID: 6363106951221882465, guid: 949d1c0ea2f246942bc927bb3dcf15fa, type: 3}
+--- !u!1 &1346981848
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1346981849}
+  - component: {fileID: 1346981850}
+  m_Layer: 0
+  m_Name: RangedEnemy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1346981849
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1346981848}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.19865698, z: -0, w: 0.9800691}
+  m_LocalPosition: {x: 73.74, y: 8.559, z: -54.56}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 507303442}
+  m_LocalEulerAnglesHint: {x: 0, y: -22.917, z: 0}
+--- !u!114 &1346981850
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1346981848}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0aab31ac81433d40acd8b1acb49ed75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.EnemySpawnPoint
+  _enemyPrefab: {fileID: 6363106951221882465, guid: bd528a468c312e047a24cf6dd61340a0, type: 3}
 --- !u!1 &1559516976
 GameObject:
   m_ObjectHideFlags: 0
@@ -1636,7 +1775,7 @@ GameObject:
   - component: {fileID: 1758533275}
   - component: {fileID: 1758533276}
   m_Layer: 0
-  m_Name: EnemyRanged
+  m_Name: PlantGuardian
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1681,7 +1820,7 @@ GameObject:
   - component: {fileID: 1797227585}
   - component: {fileID: 1797227586}
   m_Layer: 0
-  m_Name: EnemyRanged
+  m_Name: PlantGuardian
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1864,6 +2003,51 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15eeb2da01c4f8c4d9aa5e7bbdbe3348, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Bootstrap.PlayerSpawnPoint
+--- !u!1 &1959892195
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1959892196}
+  - component: {fileID: 1959892197}
+  m_Layer: 0
+  m_Name: RangedEnemy (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1959892196
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1959892195}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.94136566, z: -0, w: 0.3373882}
+  m_LocalPosition: {x: 25.02, y: 5.63, z: -31.73}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 507303442}
+  m_LocalEulerAnglesHint: {x: 0, y: -140.564, z: 0}
+--- !u!114 &1959892197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1959892195}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0aab31ac81433d40acd8b1acb49ed75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.EnemySpawnPoint
+  _enemyPrefab: {fileID: 6363106951221882465, guid: bd528a468c312e047a24cf6dd61340a0, type: 3}
 --- !u!1 &2036694809
 GameObject:
   m_ObjectHideFlags: 0
