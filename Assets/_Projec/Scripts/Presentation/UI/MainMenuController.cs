@@ -24,11 +24,27 @@ namespace Game.Presentation.UI
         [SerializeField] private string _gamePortName = "game_port";
 
         private UIDocument _document;
-        private VisualElement _searchPanel;
+        private VisualElement _menuRoot;
+        private Button _findMatchButton;
+        private Button _stashButton;
+        private Button _quitButton;
+
+        // Búsqueda de partida: banner arriba (no bloquea; se puede ordenar el stash mientras tanto).
+        private VisualElement _searchBanner;
         private Label _searchStatus;
         private Label _searchTimer;
         private float _searchStartTime;
-        private bool _searching;
+        private bool _searching;       // búsqueda viva: los pasos async cortan si pasa a false
+        private bool _searchActive;    // banner visible y loadout bloqueado (hasta conectar o cancelar)
+
+        // Paneles emergentes (aviso / run en curso): bloquean el menú con un fondo.
+        private VisualElement _backdrop;
+        private VisualElement _noticePanel;
+        private Label _noticeMessage;
+
+        // El menú se dibuja encima del Stash (para que el banner y los avisos se vean con el Stash
+        // abierto); mientras el Stash está abierto el menú queda en "modo overlay" (ver USS).
+        private const int SortingOrderAboveStash = 10;
 
         // Run en curso sin terminar (ver PlayerLoadoutService.IsInActiveRun).
         private VisualElement _rejoinPanel;
@@ -53,14 +69,30 @@ namespace Game.Presentation.UI
             UnityEngine.Cursor.lockState = CursorLockMode.None;
             UnityEngine.Cursor.visible = true;
 
-            root.Q<Button>("find-match-button").clicked += OnFindMatchClicked;
-            root.Q<Button>("stash-button").clicked += OnStashClicked;
-            root.Q<Button>("quit-button").clicked += () => Application.Quit();
+            _menuRoot = root.Q<VisualElement>("menu-root");
+            _findMatchButton = root.Q<Button>("find-match-button");
+            _stashButton = root.Q<Button>("stash-button");
+            _quitButton = root.Q<Button>("quit-button");
+            _findMatchButton.clicked += OnFindMatchClicked;
+            _stashButton.clicked += OnStashClicked;
+            _quitButton.clicked += () => Application.Quit();
             root.Q<Button>("search-cancel").clicked += OnCancelSearchClicked;
 
-            _searchPanel = root.Q<VisualElement>("search-panel");
+            _searchBanner = root.Q<VisualElement>("search-banner");
             _searchStatus = root.Q<Label>("search-status");
             _searchTimer = root.Q<Label>("search-timer");
+
+            _backdrop = root.Q<VisualElement>("modal-backdrop");
+            _noticePanel = root.Q<VisualElement>("notice-panel");
+            _noticeMessage = root.Q<Label>("notice-message");
+            root.Q<Button>("notice-close").clicked += HideNotice;
+
+            _document.sortingOrder = SortingOrderAboveStash;
+            if (_stashScreen != null)
+            {
+                _stashScreen.Shown += RefreshMenuState;
+                _stashScreen.Hidden += RefreshMenuState;
+            }
 
             _rejoinPanel = root.Q<VisualElement>("rejoin-panel");
             _rejoinStatus = root.Q<Label>("rejoin-status");
@@ -71,7 +103,7 @@ namespace Game.Presentation.UI
 
             // Jugar y tocar el stash dependen del loadout persistente listo (login a PlayFab
             // resuelto) — entrar antes jugaría contra el backend local descartable.
-            SetGameplayButtonsEnabled(PlayFabSession.IsReady);
+            RefreshMenuState();
             PlayFabSession.OnReady += HandleSessionReady;
 
             if (_matchmaking != null)
@@ -98,6 +130,12 @@ namespace Game.Presentation.UI
         private void OnDisable()
         {
             PlayFabSession.OnReady -= HandleSessionReady;
+            if (_stashScreen != null)
+            {
+                _stashScreen.Shown -= RefreshMenuState;
+                _stashScreen.Hidden -= RefreshMenuState;
+                _stashScreen.SetLoadoutLocked(false);
+            }
 
             if (_matchmaking != null)
             {
@@ -110,7 +148,7 @@ namespace Game.Presentation.UI
 
         private void Update()
         {
-            if (!_searching) return;
+            if (!_searching || _searchTimer == null) return;
 
             float elapsed = Time.time - _searchStartTime;
             _searchTimer.text = $"{(int)(elapsed / 60f)}:{(int)(elapsed % 60f):00}";
@@ -118,8 +156,59 @@ namespace Game.Presentation.UI
 
         private void HandleSessionReady()
         {
-            SetGameplayButtonsEnabled(true);
+            RefreshMenuState();
             _ = CheckActiveRunAsync(null);
+        }
+
+        // ---------- Estado del menú ----------
+
+        private bool NoticeVisible => _noticePanel != null && _noticePanel.style.display == DisplayStyle.Flex;
+        private bool RejoinVisible => _rejoinPanel != null && _rejoinPanel.style.display == DisplayStyle.Flex;
+
+        /// <summary>
+        /// Único lugar que decide qué se puede tocar. Con un panel emergente abierto, nada del menú
+        /// (el fondo lo tapa y los botones se deshabilitan). Buscando partida: no se puede volver a
+        /// buscar y el loadout del Stash queda bloqueado (el stash sí se ordena). Con el Stash
+        /// abierto, el menú queda en modo overlay: solo el banner y los avisos, encima del Stash.
+        /// </summary>
+        private void RefreshMenuState()
+        {
+            if (_document == null) return;
+
+            bool modal = NoticeVisible || RejoinVisible;
+            bool ready = PlayFabSession.IsReady;
+
+            if (_backdrop != null) _backdrop.style.display = modal ? DisplayStyle.Flex : DisplayStyle.None;
+            if (_searchBanner != null) _searchBanner.style.display = _searchActive && !modal ? DisplayStyle.Flex : DisplayStyle.None;
+
+            _findMatchButton?.SetEnabled(ready && !modal && !_searchActive);
+            _stashButton?.SetEnabled(ready && !modal);
+            _quitButton?.SetEnabled(!modal);
+
+            _stashScreen?.SetLoadoutLocked(_searchActive);
+
+            bool overlay = _stashScreen != null && _stashScreen.IsVisible;
+            if (_menuRoot != null)
+            {
+                _menuRoot.EnableInClassList("overlay-mode", overlay);
+                // En overlay los clics sobre el fondo del menú pasan al Stash de abajo.
+                _menuRoot.pickingMode = overlay ? PickingMode.Ignore : PickingMode.Position;
+            }
+        }
+
+        private void ShowSearchBanner(string status)
+        {
+            _searchActive = true;
+            _searchStatus.text = status;
+            RefreshMenuState();
+        }
+
+        /// <summary>Termina la búsqueda en la UI (banner oculto, loadout libre).</summary>
+        private void EndSearchUi()
+        {
+            _searching = false;
+            _searchActive = false;
+            RefreshMenuState();
         }
 
         // ---------- Run en curso (reconexión) ----------
@@ -153,8 +242,9 @@ namespace Game.Presentation.UI
         private void ShowRejoinPanel(string message)
         {
             _searching = false;
-            SetSearchPanel(false);
-            SetGameplayButtonsEnabled(false);
+            _searchActive = false;
+            if (_noticePanel != null) _noticePanel.style.display = DisplayStyle.None;
+            _stashScreen?.Hide();
 
             _abandonArmed = false;
             if (_rejoinAbandon != null) _rejoinAbandon.text = "Abandon Run";
@@ -162,12 +252,13 @@ namespace Game.Presentation.UI
             _rejoinReconnect?.SetEnabled(true);
             _rejoinAbandon?.SetEnabled(true);
             if (_rejoinPanel != null) _rejoinPanel.style.display = DisplayStyle.Flex;
+            RefreshMenuState();
         }
 
         private void HideRejoinPanel()
         {
             if (_rejoinPanel != null) _rejoinPanel.style.display = DisplayStyle.None;
-            SetGameplayButtonsEnabled(PlayFabSession.IsReady);
+            RefreshMenuState();
         }
 
         private async void OnRejoinReconnectClicked()
@@ -213,13 +304,6 @@ namespace Game.Presentation.UI
             ShowNotice("Run abandoned. Everything you brought was lost.");
         }
 
-        private void SetGameplayButtonsEnabled(bool enabled)
-        {
-            var root = _document.rootVisualElement;
-            root.Q<Button>("find-match-button").SetEnabled(enabled);
-            root.Q<Button>("stash-button").SetEnabled(enabled);
-        }
-
         // ---------- Matchmaking ----------
 
         private async void OnStashClicked()
@@ -249,9 +333,8 @@ namespace Game.Presentation.UI
 
             _searchStartTime = Time.time;
             _searching = true;
-            _searchStatus.text = "Loading your inventory...";
             _searchTimer.text = "0:00";
-            SetSearchPanel(true);
+            ShowSearchBanner("Loading your inventory...");
 
             // El loadout tiene que estar leído antes de entrar: al extraer o morir se persiste
             // encima, y sin la lectura previa se pisaría el loadout real.
@@ -296,8 +379,7 @@ namespace Game.Presentation.UI
         private void OnCancelSearchClicked()
         {
             _matchmaking?.CancelSearch();
-            _searching = false;
-            SetSearchPanel(false);
+            EndSearchUi();
         }
 
         private void HandleMatchmakingState(MatchmakingService.State state)
@@ -311,21 +393,18 @@ namespace Game.Presentation.UI
                 case MatchmakingService.State.Matched:
                     _searching = false;
                     _searchStatus.text = "Run found. Connecting...";
-                    ConnectToMatchServer();
+                    _ = ConnectToMatchServerAsync();
                     break;
 
                 case MatchmakingService.State.Idle:
-                    _searching = false;
-                    SetSearchPanel(false);
+                    EndSearchUi();
                     break;
             }
         }
 
         private void HandleMatchmakingFailed(string reason)
         {
-            _searching = false;
-            _searchStatus.text = reason;
-            // Se deja el panel abierto con el motivo: el jugador cierra con Cancel cuando lo leyó.
+            ShowNotice(reason); // termina la búsqueda y muestra el motivo hasta que lo cierre
         }
 
 
@@ -344,13 +423,20 @@ namespace Game.Presentation.UI
             ShowNotice(reason);
         }
 
-        /// <summary>Reusa el panel de búsqueda como cartel de aviso: el jugador lo cierra con Cancel.</summary>
+        /// <summary>Aviso emergente: termina cualquier búsqueda y bloquea el menú hasta que lo cierre.</summary>
         private void ShowNotice(string message)
         {
             _searching = false;
-            _searchStatus.text = message;
-            _searchTimer.text = string.Empty;
-            SetSearchPanel(true);
+            _searchActive = false;
+            if (_noticeMessage != null) _noticeMessage.text = message;
+            if (_noticePanel != null) _noticePanel.style.display = DisplayStyle.Flex;
+            RefreshMenuState();
+        }
+
+        private void HideNotice()
+        {
+            if (_noticePanel != null) _noticePanel.style.display = DisplayStyle.None;
+            RefreshMenuState();
         }
 
         /// <summary>
@@ -358,6 +444,23 @@ namespace Game.Presentation.UI
         /// (requiere el Build desplegado en MPS), se usa la dirección de fallback del inspector.
         /// Cuando eso exista, ServerDetails trae IP y puerto reales y esto es lo único que cambia.
         /// </summary>
+        /// <summary>
+        /// Hay partida: se cierra el Stash y, antes de conectar, se espera a que se guarde lo que se
+        /// haya ordenado en él mientras se buscaba (el servidor marca la run al entrar, y un cambio
+        /// que llegara después quedaría rechazado).
+        /// </summary>
+        private async System.Threading.Tasks.Task ConnectToMatchServerAsync()
+        {
+            _stashScreen?.Hide();
+
+            float giveUpAt = Time.time + SaveWaitSeconds;
+            while (Game.Presentation.Run.PlayerLoadoutService.PendingSync && Time.time < giveUpAt)
+                await System.Threading.Tasks.Task.Delay(100);
+            if (this == null) return; // cambió la escena mientras tanto
+
+            ConnectToMatchServer();
+        }
+
         private void ConnectToMatchServer()
         {
             string address;
@@ -417,8 +520,5 @@ namespace Game.Presentation.UI
             port = (ushort)chosen.Num;
             return true;
         }
-
-        private void SetSearchPanel(bool visible)
-            => _searchPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
     }
 }

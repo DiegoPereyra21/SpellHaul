@@ -153,6 +153,89 @@
     -unity-text-align: upper-center;
     margin-bottom: 20px;
 }
+.notice-message {
+    margin-bottom: 20px;
+}
+
+/* ---------- Paneles emergentes ---------- */
+
+.modal-backdrop {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(4, 4, 9, 0.7);
+}
+
+/* ---------- Banner de búsqueda (arriba, visible también sobre el Stash) ---------- */
+
+.search-banner {
+    display: none;
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    translate: -50% 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px 12px 24px;
+    background-color: rgba(14, 14, 24, 0.96);
+    border-width: 1px;
+    border-color: rgba(181, 139, 249, 0.45);
+    border-radius: 12px;
+}
+
+.search-banner-info {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 22px;
+}
+
+.banner-status {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    font-size: 16px;
+    color: rgb(220, 221, 229);
+    margin-right: 18px;
+}
+
+.banner-timer {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Cinzel-Medium.ttf");
+    font-size: 22px;
+    color: rgb(186, 146, 253);
+    min-width: 64px;
+    -unity-text-align: middle-center;
+}
+
+.banner-cancel {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    font-size: 15px;
+    letter-spacing: 1px;
+    padding: 8px 18px;
+    margin: 0;
+    color: rgb(111, 113, 125);
+    background-color: transparent;
+    border-width: 1px;
+    border-color: rgba(56, 58, 69, 0.6);
+    border-radius: 8px;
+}
+
+.banner-cancel:hover {
+    color: rgb(220, 221, 229);
+    border-color: rgba(111, 113, 125, 0.8);
+}
+
+/* Con el Stash abierto el menú queda por encima solo para mostrar el banner y los avisos:
+   sin fondo ni contenido propio, y los clics pasan al Stash (ver MainMenuController). */
+.menu-root.overlay-mode {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.menu-root.overlay-mode .menu-content,
+.menu-root.overlay-mode .version-tag {
+    display: none;
+}
+
 .rejoin-status {
     white-space: normal;
     margin-bottom: 20px;

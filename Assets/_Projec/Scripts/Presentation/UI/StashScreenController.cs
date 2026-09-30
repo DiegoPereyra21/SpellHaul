@@ -42,6 +42,31 @@ namespace Game.Presentation.UI
 
         private enum SlotZone { Equipment, PocketL, PocketR, Stash }
 
+        // Mientras se busca partida el equipo (loadout) no se puede tocar: el servidor de la run lo
+        // va a leer así como está. El stash sí se puede ordenar.
+        private VisualElement _loadoutColumn;
+        private Label _loadoutLockNote;
+
+        /// <summary>True mientras el loadout está bloqueado (buscando partida).</summary>
+        public bool LoadoutLocked { get; private set; }
+
+        public bool IsVisible => _root != null && _root.style.display == DisplayStyle.Flex;
+
+        /// <summary>Se abrió / se cerró la pantalla (el menú acomoda su banner de búsqueda encima).</summary>
+        public event System.Action Shown;
+        public event System.Action Hidden;
+
+        /// <summary>Bloquea o libera el loadout (equipo y pockets): queda atenuado y no acepta cambios.</summary>
+        public void SetLoadoutLocked(bool locked)
+        {
+            LoadoutLocked = locked;
+            // Buscando partida el banner de búsqueda del menú va arriba: el panel baja para dejarle lugar.
+            _root?.EnableInClassList("searching", locked);
+            if (_loadoutColumn != null) _loadoutColumn.EnableInClassList("loadout-locked", locked);
+            if (_loadoutLockNote != null) _loadoutLockNote.style.display = locked ? DisplayStyle.Flex : DisplayStyle.None;
+            if (locked && _isDragging && _dragging.Zone != SlotZone.Stash) CancelDrag();
+        }
+
         private struct DragInfo
         {
             public SlotZone Zone;
@@ -65,6 +90,9 @@ namespace Game.Presentation.UI
             _pocketRLabel = _root.Q<Label>("pocket-r-label");
             _stashGrid = _root.Q<VisualElement>("stash-grid");
             _stashLabel = _root.Q<Label>("stash-label");
+            _loadoutColumn = _root.Q<VisualElement>("loadout-column");
+            _loadoutLockNote = _root.Q<Label>("loadout-lock-note");
+            SetLoadoutLocked(LoadoutLocked);
             _tooltip = _root.Q<VisualElement>("item-tooltip");
             _tooltipTitle = _root.Q<Label>("tooltip-title");
             _tooltipType = _root.Q<Label>("tooltip-type");
@@ -107,16 +135,31 @@ namespace Game.Presentation.UI
             // Datos guardados con otra capacidad de pockets u otra cantidad de slots de equipo
             // (kit viejo, un EquipmentSlot nuevo al final del enum) se ajustan una vez al abrir.
             // Si el ajuste no entra en el Stash, se deja todo como estaba (nunca se descarta nada).
-            var backup = TakeBackup();
-            if (!NormalizeInventory()) RestoreBackup(backup);
-            else if (!MatchesBackup(backup)) PersistAll();
+            // Con el loadout bloqueado no se ajusta: el ajuste manda sobrantes de los pockets al stash
+            // y guardar solo el stash duplicaría esos items.
+            if (!LoadoutLocked)
+            {
+                var backup = TakeBackup();
+                if (!NormalizeInventory()) RestoreBackup(backup);
+                else if (!MatchesBackup(backup)) PersistAll();
+            }
 
+            bool wasVisible = IsVisible;
             _root.style.display = DisplayStyle.Flex;
             Redraw();
+            if (!wasVisible) Shown?.Invoke();
             return true;
         }
 
-        public void Hide() => _root.style.display = DisplayStyle.None;
+        public void Hide()
+        {
+            if (_root == null) return;
+            if (_isDragging) CancelDrag();
+            HideTooltip();
+            bool wasVisible = IsVisible;
+            _root.style.display = DisplayStyle.None;
+            if (wasVisible) Hidden?.Invoke();
+        }
 
         private InventorySnapshot Inv => PlayerLoadoutService.Current;
         private StashData Stash => StashService.Stash;
@@ -132,6 +175,11 @@ namespace Game.Presentation.UI
 
         private void PersistAll()
         {
+            if (LoadoutLocked)
+            {
+                StashService.Save(Stash); // el loadout no cambió (TryMutate lo garantiza)
+                return;
+            }
             PlayerLoadoutService.Save(Inv);
             StashService.Save(Stash);
         }
@@ -273,7 +321,12 @@ namespace Game.Presentation.UI
         private bool TryMutate(System.Func<bool> action)
         {
             var backup = TakeBackup();
-            if (action() && NormalizeInventory())
+            bool ok = action() && NormalizeInventory();
+
+            // Loadout bloqueado (buscando partida): solo valen movimientos dentro del stash.
+            if (ok && LoadoutLocked && !LoadoutMatches(backup)) ok = false;
+
+            if (ok)
             {
                 PersistAndRedraw();
                 return true;
@@ -340,6 +393,10 @@ namespace Game.Presentation.UI
             ReplaceContents(Inv.PocketR, b.PocketR);
             ReplaceContents(Stash.Slots, b.StashSlots);
         }
+
+        private bool LoadoutMatches(Backup b)
+            => SameStacks(Inv.Equipment, b.Equipment) && SameStacks(Inv.PocketL, b.PocketL)
+               && SameStacks(Inv.PocketR, b.PocketR);
 
         private bool MatchesBackup(Backup b)
             => SameStacks(Inv.Equipment, b.Equipment) && SameStacks(Inv.PocketL, b.PocketL)
@@ -490,6 +547,8 @@ namespace Game.Presentation.UI
         // ---------- Drag & drop ----------
         private void BeginDrag(SlotZone zone, int index, ItemStack stack, Vector2 pos)
         {
+            if (LoadoutLocked && zone != SlotZone.Stash) return; // el equipo no se mueve buscando partida
+
             _dragging = new DragInfo { Zone = zone, Index = index, Stack = stack };
             _isDragging = true;
             _dragMoved = false;

@@ -6,6 +6,11 @@
     display: none;
 }
 
+/* Buscando partida: lugar arriba para el banner de búsqueda del menú (que se dibuja encima). */
+.stash-root.searching {
+    padding-top: 84px;
+}
+
 .stash-panel {
     -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Regular.ttf");
     background-color: rgb(18, 19, 29);
@@ -36,6 +41,20 @@
     font-size: 16px;
     letter-spacing: 1px;
     margin-bottom: 10px;
+}
+
+/* Buscando partida: el loadout queda atenuado y no acepta cambios (el stash sí se ordena). */
+.loadout-locked .equipment-slots,
+.loadout-locked .pockets-row {
+    opacity: 0.35;
+}
+
+.loadout-lock-note {
+    display: none;
+    color: rgb(186, 146, 253);
+    font-size: 14px;
+    -unity-font-style: italic;
+    margin-bottom: 8px;
 }
 
 .grid-header {

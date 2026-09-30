@@ -18,12 +18,13 @@
 
         <ui:Label text="Diego2K_Dev" class="version-tag" />
 
-        <!-- Panel de búsqueda de partida (oculto por defecto) -->
-        <ui:VisualElement name="search-panel" class="lobby-panel">
-            <ui:Label text="Searching for a Run" class="lobby-title" />
-            <ui:Label name="search-status" text="Entering the queue..." class="search-status" />
-            <ui:Label name="search-timer" text="0:00" class="search-timer" />
-            <ui:Button name="search-cancel" text="Cancel" class="menu-button quit" />
+        <!-- Fondo de los paneles emergentes: tapa y bloquea el menú mientras hay uno abierto. -->
+        <ui:VisualElement name="modal-backdrop" class="modal-backdrop" />
+
+        <!-- Aviso (errores, resultado de una run, etc.). Oculto por defecto. -->
+        <ui:VisualElement name="notice-panel" class="lobby-panel">
+            <ui:Label name="notice-message" text="" class="search-status notice-message" />
+            <ui:Button name="notice-close" text="OK" class="menu-button quit" />
         </ui:VisualElement>
 
         <!-- Run en curso sin terminar (desconexión o cierre del juego). Oculto por defecto. -->
@@ -32,6 +33,15 @@
             <ui:Label name="rejoin-status" text="" class="search-status rejoin-status" />
             <ui:Button name="rejoin-reconnect" text="Reconnect" class="menu-button primary" />
             <ui:Button name="rejoin-abandon" text="Abandon Run" class="menu-button quit" />
+        </ui:VisualElement>
+
+        <!-- Búsqueda de partida en curso: banner arriba, no bloquea (se puede ordenar el stash). -->
+        <ui:VisualElement name="search-banner" class="search-banner">
+            <ui:VisualElement class="search-banner-info">
+                <ui:Label name="search-status" text="Entering the queue..." class="banner-status" />
+                <ui:Label name="search-timer" text="0:00" class="banner-timer" />
+            </ui:VisualElement>
+            <ui:Button name="search-cancel" text="Cancel" class="banner-cancel" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

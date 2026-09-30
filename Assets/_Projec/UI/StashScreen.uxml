@@ -6,8 +6,9 @@
 
             <ui:VisualElement class="management-columns">
 
-                <ui:VisualElement class="mgmt-column">
+                <ui:VisualElement name="loadout-column" class="mgmt-column">
                     <ui:Label text="Loadout" class="column-header" />
+                    <ui:Label name="loadout-lock-note" text="Locked while searching for a run" class="loadout-lock-note" />
                     <ui:VisualElement name="equipment-slots" class="equipment-slots" />
 
                     <ui:VisualElement class="pockets-row">
