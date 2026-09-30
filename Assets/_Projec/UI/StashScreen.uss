@@ -280,6 +280,17 @@
 .rarity-common { color: rgb(227, 228, 235); }
 .rarity-rare   { color: rgb(70, 165, 235); }
 .rarity-epic   { color: rgb(197, 96, 232); }
+
+/* Rareza en BORDE de las casillas, igual que en el inventario de la run. Va después de los
+   acentos por tipo para ganarles el color del borde (el fondo sigue siendo el del tipo). */
+.item-slot.rarity-rare {
+    border-color: rgb(90, 180, 255);
+    border-width: 2px;
+}
+.item-slot.rarity-epic {
+    border-color: rgb(210, 110, 245);
+    border-width: 2px;
+}
 /* ---------- Grupo "Bags" (pockets) en la lista de equipo ---------- */
 
 .equip-group-header {
