@@ -586,7 +586,8 @@ namespace Game.Presentation.UI
             return slot;
         }
 
-        private string GetAccentClass(ItemSO def)
+        /// <summary>Clase USS de acento por tipo de item (compartida con EconomyPanel).</summary>
+        internal static string GetAccentClass(ItemSO def)
         {
             if (def is EquipmentItemSO equip)
             {

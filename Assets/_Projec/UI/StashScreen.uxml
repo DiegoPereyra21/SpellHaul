@@ -49,7 +49,7 @@
                     <ui:ScrollView name="crafting-view" class="economy-view" />
                     <ui:ScrollView name="trader-view" class="economy-view">
                         <ui:Label text="Buy" class="grid-header" />
-                        <ui:VisualElement name="trader-offers" />
+                        <ui:VisualElement name="trader-offers" class="trader-offers" />
                         <ui:Label text="Sell — click an item twice" class="grid-header" />
                         <ui:VisualElement name="trader-sell-grid" class="grid stash-grid-big" />
                     </ui:ScrollView>

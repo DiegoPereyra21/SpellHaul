@@ -449,24 +449,65 @@
     min-width: 90px;
 }
 
-.sell-slot {
+.trader-offers {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+/* Oferta del vendedor: la casilla del item y el botón de comprar debajo. */
+.offer-card {
+    align-items: center;
+    margin-right: 4px;
+}
+
+.offer-buy-btn {
+    margin: 0 0 6px 0;
+    padding: 3px 12px;
+    font-size: 13px;
+}
+
+/* Casilla de compra/venta: mismo aspecto que el stash, con una franja de precio abajo.
+   El nombre deja libre ese espacio y la cantidad sube a la esquina de arriba. */
+.item-slot.trade-slot {
+    padding-bottom: 16px;
     position: relative;
 }
 
-.sell-price {
+.trade-slot .item-name {
+    font-size: 13px;
+}
+
+.trade-slot .item-qty {
+    top: 2px;
+    bottom: auto;
+    font-size: 12px;
+}
+
+.trade-price {
     position: absolute;
-    bottom: 2px;
     left: 0;
     right: 0;
+    bottom: 0;
+    height: 16px;
     -unity-text-align: middle-center;
+    background-color: rgba(6, 6, 10, 0.75);
     color: rgb(228, 183, 80);
     font-size: 12px;
     -unity-font-style: bold;
 }
 
-.sell-slot--armed {
+.trade-slot .glove-band {
+    bottom: 16px; /* encima de la franja de precio */
+}
+
+.trade-slot--armed {
     border-color: rgb(228, 183, 80);
     border-width: 2px;
+}
+
+.trade-slot--armed .trade-price {
+    background-color: rgba(228, 183, 80, 0.85);
+    color: rgb(18, 19, 29);
 }
 
 .economy-status {

@@ -221,22 +221,57 @@ namespace Game.Presentation.UI
                 _traderSellGrid.Add(BuildSellSlot(stash.Slots[i], i));
         }
 
+        /// <summary>Casilla con el mismo aspecto que en el stash (acento por tipo, borde de rareza,
+        /// estilo de guante, cantidad) y el tooltip del item. Base de las ofertas y de la venta.</summary>
+        private VisualElement BuildItemCell(ItemSO def, string itemId, int quantity)
+        {
+            var cell = new VisualElement();
+            cell.AddToClassList("item-slot");
+            cell.AddToClassList("trade-slot");
+            cell.AddToClassList(StashScreenController.GetAccentClass(def));
+            cell.AddToClassList(ItemTooltipFormatter.RarityClass(def));
+
+            var name = new Label(def != null ? def.DisplayName : itemId);
+            name.AddToClassList("item-name");
+            name.pickingMode = PickingMode.Ignore;
+            cell.Add(name);
+            GloveVisuals.ApplyToSlot(cell, def);
+
+            if (quantity > 1)
+            {
+                var qty = new Label($"x{quantity}");
+                qty.AddToClassList("item-qty");
+                qty.pickingMode = PickingMode.Ignore;
+                cell.Add(qty);
+            }
+
+            cell.RegisterCallback<PointerEnterEvent>(_ => _showTooltip(cell, def));
+            cell.RegisterCallback<PointerLeaveEvent>(_ => _hideTooltip());
+            return cell;
+        }
+
+        /// <summary>Franja inferior de la casilla con un precio (no tapa el nombre: la casilla
+        /// reserva ese espacio con la clase trade-slot).</summary>
+        private static Label PriceBand(string text)
+        {
+            var band = new Label(text);
+            band.AddToClassList("trade-price");
+            band.pickingMode = PickingMode.Ignore;
+            return band;
+        }
+
         private VisualElement BuildOfferRow(EconomyConfigSO.Offer offer)
         {
-            var row = new VisualElement();
-            row.AddToClassList("recipe-row");
+            var card = new VisualElement();
+            card.AddToClassList("offer-card");
 
-            string qty = offer.Quantity > 1 ? $" x{offer.Quantity}" : "";
-            var name = new Label(offer.Item.DisplayName + qty);
-            name.AddToClassList("recipe-name");
-            name.AddToClassList(ItemTooltipFormatter.RarityClass(offer.Item));
-            name.RegisterCallback<PointerEnterEvent>(_ => _showTooltip(name, offer.Item));
-            name.RegisterCallback<PointerLeaveEvent>(_ => _hideTooltip());
-            row.Add(name);
+            var cell = BuildItemCell(offer.Item, offer.Item.ItemId, offer.Quantity);
+            cell.Add(PriceBand($"{offer.Price}g"));
+            card.Add(cell);
 
-            var button = new Button { text = $"Buy · {offer.Price} Gold" };
+            var button = new Button { text = "Buy" };
             button.AddToClassList("sort-btn");
-            button.AddToClassList("economy-btn");
+            button.AddToClassList("offer-buy-btn");
             button.SetEnabled(EconomyService.Gold >= offer.Price && !EconomyService.Busy);
             button.clicked += async () =>
             {
@@ -247,34 +282,29 @@ namespace Game.Presentation.UI
                 else GameAudio.Ui(l => l.UiError, 0.6f);
                 SetStatus(error ?? $"Bought {offer.Item.DisplayName}.", error != null);
             };
-            row.Add(button);
-            return row;
+            card.Add(button);
+            return card;
         }
 
         /// <summary>Casilla del stash en modo venta: muestra lo que paga el vendedor. Primer clic
         /// la marca ("Sell?"), el segundo vende el stack entero.</summary>
         private VisualElement BuildSellSlot(ItemStack stack, int index)
         {
-            var slot = new VisualElement();
-            slot.AddToClassList("item-slot");
-            slot.AddToClassList("sell-slot");
-            if (stack.IsEmpty) return slot;
+            if (stack.IsEmpty)
+            {
+                var empty = new VisualElement();
+                empty.AddToClassList("item-slot");
+                return empty;
+            }
 
             ItemSO def = _database.GetById(stack.ItemId);
-            slot.AddToClassList(ItemTooltipFormatter.RarityClass(def));
-            var name = new Label(def != null ? def.DisplayName : stack.ItemId);
-            name.AddToClassList("item-name");
-            slot.Add(name);
+            var slot = BuildItemCell(def, stack.ItemId, stack.Quantity);
 
             int total = _config.SellPriceOf(def) * stack.Quantity;
             bool armed = index == _armedSellIndex;
-            var price = new Label(armed ? "Sell?" : $"{total}g");
-            price.AddToClassList("sell-price");
-            slot.Add(price);
-            if (armed) slot.AddToClassList("sell-slot--armed");
+            slot.Add(PriceBand(armed ? "Sell?" : $"{total}g"));
+            if (armed) slot.AddToClassList("trade-slot--armed");
 
-            slot.RegisterCallback<PointerEnterEvent>(_ => _showTooltip(slot, def));
-            slot.RegisterCallback<PointerLeaveEvent>(_ => _hideTooltip());
             slot.RegisterCallback<ClickEvent>(async _ =>
             {
                 if (EconomyService.Busy || def == null) return;
