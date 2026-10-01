@@ -123,6 +123,22 @@ namespace Game.Presentation.Bootstrap
 
             networkManager.ServerManager.RegisterBroadcast<PlayerIdentityBroadcast>(OnPlayerIdentityBroadcast, requireAuthentication: false);
             networkManager.ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
+            networkManager.ServerManager.OnServerConnectionState += OnServerConnectionState;
+        }
+
+        /// <summary>
+        /// Server. Al apagar el servidor se olvidan las identidades de esa partida. Los mapas son
+        /// estáticos y el proceso puede levantar otro servidor (volver a entrar al campo de
+        /// práctica): sin esto, la conexión nueva (que reusa el id 0) se tomaba como "la vieja con la
+        /// misma clave" y se cortaba a sí misma.
+        /// </summary>
+        private void OnServerConnectionState(ServerConnectionStateArgs args)
+        {
+            if (args.ConnectionState != LocalConnectionState.Stopped) return;
+            _keysByClientId.Clear();
+            _playFabIdByKey.Clear();
+            _endpointByKey.Clear();
+            _verifying.Clear();
         }
 
         private void OnDestroy()
@@ -130,6 +146,7 @@ namespace Game.Presentation.Bootstrap
             if (NetworkManager == null) return;
             NetworkManager.ClientManager.OnClientConnectionState -= OnClientConnectionState;
             NetworkManager.ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
+            NetworkManager.ServerManager.OnServerConnectionState -= OnServerConnectionState;
         }
 
         // ---------- Cliente ----------
@@ -274,7 +291,7 @@ namespace Game.Presentation.Bootstrap
                 return;
             }
 
-            KickStaleConnection(key);
+            KickStaleConnection(key, conn.ClientId);
             _keysByClientId[conn.ClientId] = key;
             if (playFabId != null) _playFabIdByKey[key] = playFabId;
             if (!string.IsNullOrEmpty(msg.ServerAddress) && msg.ServerPort != 0)
@@ -315,12 +332,13 @@ namespace Game.Presentation.Bootstrap
         }
 
         /// <summary>Corta una conexión anterior con la misma clave (sesión colgada tras un crash).</summary>
-        private void KickStaleConnection(string key)
+        private void KickStaleConnection(string key, int currentClientId)
         {
             int staleId = -1;
             foreach (var kvp in _keysByClientId)
                 if (kvp.Value == key) { staleId = kvp.Key; break; }
             if (staleId < 0) return;
+            if (staleId == currentClientId) return; // es esta misma conexión (id reutilizado): no cortarse a sí misma
 
             _keysByClientId.Remove(staleId);
             if (NetworkManager.ServerManager.Clients.TryGetValue(staleId, out NetworkConnection stale))
