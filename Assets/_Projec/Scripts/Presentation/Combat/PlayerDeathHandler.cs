@@ -33,6 +33,14 @@ namespace Game.Presentation.Combat
 
         private void HandleDiedServer(int instigatorNetworkId)
         {
+            // Práctica: no se pierde nada; el personaje reaparece con el mismo equipo.
+            if (Game.Presentation.Run.PracticeSession.Active)
+            {
+                DieObserversRpc();
+                Game.Presentation.Bootstrap.PlayerSpawnManager.Instance?.ServerRespawnAfter(base.NetworkObject, PracticeRespawnSeconds);
+                return;
+            }
+
             if (Game.Presentation.Run.RunManager.Instance != null)
                 Game.Presentation.Run.RunManager.Instance.SetDead(base.ObjectId);
 
@@ -44,6 +52,8 @@ namespace Game.Presentation.Combat
             _leavingRun = false;
             DieObserversRpc();
         }
+
+        private const float PracticeRespawnSeconds = 3f;
 
         // ---------- Salir de la run (menú de pausa) ----------
 
@@ -98,11 +108,12 @@ namespace Game.Presentation.Combat
 
             // Soltar el loot de la run: solo el servidor (DropAll es [Server]; en los clientes
             // solo generaba un warning por muerte).
-            if (base.IsServerInitialized && TryGetComponent(out Game.Core.Run.IRunInventory inventory))
+            if (base.IsServerInitialized && !Game.Presentation.Run.PracticeSession.Active &&
+                TryGetComponent(out Game.Core.Run.IRunInventory inventory))
                 inventory.DropAll();
 
 
-            if (base.IsOwner)
+            if (base.IsOwner && !Game.Presentation.Run.PracticeSession.Active)
             {
                 var result = FindFirstObjectByType<Game.Presentation.UI.ResultScreenController>();
                 if (result != null) result.Show(false); // murió

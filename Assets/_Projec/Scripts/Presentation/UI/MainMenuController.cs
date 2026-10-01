@@ -26,6 +26,8 @@ namespace Game.Presentation.UI
         private UIDocument _document;
         private VisualElement _menuRoot;
         private Button _findMatchButton;
+        private Button _practiceButton;
+        private bool _startingPractice;
         private Button _stashButton;
         private Button _quitButton;
 
@@ -78,6 +80,8 @@ namespace Game.Presentation.UI
             _quitButton = root.Q<Button>("quit-button");
             _findMatchButton.clicked += OnFindMatchClicked;
             _stashButton.clicked += OnStashClicked;
+            _practiceButton = root.Q<Button>("practice-button");
+            if (_practiceButton != null) _practiceButton.clicked += OnPracticeClicked;
             _quitButton.clicked += () => Application.Quit();
             root.Q<Button>("search-cancel").clicked += OnCancelSearchClicked;
 
@@ -195,6 +199,7 @@ namespace Game.Presentation.UI
 
             _findMatchButton?.SetEnabled(ready && !modal && !_searchActive);
             _stashButton?.SetEnabled(ready && !modal);
+            _practiceButton?.SetEnabled(ready && !modal && !_searchActive && !_startingPractice);
             _quitButton?.SetEnabled(!modal);
             _optionsButton?.SetEnabled(!modal);
 
@@ -387,6 +392,46 @@ namespace Game.Presentation.UI
 
             _searchStatus.text = "Entering the queue...";
             _matchmaking.StartSearch();
+        }
+
+        // ---------- Campo de práctica ----------
+
+        /// <summary>
+        /// Entra al campo de práctica con el equipo actual: host local, sin matchmaking. Nada de lo
+        /// que pase ahí se guarda (PracticeSession).
+        /// </summary>
+        private async void OnPracticeClicked()
+        {
+            if (_startingPractice || _searchActive) return;
+            if (Game.Presentation.Run.PlayerLoadoutService.IsInActiveRun) { ShowRejoinPanel(RejoinDefaultMessage); return; }
+
+            _startingPractice = true;
+            RefreshMenuState();
+            try
+            {
+                // Se entra con el loadout del jugador: tiene que estar leído.
+                if (_stashScreen != null && !await _stashScreen.EnsureLoadoutLoadedAsync())
+                {
+                    ShowNotice(InventoryLoadFailedMessage);
+                    return;
+                }
+
+                var bootstrap = FindFirstObjectByType<NetworkBootstrap>();
+                if (bootstrap == null)
+                {
+                    Debug.LogError("[MainMenu] No hay NetworkBootstrap en la escena.");
+                    return;
+                }
+
+                _stashScreen?.Hide();
+                if (!bootstrap.StartPractice())
+                    ShowNotice("Could not start the practice range. Please try again.");
+            }
+            finally
+            {
+                _startingPractice = false;
+                RefreshMenuState();
+            }
         }
 
         private void OnCancelSearchClicked()

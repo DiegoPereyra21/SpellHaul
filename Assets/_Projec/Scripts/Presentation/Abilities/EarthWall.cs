@@ -50,6 +50,18 @@ namespace Game.Presentation.Abilities
                 // Alto del muro: lo que hay que bajarlo para que quede enterrado del todo.
                 var rend = _body.GetComponentInChildren<Renderer>();
                 if (rend != null) _bodyHeight = Mathf.Max(0.5f, rend.bounds.size.y);
+
+                // Los NavMeshAgent ignoran los colliders: sin obstáculo que talle el NavMesh, los
+                // enemigos melee atravesaban el muro. Se agrega solo si el prefab no lo trae.
+                if (!_body.TryGetComponent(out UnityEngine.AI.NavMeshObstacle obstacle))
+                {
+                    obstacle = _body.gameObject.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+                    obstacle.shape = UnityEngine.AI.NavMeshObstacleShape.Box;
+                    obstacle.center = Vector3.zero;
+                    obstacle.size = Vector3.one; // en espacio local del Body (cubo escalado)
+                }
+                obstacle.carving = true;
+                obstacle.carveOnlyStationary = false;
             }
         }
 

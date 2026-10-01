@@ -12,6 +12,7 @@
             <ui:Label text="EXTRACTION SPELLCRAFT" class="game-subtitle" />
             <ui:VisualElement class="menu-buttons">
                 <ui:Button name="find-match-button" text="Find Run" class="menu-button primary" />
+                <ui:Button name="practice-button" text="Practice Range" class="menu-button" />
                 <ui:Button name="stash-button" text="Stash" class="menu-button" />
                 <ui:Button name="options-button" text="Options" class="menu-button" />
                 <ui:Button name="quit-button" text="Exit" class="menu-button quit" />

@@ -32,6 +32,12 @@ namespace Game.Presentation.Bootstrap
         [Header("Escena")]
         [SerializeField] private string _runSceneName = "Run";
 
+        [Header("Campo de práctica")]
+        [Tooltip("Escena del campo de práctica (tiene que estar en la lista de escenas del build).")]
+        [SerializeField] private string _practiceSceneName = "PracticeRange";
+        [Tooltip("Puerto local del host de práctica. Solo escucha en 127.0.0.1.")]
+        [SerializeField] private ushort _practicePort = 7790;
+
         [Header("Editor (solo en el editor; ignorado si hay argumentos de rol y en builds)")]
         [SerializeField] private NetworkRole _editorRole = NetworkRole.None;
         [SerializeField] private string _editorAddress = "127.0.0.1";
@@ -142,14 +148,49 @@ namespace Game.Presentation.Bootstrap
             }
         }
 
+        /// <summary>
+        /// Campo de práctica: levanta un host local (servidor + cliente en este proceso, solo en
+        /// 127.0.0.1) y carga la escena de práctica. Nada de lo que pase ahí se guarda
+        /// (PracticeSession). False si ya había una conexión en curso.
+        /// </summary>
+        public bool StartPractice()
+        {
+            if (InstanceFinder.IsServerStarted || InstanceFinder.IsClientStarted) return false;
+            var tugboat = GetTugboat();
+            if (tugboat == null) return false;
+
+            Game.Presentation.Run.PracticeSession.Begin();
+            RunServerEndpoint.Clear(); // no es una run a la que se pueda volver
+            tugboat.SetServerBindAddress("127.0.0.1", IPAddressType.IPv4);
+            tugboat.SetPort(_practicePort);
+            tugboat.SetClientAddress("127.0.0.1");
+
+            InstanceFinder.ServerManager.StartConnection();
+            InstanceFinder.ClientManager.StartConnection();
+            StartCoroutine(LoadGlobalSceneWhenServerReady(_practiceSceneName));
+            return true;
+        }
+
+        /// <summary>Sale del campo de práctica: corta host y cliente y vuelve al menú.</summary>
+        public static void StopPractice(string menuSceneName = "MainMenu")
+        {
+            NetworkDisconnectHandler.NotifyIntentionalDisconnect();
+            if (InstanceFinder.IsServerStarted) InstanceFinder.ServerManager.StopConnection(true);
+            if (InstanceFinder.IsClientStarted) InstanceFinder.ClientManager.StopConnection();
+            Game.Presentation.Run.PracticeSession.End();
+            UnityEngine.SceneManagement.SceneManager.LoadScene(menuSceneName);
+        }
+
         /// <summary>Carga la run como escena global apenas el servidor está levantado. Esperar
         /// únicamente por IsServerStarted es deliberado: agregar IsClientStarted acá ya causó
         /// spawns por debajo del mapa.</summary>
-        private IEnumerator LoadRunWhenServerReady()
+        private IEnumerator LoadRunWhenServerReady() => LoadGlobalSceneWhenServerReady(_runSceneName);
+
+        private IEnumerator LoadGlobalSceneWhenServerReady(string sceneName)
         {
             while (!InstanceFinder.IsServerStarted) yield return null;
 
-            SceneLoadData sld = new SceneLoadData(_runSceneName);
+            SceneLoadData sld = new SceneLoadData(sceneName);
             sld.ReplaceScenes = ReplaceOption.All;
             InstanceFinder.SceneManager.LoadGlobalScenes(sld);
         }

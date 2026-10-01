@@ -116,6 +116,14 @@ namespace Game.Presentation.UI
 
         private void OnLeaveClicked()
         {
+            // Campo de práctica: no hay nada que perder, se sale directo al menú.
+            if (Game.Presentation.Run.PracticeSession.Active)
+            {
+                Game.Presentation.Settings.SettingsPanel.Save();
+                Game.Presentation.Bootstrap.NetworkBootstrap.StopPractice();
+                return;
+            }
+
             if (!_leaveArmed)
             {
                 _leaveArmed = true;
@@ -159,7 +167,7 @@ namespace Game.Presentation.UI
         {
             _leaveArmed = false;
             if (_leaveButton == null) return;
-            _leaveButton.text = "Leave Run";
+            _leaveButton.text = Game.Presentation.Run.PracticeSession.Active ? "Leave Practice" : "Leave Run";
             _leaveButton.RemoveFromClassList("armed");
             _leaveButton.SetEnabled(true);
         }

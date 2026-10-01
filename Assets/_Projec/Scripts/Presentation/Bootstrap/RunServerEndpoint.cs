@@ -17,5 +17,11 @@ namespace Game.Presentation.Bootstrap
             Address = address;
             Port = port;
         }
+
+        public static void Clear()
+        {
+            Address = null;
+            Port = 0;
+        }
     }
 }

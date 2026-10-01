@@ -74,6 +74,17 @@ namespace Game.Presentation.Bootstrap
                 return;
             }
 
+            // El host de práctica se cayó sin que el jugador saliera: volver al menú sin más.
+            if (Game.Presentation.Run.PracticeSession.Active)
+            {
+                Game.Presentation.Run.PracticeSession.End();
+                if (InstanceFinder.IsServerStarted) InstanceFinder.ServerManager.StopConnection(true);
+                LastDisconnectMessage = "The practice range was closed.";
+                if (SceneManager.GetActiveScene().name != _menuSceneName) SceneManager.LoadScene(_menuSceneName);
+                else OnUnexpectedDisconnect?.Invoke(LastDisconnectMessage);
+                return;
+            }
+
             bool runFinished = _localRunFinished;
             _localRunFinished = false;
 

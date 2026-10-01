@@ -184,6 +184,17 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
   - Si el cuerpo ya no existe, rechaza con `LeftRun`. No se da un cuerpo nuevo.
   - Si es otra run, rechaza con `AlreadyInRun` (lo detecta `ServerLoadLoadoutAsync` según la marca).
 
+### Campo de práctica
+- **Entrada:** botón **Practice Range** del menú, que llama a `NetworkBootstrap.StartPractice()`. Levanta un host local (servidor y cliente en el mismo proceso, escuchando solo en 127.0.0.1:7790) y carga la escena `_practiceSceneName` (default `PracticeRange`). No pasa por matchmaking ni por PlayFab MPS.
+- **Equipo:** se entra con el loadout actual. Mientras `PracticeSession.Active` está activo **no se persiste nada**:
+  - `PlayerLoadoutService` (Save, Clear, ApplyRunResult, ApplyRunLost, MarkActiveRun) no hace nada;
+  - los enemigos no sueltan loot;
+  - al morir no se suelta nada ni aparece la pantalla de resultados.
+- **Muerte:** `PlayerSpawnManager.ServerRespawnAfter` reemplaza el cuerpo por uno nuevo en un spawn a los 3 s. El dueño vuelve a enviar su loadout, que no cambió.
+- **Enemigos:** `EnemySpawner._respawnSeconds > 0` los hace reaparecer en su punto. En la run vale 0.
+- **Salida:** Esc → **Leave Practice** (`NetworkBootstrap.StopPractice`) vuelve al menú sin perder nada. Si el host se cae, `NetworkDisconnectHandler` cierra la sesión de práctica y vuelve al menú.
+- **Escena:** necesita `GameLifetimeScope`, `VFXManager`, `InventoryUIDocument`, luz, suelo en la capa Ground con NavMesh, `PlayerSpawnPoint`, `EnemySpawnPoint` y un `EnemySpawner` con respawn. No lleva `RunManager`, `ExtractionZone` ni `ChestSpawner`.
+
 ## 5. Red
 
 ### Simulación y movimiento

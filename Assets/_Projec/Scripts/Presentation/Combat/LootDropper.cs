@@ -35,6 +35,7 @@ namespace Game.Presentation.Combat
         private void HandleDied(int instigator)
         {
             if (_lootTable == null || _lootContainerPrefab == null) return;
+            if (Game.Presentation.Run.PracticeSession.Active) return; // práctica: sin loot
 
             var loot = _lootTable.Roll();
             if (loot.Count == 0) return; // no cayó nada

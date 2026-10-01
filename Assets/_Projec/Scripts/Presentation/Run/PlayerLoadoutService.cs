@@ -125,6 +125,7 @@ namespace Game.Presentation.Run
         /// Si el servidor es dueño del loadout, él ya guardó la marca: acá solo se refleja en la cache.</summary>
         public static void MarkActiveRun(string address, ushort port)
         {
+            if (PracticeSession.Active) return; // práctica: nada de la partida toca el loadout real
             if (_snapshot == null) return;
             _snapshot.ActiveRun = CreateActiveRun(address, port);
             // En PlayFab la marca la guarda solo el servidor de la run (CloudScript ignora la del
@@ -143,6 +144,7 @@ namespace Game.Presentation.Run
         /// <summary>Client-only. Resultado de la run que llega del servidor (extrajo con esto).</summary>
         public static void ApplyRunResult(InventorySnapshot snapshot)
         {
+            if (PracticeSession.Active) return; // práctica: nada de la partida toca el loadout real
             if (snapshot == null) return;
             if (ServerOwnsRun) { _snapshot = snapshot; _initialized = true; } // ya lo guardó el servidor
             else Save(snapshot);
@@ -159,6 +161,7 @@ namespace Game.Presentation.Run
         /// <summary>Client-only. La run se perdió (murió, o ya no puede volver).</summary>
         public static void ApplyRunLost()
         {
+            if (PracticeSession.Active) return; // práctica: nada de la partida toca el loadout real
             if (ServerOwnsRun) { _snapshot = CreateEmptySnapshot(); _initialized = true; }
             else Clear();
         }
@@ -197,6 +200,7 @@ namespace Game.Presentation.Run
         /// <summary>Guarda una foto nueva (al extraer / al gestionar en el menú). Cache instantáneo + persistencia en background.</summary>
         public static void Save(InventorySnapshot snapshot)
         {
+            if (PracticeSession.Active) return; // práctica: no se persiste nada
             _snapshot = snapshot;
             _initialized = true;
             ProfileSaveQueue.EnqueueLoadout(snapshot);
@@ -205,6 +209,7 @@ namespace Game.Presentation.Run
         /// <summary>Vacía el inventario propio (al morir: volvés desnudo, pero con los slots de equipo visibles).</summary>
         public static void Clear()
         {
+            if (PracticeSession.Active) return; // práctica: no se persiste nada
             _snapshot = CreateEmptySnapshot();
             _initialized = true;
             ProfileSaveQueue.EnqueueLoadout(_snapshot);

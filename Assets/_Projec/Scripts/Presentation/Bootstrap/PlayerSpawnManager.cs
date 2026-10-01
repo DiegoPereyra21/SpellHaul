@@ -41,8 +41,12 @@ namespace Game.Presentation.Bootstrap
         // (PlayerIdentityAuthenticator). Permite volver a tomar el mismo personaje al reconectar.
         private readonly Dictionary<string, NetworkObject> _bodiesByKey = new();
 
+        /// <summary>Instancia activa (vive con el NetworkManager).</summary>
+        public static PlayerSpawnManager Instance { get; private set; }
+
         private void Start()
         {
+            Instance = this;
             if (_networkManager == null)
                 _networkManager = FishNet.InstanceFinder.NetworkManager;
 
@@ -53,6 +57,7 @@ namespace Game.Presentation.Bootstrap
 
         private void OnDestroy()
         {
+            if (Instance == this) Instance = null;
             if (_networkManager == null) return;
             _networkManager.SceneManager.OnClientLoadedStartScenes -= OnClientLoadedStartScenes;
             _networkManager.SceneManager.OnClientPresenceChangeEnd -= OnClientPresenceChangeEnd;
@@ -162,6 +167,29 @@ namespace Game.Presentation.Bootstrap
 
             body.GiveOwnership(conn);
             Debug.Log($"[PlayerSpawnManager] {key} volvió a la run: recupera su personaje.");
+        }
+
+        /// <summary>
+        /// Server-only. Campo de práctica: tras 'delay' segundos reemplaza el personaje muerto por uno
+        /// nuevo en un spawn. El dueño vuelve a mandar su loadout al spawnear (RunInventory), que en
+        /// práctica nunca cambió.
+        /// </summary>
+        public void ServerRespawnAfter(NetworkObject oldBody, float delay)
+        {
+            if (oldBody != null) StartCoroutine(RespawnRoutine(oldBody, delay));
+        }
+
+        private System.Collections.IEnumerator RespawnRoutine(NetworkObject oldBody, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (oldBody == null || !oldBody.IsSpawned) yield break;
+
+            NetworkConnection conn = oldBody.Owner;
+            if (conn != null && PlayerIdentityAuthenticator.TryGetPlayerKey(conn, out string key) && key != null)
+                _bodiesByKey.Remove(key);
+
+            oldBody.Despawn();
+            if (conn != null && conn.IsActive) SpawnPlayer(conn);
         }
 
         private Transform PickSpawnPoint()
