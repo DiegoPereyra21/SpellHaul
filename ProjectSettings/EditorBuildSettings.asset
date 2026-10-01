@@ -12,8 +12,8 @@ EditorBuildSettings:
     path: Assets/_Projec/Scenes/Run.unity
     guid: 3a4acb6993d85c447a4f81c617f0cf6a
   - enabled: 1
-    path: Assets/_Projec/Scenes/Range.unity
-    guid: e95d561c09f220e4c97f7f2521bb24b2
+    path: Assets/_Projec/Scenes/PracticeRange.unity
+    guid: d1b8d01ed06584743b60f57a5bf755cb
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
