@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e713a807e021124e9cb16ccc589108a, type: 3}
+  m_Name: ember_shard
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.ItemSO
+  _itemId: ember_shard
+  _displayName: Ember Shard
+  _category: 0
+  _rarity: 1
+  _icon: {fileID: 0}
+  _description: A splinter of living fire. Used to craft Fire gloves.
+  _isStackable: 1
+  _maxStack: 10
+  _baseValue: 0
+  WorldPrefab: {fileID: 0}

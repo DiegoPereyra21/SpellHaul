@@ -1,0 +1,213 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b402e55ae0571414bb75ad19ce6b893f, type: 3}
+  m_Name: EconomyConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Economy.EconomyConfigSO
+  _sellRate: 0.4
+  _valueCommon: 20
+  _valueRare: 60
+  _valueEpic: 180
+  _materialMultiplier: 0.25
+  _resourceMultiplier: 0.5
+  _consumableMultiplier: 0.6
+  _recipes:
+  - Id: craft_health_potion_common
+    Output: {fileID: 11400000, guid: be28f83aa4a687a42b15b590cda92ebf, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+      Quantity: 2
+    - Item: {fileID: 11400000, guid: 22a5d5ee2369bb7458c3b0132cc4acd0, type: 2}
+      Quantity: 1
+    Gold: 10
+  - Id: craft_health_potion_rare
+    Output: {fileID: 11400000, guid: 2f9bc70de11e5ea4fb0c25a31e2bf19e, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+      Quantity: 2
+    - Item: {fileID: 11400000, guid: 22a5d5ee2369bb7458c3b0132cc4acd0, type: 2}
+      Quantity: 3
+    Gold: 40
+  - Id: craft_health_potion_epic
+    Output: {fileID: 11400000, guid: 84acf3015a5df174783df89847271e90, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: 22a5d5ee2369bb7458c3b0132cc4acd0, type: 2}
+      Quantity: 4
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 1
+    Gold: 120
+  - Id: craft_mana_potion_common
+    Output: {fileID: 11400000, guid: ef720266264f98b448a4f26675c19af1, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+      Quantity: 2
+    - Item: {fileID: 11400000, guid: b1fbe9ea944d61b4a8232c567828fb4b, type: 2}
+      Quantity: 1
+    Gold: 10
+  - Id: craft_mana_potion_rare
+    Output: {fileID: 11400000, guid: 5415a464985c15349ae5d0a124882318, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+      Quantity: 2
+    - Item: {fileID: 11400000, guid: b1fbe9ea944d61b4a8232c567828fb4b, type: 2}
+      Quantity: 3
+    Gold: 40
+  - Id: craft_mana_potion_epic
+    Output: {fileID: 11400000, guid: cf90f64faec6fa24abc95f53cf7ed489, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: b1fbe9ea944d61b4a8232c567828fb4b, type: 2}
+      Quantity: 4
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 1
+    Gold: 120
+  - Id: craft_orb_gloves_common
+    Output: {fileID: 11400000, guid: 1087e762d342e194c977afdd51f10e21, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+      Quantity: 3
+    - Item: {fileID: 11400000, guid: 0f904ff7cb9bc7d4e88722835f9604eb, type: 2}
+      Quantity: 2
+    Gold: 50
+  - Id: craft_orb_gloves_rare
+    Output: {fileID: 11400000, guid: c30d057babdc8e74a8a2f6290b6d3c74, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: 1087e762d342e194c977afdd51f10e21, type: 2}
+      Quantity: 1
+    - Item: {fileID: 11400000, guid: 0f904ff7cb9bc7d4e88722835f9604eb, type: 2}
+      Quantity: 4
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 1
+    Gold: 150
+  - Id: craft_orb_gloves_epic
+    Output: {fileID: 11400000, guid: 8a94295652b7d154399518b714a382d2, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c30d057babdc8e74a8a2f6290b6d3c74, type: 2}
+      Quantity: 1
+    - Item: {fileID: 11400000, guid: 0f904ff7cb9bc7d4e88722835f9604eb, type: 2}
+      Quantity: 6
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 2
+    Gold: 400
+  - Id: craft_mending_gloves_common
+    Output: {fileID: 11400000, guid: 15e2c52fd2f810640828b84f7b364f89, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+      Quantity: 3
+    - Item: {fileID: 11400000, guid: 22a5d5ee2369bb7458c3b0132cc4acd0, type: 2}
+      Quantity: 2
+    Gold: 50
+  - Id: craft_mending_gloves_rare
+    Output: {fileID: 11400000, guid: 27dc2a26623792e4282cb351db574781, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: 15e2c52fd2f810640828b84f7b364f89, type: 2}
+      Quantity: 1
+    - Item: {fileID: 11400000, guid: 22a5d5ee2369bb7458c3b0132cc4acd0, type: 2}
+      Quantity: 4
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 1
+    Gold: 150
+  - Id: craft_mending_gloves_epic
+    Output: {fileID: 11400000, guid: 0afb6581e8a2d3c4a8e6c6724eeca319, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: 27dc2a26623792e4282cb351db574781, type: 2}
+      Quantity: 1
+    - Item: {fileID: 11400000, guid: 22a5d5ee2369bb7458c3b0132cc4acd0, type: 2}
+      Quantity: 6
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 2
+    Gold: 400
+  - Id: craft_flare_gloves_common
+    Output: {fileID: 11400000, guid: 3fcc7408b1bda7d4cb982d01c86b6166, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+      Quantity: 3
+    - Item: {fileID: 11400000, guid: b1fbe9ea944d61b4a8232c567828fb4b, type: 2}
+      Quantity: 2
+    Gold: 50
+  - Id: craft_flare_gloves_rare
+    Output: {fileID: 11400000, guid: 97240380ae806144b8b44451214b28f8, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: 3fcc7408b1bda7d4cb982d01c86b6166, type: 2}
+      Quantity: 1
+    - Item: {fileID: 11400000, guid: b1fbe9ea944d61b4a8232c567828fb4b, type: 2}
+      Quantity: 4
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 1
+    Gold: 150
+  - Id: craft_flare_gloves_epic
+    Output: {fileID: 11400000, guid: aac2906ad6b1ff54f91b5b58f792c2ff, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: 97240380ae806144b8b44451214b28f8, type: 2}
+      Quantity: 1
+    - Item: {fileID: 11400000, guid: b1fbe9ea944d61b4a8232c567828fb4b, type: 2}
+      Quantity: 6
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 2
+    Gold: 400
+  - Id: craft_stone_gloves_common
+    Output: {fileID: 11400000, guid: 66f0458331581904fbad525119ab3ed9, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+      Quantity: 3
+    - Item: {fileID: 11400000, guid: 51d8ed91fa84d9e4c98134b4102bc9ea, type: 2}
+      Quantity: 2
+    Gold: 50
+  - Id: craft_stone_gloves_rare
+    Output: {fileID: 11400000, guid: 29f0af0687861da4c9a1ddc4879cdaa4, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: 66f0458331581904fbad525119ab3ed9, type: 2}
+      Quantity: 1
+    - Item: {fileID: 11400000, guid: 51d8ed91fa84d9e4c98134b4102bc9ea, type: 2}
+      Quantity: 4
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 1
+    Gold: 150
+  - Id: craft_stone_gloves_epic
+    Output: {fileID: 11400000, guid: 8d0fbbbf89acaf14795f153860a0b905, type: 2}
+    OutputQuantity: 1
+    Inputs:
+    - Item: {fileID: 11400000, guid: 29f0af0687861da4c9a1ddc4879cdaa4, type: 2}
+      Quantity: 1
+    - Item: {fileID: 11400000, guid: 51d8ed91fa84d9e4c98134b4102bc9ea, type: 2}
+      Quantity: 6
+    - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
+      Quantity: 2
+    Gold: 400
+  _offers:
+  - Id: buy_health_potion_common
+    Item: {fileID: 11400000, guid: be28f83aa4a687a42b15b590cda92ebf, type: 2}
+    Quantity: 1
+    Price: 40
+  - Id: buy_mana_potion_common
+    Item: {fileID: 11400000, guid: ef720266264f98b448a4f26675c19af1, type: 2}
+    Quantity: 1
+    Price: 40
+  - Id: buy_black_wood
+    Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+    Quantity: 1
+    Price: 15

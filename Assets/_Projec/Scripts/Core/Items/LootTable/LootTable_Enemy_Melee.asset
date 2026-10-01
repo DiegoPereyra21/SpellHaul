@@ -17,6 +17,14 @@ MonoBehaviour:
     Chance: 0.45
     MinQuantity: 1
     MaxQuantity: 3
+  - Item: {fileID: 11400000, guid: 51d8ed91fa84d9e4c98134b4102bc9ea, type: 2}
+    Chance: 0.1575
+    MinQuantity: 1
+    MaxQuantity: 2
+  - Item: {fileID: 11400000, guid: 0f904ff7cb9bc7d4e88722835f9604eb, type: 2}
+    Chance: 0.1575
+    MinQuantity: 1
+    MaxQuantity: 2
   - Item: {fileID: 11400000, guid: 3fcc7408b1bda7d4cb982d01c86b6166, type: 2}
     Chance: 0.025
     MinQuantity: 1
@@ -113,6 +121,14 @@ MonoBehaviour:
     Chance: 0.008
     MinQuantity: 1
     MaxQuantity: 1
+  - Item: {fileID: 11400000, guid: b1fbe9ea944d61b4a8232c567828fb4b, type: 2}
+    Chance: 0.1575
+    MinQuantity: 1
+    MaxQuantity: 2
+  - Item: {fileID: 11400000, guid: 22a5d5ee2369bb7458c3b0132cc4acd0, type: 2}
+    Chance: 0.1575
+    MinQuantity: 1
+    MaxQuantity: 2
   - Item: {fileID: 11400000, guid: ef720266264f98b448a4f26675c19af1, type: 2}
     Chance: 0.1
     MinQuantity: 1

@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.ItemDatabase
   _items:
   - {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
+  - {fileID: 11400000, guid: 51d8ed91fa84d9e4c98134b4102bc9ea, type: 2}
+  - {fileID: 11400000, guid: 0f904ff7cb9bc7d4e88722835f9604eb, type: 2}
   - {fileID: 11400000, guid: 3fcc7408b1bda7d4cb982d01c86b6166, type: 2}
   - {fileID: 11400000, guid: aac2906ad6b1ff54f91b5b58f792c2ff, type: 2}
   - {fileID: 11400000, guid: 97240380ae806144b8b44451214b28f8, type: 2}
@@ -38,6 +40,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c68946b79bac36a4eb9e482cbb1934d8, type: 2}
   - {fileID: 11400000, guid: 39c57ed7f15066b44a314c9a87227d02, type: 2}
   - {fileID: 11400000, guid: cef21ffb40788d34390ed162f83d6e87, type: 2}
+  - {fileID: 11400000, guid: b1fbe9ea944d61b4a8232c567828fb4b, type: 2}
+  - {fileID: 11400000, guid: 22a5d5ee2369bb7458c3b0132cc4acd0, type: 2}
   - {fileID: 11400000, guid: ef720266264f98b448a4f26675c19af1, type: 2}
   - {fileID: 11400000, guid: cf90f64faec6fa24abc95f53cf7ed489, type: 2}
   - {fileID: 11400000, guid: 5415a464985c15349ae5d0a124882318, type: 2}
