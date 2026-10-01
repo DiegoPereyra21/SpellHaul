@@ -379,6 +379,10 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 - La potencia viaja en `AbilityCastContext.AbilityPower`. El cooldown efectivo es `Cooldown × CooldownMultiplier / CastSpeed`.
 - El cooldown es del slot, no del guante: cambiar de guante no lo reinicia. Si el guante cambia en medio de una carga o un windup, el cast se descarta.
 - **Tooltip:** `AbilitySO.DescribeEffect(power, lines)` arma las líneas de efecto ya escaladas (por ejemplo "Heals 39").
+- **Estilo en la UI** (`GloveVisuals` + `UI/Gloves.uss`, compartido entre stash e inventario de run): los guantes se distinguen del resto del equipo.
+  - En las grillas, la casilla es más redondeada, con un rombo y una banda inferior del color de la escuela. El borde sigue indicando la rareza.
+  - En el loadout, la fila lleva una franja de la escuela y, debajo del nombre, "RMB · habilidad".
+  - En el tooltip, la franja y el tipo van en el color de la escuela.
 
 | Familia | ItemId | Escuela | Habilidad (`AbilityId`) | Potencia C/R/E | Cooldown C/R/E |
 |---|---|---|---|---|---|
@@ -455,6 +459,8 @@ Todo con UI Toolkit. El orden entre paneles se maneja con `sortingOrder` de cada
   - Panel de rejoin (ver §4).
   - Durante la búsqueda se muestra un banner con temporizador y botón para cancelar. Se puede abrir el stash mientras busca: el menú pasa a modo overlay (`sortingOrder` 10) por encima del stash.
 - **`StashScreenController`.** Ver §7. Expone los eventos `Shown` y `Hidden`.
+
+- **Tooltips** (stash e inventario): `TooltipPlacement` los ubica arriba del slot. Si no entran, abajo, y si tampoco, al costado. Siempre quedan dentro del panel.
 
 ### En partida
 - **`InventoryUIController`** (se abre con Tab):

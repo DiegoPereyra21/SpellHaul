@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <Style src="StashScreen.uss" />
+    <Style src="Gloves.uss" />
     <ui:VisualElement name="stash-root" class="stash-root">
         <ui:VisualElement class="stash-panel">
             <ui:Label text="Stash" class="stash-title" />

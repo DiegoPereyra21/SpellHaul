@@ -212,12 +212,9 @@ namespace Game.Presentation.UI
             if (_gloveIcon != null)
             {
                 foreach (Game.Core.Items.GloveSchool school in System.Enum.GetValues(typeof(Game.Core.Items.GloveSchool)))
-                    _gloveIcon.EnableInClassList(GloveSchoolClass(school), hasAbility && glove.School == school);
+                    _gloveIcon.EnableInClassList(GloveVisuals.SchoolClass(school), hasAbility && glove.School == school);
             }
         }
-
-        /// <summary>Clase USS de color por escuela de guante (HUD.uss).</summary>
-        public static string GloveSchoolClass(Game.Core.Items.GloveSchool school) => "school-" + school.ToString().ToLowerInvariant();
 
         public override void OnStopClient()
         {

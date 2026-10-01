@@ -1,0 +1,77 @@
+/* Guantes: estilo propio en stash, inventario de run y tooltip (GloveVisuals.cs).
+   Color por escuela (GloveSchool). Escuela nueva = agregar su bloque de colores al final.
+   El color del borde de las casillas sigue siendo el de la rareza. */
+
+/* ---------- Casilla de grilla ---------- */
+.item-slot.item-glove {
+    border-radius: 18px;
+}
+
+.glove-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+}
+
+.glove-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 9px;
+    height: 9px;
+    rotate: 45deg;
+    border-radius: 2px;
+}
+
+/* ---------- Fila del loadout ---------- */
+.equip-slot.equip-slot-glove {
+    border-left-width: 3px;
+    border-radius: 4px;
+    padding-left: 8px;
+}
+
+.accent-dot.glove-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    rotate: 45deg;
+}
+
+.equip-name-column {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.glove-ability {
+    font-size: 13px;
+    margin-left: 8px;
+    -unity-font-style: bold;
+}
+
+/* ---------- Tooltip ---------- */
+.item-tooltip.tooltip-glove {
+    border-left-width: 3px;
+}
+
+/* ---------- Colores por escuela ---------- */
+/* Destruction: brasa */
+.item-slot.item-glove.school-destruction { background-color: rgba(232, 112, 76, 0.16); }
+.school-destruction .glove-band,
+.school-destruction .glove-badge          { background-color: rgb(232, 112, 76); }
+.equip-slot-glove.school-destruction      { border-left-color: rgb(232, 112, 76); background-color: rgba(232, 112, 76, 0.10); }
+.equip-slot-glove.school-destruction .glove-dot { background-color: rgb(232, 112, 76); }
+.equip-slot-glove.school-destruction .glove-ability { color: rgb(240, 150, 120); }
+.tooltip-glove.school-destruction         { border-left-color: rgb(232, 112, 76); }
+.tooltip-glove.school-destruction .tooltip-type { color: rgb(240, 150, 120); }
+
+/* Restoration: verde */
+.item-slot.item-glove.school-restoration { background-color: rgba(103, 210, 131, 0.16); }
+.school-restoration .glove-band,
+.school-restoration .glove-badge          { background-color: rgb(103, 210, 131); }
+.equip-slot-glove.school-restoration      { border-left-color: rgb(103, 210, 131); background-color: rgba(103, 210, 131, 0.10); }
+.equip-slot-glove.school-restoration .glove-dot { background-color: rgb(103, 210, 131); }
+.equip-slot-glove.school-restoration .glove-ability { color: rgb(140, 225, 160); }
+.tooltip-glove.school-restoration         { border-left-color: rgb(103, 210, 131); }
+.tooltip-glove.school-restoration .tooltip-type { color: rgb(140, 225, 160); }

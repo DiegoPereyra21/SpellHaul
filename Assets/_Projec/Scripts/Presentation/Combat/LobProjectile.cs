@@ -39,6 +39,11 @@ namespace Game.Presentation.Combat
         {
             if (_hitMask.value == 0)
                 _hitMask = LayerMask.GetMask("Hitbox", "Ground");
+
+            // La colisión se resuelve a mano (sweep + OverlapSphere contra _hitMask): un collider
+            // sólido en el prefab solo hacía que jugadores y enemigos se chocaran con el orbe en vuelo.
+            foreach (var col in GetComponentsInChildren<Collider>(true))
+                col.enabled = false;
         }
 
         [Server]

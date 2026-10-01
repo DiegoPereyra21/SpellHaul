@@ -37,7 +37,6 @@ namespace Game.Presentation.UI
         private Label _tooltipType;
         private Label _tooltipDescription;
         private VisualElement _tooltipStats;
-        private float _pendingTooltipAnchorBottom;
         private InputAction _toggleAction;
         private PlayerControls _controls;
         private bool _isOpen;
@@ -310,6 +309,7 @@ namespace Game.Presentation.UI
                     name.AddToClassList("equip-item-name");
                     name.AddToClassList(ItemTooltipFormatter.RarityClass(def));
                     itemWrap.Add(name);
+                    GloveVisuals.ApplyToEquipRow(slot, itemWrap, dot, name, def);
 
                     slot.Add(itemWrap);
 
@@ -408,6 +408,7 @@ namespace Game.Presentation.UI
                 name.AddToClassList("item-name");
                 slot.AddToClassList(ItemTooltipFormatter.RarityClass(def));
                 slot.Add(name);
+                GloveVisuals.ApplyToSlot(slot, def);
 
                 if (stack.Quantity > 1)
                 {
@@ -515,18 +516,8 @@ namespace Game.Presentation.UI
                 _tooltipStats.Add(line);
             }
 
-            Rect bound = anchor.worldBound;
-            _tooltip.style.left = bound.x;
-            _tooltip.style.top = bound.y; // provisional, se corrige abajo cuando se conoce la altura real
-            _pendingTooltipAnchorBottom = bound.y;
-            _tooltip.style.display = DisplayStyle.Flex;
-            _tooltip.RegisterCallback<GeometryChangedEvent>(OnTooltipGeometryChanged);
-        }
-
-        private void OnTooltipGeometryChanged(GeometryChangedEvent evt)
-        {
-            _tooltip.UnregisterCallback<GeometryChangedEvent>(OnTooltipGeometryChanged);
-            _tooltip.style.top = _pendingTooltipAnchorBottom - evt.newRect.height - 10; // arriba del slot, con aire
+            GloveVisuals.ApplyToTooltip(_tooltip, def);
+            TooltipPlacement.Show(_tooltip, anchor); // dentro de la pantalla: arriba, abajo o al costado
         }
 
         private void HideTooltip()
