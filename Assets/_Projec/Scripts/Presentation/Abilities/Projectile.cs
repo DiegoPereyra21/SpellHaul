@@ -385,12 +385,17 @@ namespace Game.Presentation.Abilities
         {
             bool hitConfirmed = damageable != null; // false = pegó en geometría (Ground)
             bool isKill = false;
+            float dealt = 0f;
 
             if (damageable != null)
             {
+                float before = damageable is Health h0 ? h0.Current : 0f;
                 damageable.ApplyDamage(_damage, _casterNetworkId);
                 if (damageable is Health health) // único implementador de IDamageable
+                {
                     isKill = health.IsDead;
+                    dealt = Mathf.Max(0f, before - health.Current); // ya con la protección del objetivo
+                }
             }
 
             transform.position = point;
@@ -398,7 +403,7 @@ namespace Game.Presentation.Abilities
             if (InstanceFinder.ServerManager.Objects.Spawned.TryGetValue(_casterNetworkId, out NetworkObject casterNob) &&
                 casterNob.TryGetComponent(out AbilityController ac))
             {
-                ac.NotifyProjectileImpact(point, normal, hitConfirmed, isKill);
+                ac.NotifyProjectileImpact(point, normal, hitConfirmed, isKill, dealt);
                 ac.NotifyAbilityImpactSfx(point, _slot, wallHit: !hitConfirmed);
             }
 

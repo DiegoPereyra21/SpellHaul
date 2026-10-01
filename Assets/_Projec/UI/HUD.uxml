@@ -77,7 +77,7 @@
                 <ui:Label text="Paused" class="pause-title" />
                 <ui:Label text="The run keeps going while this menu is open." class="pause-hint" />
 
-                <ui:VisualElement name="pause-settings" />
+                <ui:ScrollView name="pause-settings" class="settings-scroll" />
 
                 <ui:Button name="pause-resume" text="Resume" class="pause-button primary" />
                 <ui:Button name="pause-leave" text="Leave Run" class="pause-button danger" />

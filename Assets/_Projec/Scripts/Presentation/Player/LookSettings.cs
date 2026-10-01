@@ -13,7 +13,21 @@ namespace Game.Presentation.Player
         public const float MinSensitivity = 0.2f;
         public const float MaxSensitivity = 3f;
 
+        private const string InvertYKey = "SpellHaul.InvertY";
+
         private static float? _cached;
+        private static bool? _invertY;
+
+        /// <summary>Invierte el eje vertical de la mirada.</summary>
+        public static bool InvertY
+        {
+            get => _invertY ??= PlayerPrefs.GetInt(InvertYKey, 0) == 1;
+            set
+            {
+                _invertY = value;
+                PlayerPrefs.SetInt(InvertYKey, value ? 1 : 0);
+            }
+        }
 
         public static float Sensitivity
         {

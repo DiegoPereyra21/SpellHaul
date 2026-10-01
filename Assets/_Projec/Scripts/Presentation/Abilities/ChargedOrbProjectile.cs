@@ -157,6 +157,7 @@ namespace Game.Presentation.Abilities
             // Un solo golpe por entidad: con más de una hitbox (cabeza + cuerpo, etc.) cada collider
             // aplicaba el daño de nuevo.
             _alreadyHit.Clear();
+            float dealt = 0f; // daño total hecho (para los números de daño del tirador)
             int count = Physics.OverlapSphereNonAlloc(point, _explosionRadius, _explosionBuffer, _hitMask, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
             {
@@ -167,10 +168,14 @@ namespace Game.Presentation.Abilities
 
                 if (nob.TryGetComponent(out IDamageable damageable))
                 {
+                    float before = damageable is Health h0 ? h0.Current : 0f;
                     damageable.ApplyDamage(_damage, _casterNetworkId);
                     hitConfirmed = true;
-                    if (damageable is Health health && health.IsDead)
-                        isKill = true;
+                    if (damageable is Health health)
+                    {
+                        dealt += Mathf.Max(0f, before - health.Current);
+                        if (health.IsDead) isKill = true;
+                    }
                 }
             }
 
@@ -179,7 +184,7 @@ namespace Game.Presentation.Abilities
             if (InstanceFinder.ServerManager.Objects.Spawned.TryGetValue(_casterNetworkId, out NetworkObject casterNob) &&
                 casterNob.TryGetComponent(out AbilityController ac))
             {
-                ac.NotifyProjectileImpact(point, Vector3.up, hitConfirmed, isKill);
+                ac.NotifyProjectileImpact(point, Vector3.up, hitConfirmed, isKill, dealt);
                 ac.NotifyAbilityImpactSfx(point, _slot); // la explosión suena siempre
             }
 

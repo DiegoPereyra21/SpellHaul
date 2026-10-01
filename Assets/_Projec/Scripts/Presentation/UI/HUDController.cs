@@ -177,6 +177,11 @@ namespace Game.Presentation.UI
                 if (pause == null) pause = gameObject.AddComponent<PauseMenuController>();
                 pause.Init(root);
             }
+
+            // Mira configurable, números de daño, FPS/ping y aviso de conexión inestable.
+            var extras = GetComponent<HudExtras>();
+            if (extras == null) extras = gameObject.AddComponent<HudExtras>();
+            extras.Init(root, _abilities, _cam);
         }
 
         public override void OnStopClient()

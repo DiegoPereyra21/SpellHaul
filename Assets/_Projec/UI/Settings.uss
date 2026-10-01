@@ -77,3 +77,13 @@
     width: 20px;
     height: 20px;
 }
+
+/* Contenedor desplazable: con todas las opciones no entra en pantalla. */
+.settings-scroll {
+    max-height: 480px;
+    margin-bottom: 6px;
+}
+
+.settings-scroll .unity-scroll-view__content-container {
+    padding-right: 12px;
+}

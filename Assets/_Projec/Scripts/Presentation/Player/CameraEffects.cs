@@ -14,10 +14,56 @@ namespace Game.Presentation.Player
         private float _baseFov;
         private Coroutine _fovRoutine;
 
+        // FOV elegido en opciones. Se aplica a la Camera y a la CinemachineCamera (la que maneje
+        // el lente). Sin elección (0) se dejan los valores originales del prefab, sin tocar.
+        private Unity.Cinemachine.CinemachineCamera _cinemachine;
+        private float _originalCameraFov;
+        private float _originalLensFov;
+
         private void Awake()
         {
             _camera = GetComponent<Camera>();
+            _cinemachine = GetComponent<Unity.Cinemachine.CinemachineCamera>();
+            _originalCameraFov = _camera.fieldOfView;
+            _originalLensFov = _cinemachine != null ? _cinemachine.Lens.FieldOfView : _originalCameraFov;
             _baseFov = _camera.fieldOfView;
+
+            ApplyFieldOfView();
+            Game.Presentation.Settings.DisplaySettings.Changed += ApplyFieldOfView;
+        }
+
+        private void OnDestroy()
+        {
+            Game.Presentation.Settings.DisplaySettings.Changed -= ApplyFieldOfView;
+        }
+
+        private void ApplyFieldOfView()
+        {
+            if (_camera == null) return;
+
+            float horizontal = Game.Presentation.Settings.DisplaySettings.FieldOfView;
+            float cameraFov, lensFov;
+            if (horizontal > 0f)
+            {
+                // Horizontal → vertical (lo que usa Unity) según el aspecto de la pantalla.
+                float aspect = Mathf.Max(0.1f, _camera.aspect);
+                float vertical = 2f * Mathf.Atan(Mathf.Tan(horizontal * 0.5f * Mathf.Deg2Rad) / aspect) * Mathf.Rad2Deg;
+                cameraFov = lensFov = vertical;
+            }
+            else
+            {
+                cameraFov = _originalCameraFov;
+                lensFov = _originalLensFov;
+            }
+
+            _baseFov = cameraFov;
+            if (_fovRoutine == null) _camera.fieldOfView = cameraFov;
+            if (_cinemachine != null)
+            {
+                var lens = _cinemachine.Lens;
+                lens.FieldOfView = lensFov;
+                _cinemachine.Lens = lens;
+            }
         }
 
         /// <summary>
@@ -56,6 +102,7 @@ namespace Game.Presentation.Player
                 yield return null;
             }
             _camera.fieldOfView = _baseFov;
+            _fovRoutine = null;
         }
     }
 }

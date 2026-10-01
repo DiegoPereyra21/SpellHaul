@@ -13,6 +13,27 @@ namespace Game.Presentation.Settings
         private const string VSyncKey = "SpellHaul.Display.VSync";
         private const string FrameLimitKey = "SpellHaul.Display.FrameLimit";
         private const string QualityKey = "SpellHaul.Display.Quality";
+        private const string FovKey = "SpellHaul.Display.FieldOfView";
+
+        /// <summary>Algún ajuste visual cambió (la cámara del jugador vuelve a aplicar el FOV).</summary>
+        public static event System.Action Changed;
+
+        public const float MinFieldOfView = 70f;
+        public const float MaxFieldOfView = 120f;
+
+        /// <summary>
+        /// Campo de visión HORIZONTAL elegido (como en la mayoría de los shooters), o 0 = el del
+        /// prefab (sin tocar). La cámara lo convierte al vertical que usa Unity según su aspecto.
+        /// </summary>
+        public static float FieldOfView
+        {
+            get => PlayerPrefs.GetFloat(FovKey, 0f);
+            set
+            {
+                PlayerPrefs.SetFloat(FovKey, value <= 0f ? 0f : Mathf.Clamp(value, MinFieldOfView, MaxFieldOfView));
+                Changed?.Invoke();
+            }
+        }
 
         public const int DefaultFrameLimit = 144;
 

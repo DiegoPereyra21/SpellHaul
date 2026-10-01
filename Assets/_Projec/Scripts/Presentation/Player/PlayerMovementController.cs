@@ -220,7 +220,7 @@ namespace Game.Presentation.Player
                 // local antes de convertirla en input: prediction/reconcile no cambian.
                 float sensitivity = _mouseSensitivity * LookSettings.Sensitivity;
                 float yawDelta = look.x * sensitivity;
-                float pitchDelta = -look.y * sensitivity;
+                float pitchDelta = (LookSettings.InvertY ? look.y : -look.y) * sensitivity;
 
                 transform.Rotate(Vector3.up, yawDelta);
                 if (_cameraLook != null)

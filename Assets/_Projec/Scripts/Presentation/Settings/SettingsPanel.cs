@@ -37,6 +37,7 @@ namespace Game.Presentation.Settings
             Section(container, "Controls");
             SliderRow(container, "Mouse Sensitivity", LookSettings.MinSensitivity, LookSettings.MaxSensitivity,
                 LookSettings.Sensitivity, v => LookSettings.Sensitivity = v, v => $"{v:0.00}x");
+            ToggleRow(container, "Invert Y Axis", LookSettings.InvertY, v => LookSettings.InvertY = v);
 
             // ---------- Display ----------
             Section(container, "Display");
@@ -73,6 +74,23 @@ namespace Game.Presentation.Settings
             var qualities = new List<string>(QualitySettings.names);
             if (qualities.Count > 1)
                 DropdownRow(container, "Graphics Quality", qualities, DisplaySettings.Quality, i => DisplaySettings.Quality = i);
+
+            // FOV: sin elegir se usa el del juego ("Default"); al moverlo queda el elegido.
+            float fov = DisplaySettings.FieldOfView;
+            bool fovChosen = fov > 0f;
+            SliderRow(container, "Field of View", DisplaySettings.MinFieldOfView, DisplaySettings.MaxFieldOfView,
+                fovChosen ? fov : 90f, v => DisplaySettings.FieldOfView = Mathf.Round(v),
+                v => fovChosen ? $"{Mathf.RoundToInt(v)}°" : "Default", onFirstChange: () => fovChosen = true);
+
+            // ---------- HUD ----------
+            Section(container, "HUD");
+            var colors = new List<string>();
+            foreach (var c in HudSettings.CrosshairColors) colors.Add(c.Label);
+            DropdownRow(container, "Crosshair Color", colors, HudSettings.CrosshairColorIndex, i => HudSettings.CrosshairColorIndex = i);
+            SliderRow(container, "Crosshair Size", HudSettings.MinCrosshairSize, HudSettings.MaxCrosshairSize,
+                HudSettings.CrosshairSize, v => HudSettings.CrosshairSize = v, v => $"{Mathf.RoundToInt(v * 100f)}%");
+            ToggleRow(container, "Damage Numbers", HudSettings.ShowDamageNumbers, v => HudSettings.ShowDamageNumbers = v);
+            ToggleRow(container, "Show FPS and Ping", HudSettings.ShowNetStats, v => HudSettings.ShowNetStats = v);
         }
 
         /// <summary>Guarda en disco lo cambiado (llamar al cerrar el panel).</summary>
@@ -103,15 +121,17 @@ namespace Game.Presentation.Settings
         }
 
         private static void SliderRow(VisualElement container, string label, float min, float max, float value,
-            System.Action<float> onChange, System.Func<float, string> format)
+            System.Action<float> onChange, System.Func<float, string> format, System.Action onFirstChange = null)
         {
             var row = Row(container, label);
             var slider = new Slider(min, max) { value = value };
             slider.AddToClassList("settings-slider");
             var valueLabel = new Label(format(value));
             valueLabel.AddToClassList("settings-value");
+            bool changed = false;
             slider.RegisterValueChangedCallback(evt =>
             {
+                if (!changed) { changed = true; onFirstChange?.Invoke(); }
                 valueLabel.text = format(evt.newValue);
                 onChange(evt.newValue);
             });

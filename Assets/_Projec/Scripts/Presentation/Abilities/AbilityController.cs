@@ -645,20 +645,24 @@ namespace Game.Presentation.Abilities
         }
 
 
-        public void NotifyProjectileImpact(Vector3 point, Vector3 normal, bool hitConfirmed, bool isKill)
+        public void NotifyProjectileImpact(Vector3 point, Vector3 normal, bool hitConfirmed, bool isKill, float damageDealt = 0f)
         {
             PlayImpactObserversRpc(point, normal);
 
             if (hitConfirmed && base.Owner.IsActive) // el tirador pudo haberse desconectado
-                PlayHitMarkerTargetRpc(base.Owner, isKill);
+                PlayHitMarkerTargetRpc(base.Owner, isKill, damageDealt, point);
         }
 
         public event Action<bool> OnHitConfirmed;
 
+        /// <summary>Client-only (dueño). Daño confirmado por el servidor y dónde (números de daño).</summary>
+        public event Action<Vector3, float, bool> OnDamageDealt;
+
         [TargetRpc]
-        private void PlayHitMarkerTargetRpc(FishNet.Connection.NetworkConnection conn, bool isKill)
+        private void PlayHitMarkerTargetRpc(FishNet.Connection.NetworkConnection conn, bool isKill, float damageDealt, Vector3 point)
         {
             OnHitConfirmed?.Invoke(isKill);
+            if (damageDealt > 0f) OnDamageDealt?.Invoke(point, damageDealt, isKill);
         }
 
         [ObserversRpc(ExcludeOwner = true)]

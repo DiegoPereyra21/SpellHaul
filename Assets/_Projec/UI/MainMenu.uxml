@@ -40,7 +40,7 @@
         <!-- Opciones (volúmenes). Oculto por defecto. -->
         <ui:VisualElement name="options-panel" class="lobby-panel options-panel">
             <ui:Label text="Options" class="lobby-title" />
-            <ui:VisualElement name="options-settings" />
+            <ui:ScrollView name="options-settings" class="settings-scroll" />
             <ui:Button name="options-close" text="Close" class="menu-button quit options-close" />
         </ui:VisualElement>
 
