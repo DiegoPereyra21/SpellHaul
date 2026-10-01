@@ -1523,7 +1523,7 @@ PrefabInstance:
     - target: {fileID: 8751636475071672297, guid: fc5a676d2c90b3d4f8a22e369c35950d, type: 3}
       propertyPath: m_NavMeshData
       value: 
-      objectReference: {fileID: 23800000, guid: 2a3b85d7411edda4d9b6f29ae13bca0b, type: 2}
+      objectReference: {fileID: 23800000, guid: 30dbebc286ccd0241aad059cffb5e044, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1883,6 +1883,7 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1823142537}
   _networkObjectCache: {fileID: 0}
+  _respawnSeconds: 0
 --- !u!114 &1823142537
 MonoBehaviour:
   m_ObjectHideFlags: 0
