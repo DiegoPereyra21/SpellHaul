@@ -28,6 +28,7 @@ GameObject:
   - component: {fileID: 3572806112232256929}
   - component: {fileID: 6256248262321206928}
   - component: {fileID: 170986303580152875}
+  - component: {fileID: 7923410110614314807}
   m_Layer: 8
   m_Name: Player
   m_TagString: Untagged
@@ -299,6 +300,7 @@ MonoBehaviour:
   _stats: {fileID: 7481302007928117156}
   _maxHealth: 100
   _damageFlash: {fileID: 1777269769133244397}
+  _countsAsKill: 1
 --- !u!114 &5943440516833520504
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -580,6 +582,21 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &7923410110614314807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 708038747777476914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39ff744d02cb5ce4fa015b9f02675a17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Combat.UsableController
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 4708353133064893462}
+  _networkObjectCache: {fileID: 0}
 --- !u!1 &2372299899730820767
 GameObject:
   m_ObjectHideFlags: 0

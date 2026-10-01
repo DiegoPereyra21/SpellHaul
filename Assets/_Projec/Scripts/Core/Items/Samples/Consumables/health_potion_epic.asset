@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 252b904516a44c84f864fdf0085c472c, type: 3}
+  m_Name: health_potion_epic
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.PotionItemSO
+  _itemId: health_potion_epic
+  _displayName: Greater Health Potion
+  _category: 4
+  _rarity: 2
+  _icon: {fileID: 0}
+  _description: Restores health over a few seconds.
+  _isStackable: 1
+  _maxStack: 5
+  WorldPrefab: {fileID: 0}
+  _useTime: 0.6
+  _useClip: {fileID: 8300000, guid: ce673bb427b80e544b4a8cdad8498f9d, type: 3}
+  _health: 80
+  _mana: 0
+  _duration: 3

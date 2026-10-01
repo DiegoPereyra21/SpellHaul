@@ -18,11 +18,18 @@ MonoBehaviour:
   - Slot: 2
     Item: {fileID: 11400000, guid: c585bf659424a8a4e8749b95e7753cbc, type: 2}
   - Slot: 5
-    Item: {fileID: 11400000, guid: a44728bd5d6209544adc10c62d12a7ee, type: 2}
+    Item: {fileID: 11400000, guid: 9b48f05b0335ef5449e6e6007245a44f, type: 2}
   _startingItems:
   - Item: {fileID: 11400000, guid: 8a3c86e0affa8b842a45ff8a82211619, type: 2}
     Quantity: 1
-  - Item: {fileID: 11400000, guid: 5f931db816594734aa8f131c2885c692, type: 2}
-    Quantity: 1
   - Item: {fileID: 11400000, guid: c8c4f03512b230f44886e711043cf735, type: 2}
     Quantity: 3
+  - Item: {fileID: 11400000, guid: 3fcc7408b1bda7d4cb982d01c86b6166, type: 2}
+    Quantity: 1
+  - Item: {fileID: 11400000, guid: 66f0458331581904fbad525119ab3ed9, type: 2}
+    Quantity: 1
+  - Item: {fileID: 11400000, guid: 1087e762d342e194c977afdd51f10e21, type: 2}
+    Quantity: 1
+  _usables:
+  - Item: {fileID: 11400000, guid: be28f83aa4a687a42b15b590cda92ebf, type: 2}
+    Quantity: 2
