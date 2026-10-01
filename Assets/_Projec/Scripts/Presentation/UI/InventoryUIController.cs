@@ -130,7 +130,7 @@ namespace Game.Presentation.UI
             var sortRarity = _root.Q<Button>("pockets-sort-rarity");
             if (sortRarity != null) sortRarity.clicked += () => SortPockets(ItemSortMode.Rarity);
 
-            _inventory.OnInventoryChanged += Redraw;
+            _inventory.OnInventoryChanged += RequestRedraw;
             _toggleAction.Enable();
 
             _root.RegisterCallback<PointerUpEvent>(OnRootPointerUp);
@@ -139,7 +139,7 @@ namespace Game.Presentation.UI
         public override void OnStopClient()
         {
             base.OnStopClient();
-            if (_inventory != null) _inventory.OnInventoryChanged -= Redraw;
+            if (_inventory != null) _inventory.OnInventoryChanged -= RequestRedraw;
             _toggleAction.Disable();
         }
 
@@ -201,7 +201,7 @@ namespace Game.Presentation.UI
         public void OpenWithContainer(LootContainer container)
         {
             _openContainer = container;
-            if (container != null) container.RegisterChangeCallback(Redraw);
+            if (container != null) container.RegisterChangeCallback(RequestRedraw);
             SetOpen(true);
             PlayContainerOpenSounds(container);
         }
@@ -226,7 +226,7 @@ namespace Game.Presentation.UI
 
         private void CloseContainer()
         {
-            if (_openContainer != null) _openContainer.UnregisterChangeCallback(Redraw);
+            if (_openContainer != null) _openContainer.UnregisterChangeCallback(RequestRedraw);
             _openContainer = null;
         }
 
@@ -238,6 +238,20 @@ namespace Game.Presentation.UI
         }
 
         // ---------- Dibujo ----------
+
+        // Cada cambio de una casilla sincronizada avisaba por separado y redibujaba TODO el
+        // inventario (ordenar = una docena de redibujos en el mismo frame, con su basura). Ahora
+        // se marca y se redibuja una sola vez, al final del frame.
+        private bool _redrawPending;
+
+        private void RequestRedraw() => _redrawPending = true;
+
+        private void LateUpdate()
+        {
+            if (!_redrawPending) return;
+            _redrawPending = false;
+            Redraw();
+        }
 
         private void Redraw()
         {

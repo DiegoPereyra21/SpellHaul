@@ -16,8 +16,8 @@ namespace Game.Presentation.Combat
         [SerializeField] private PlayerAvatarState _avatar;
 
         // Progreso de canalización [0..1], seteado por la ExtractionZone en el servidor.
-        private readonly SyncVar<float> _extractionProgress = new SyncVar<float>();
-        private readonly SyncVar<bool> _isExtracted = new SyncVar<bool>();
+        private readonly SyncVar<float> _extractionProgress = new SyncVar<float>(new SyncTypeSettings(0.05f));
+        private readonly SyncVar<bool> _isExtracted = new SyncVar<bool>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
 
         public float ExtractionProgress => _extractionProgress.Value;
         public bool IsExtracted => _isExtracted.Value;

@@ -68,12 +68,82 @@ namespace Game.Presentation.Abilities
             // Se setea en cada spawn por el pooling de Fish-Net (no basta con desactivar una vez).
             if (_visual != null)
                 _visual.SetActive(!base.IsOwner);
+            _clientFlying = false;
+        }
+
+        public override void OnStopClient()
+        {
+            base.OnStopClient();
+            _clientFlying = false;
         }
 
         public override void OnStartServer()
         {
             base.OnStartServer();
             base.TimeManager.OnTick += OnTick;
+
+            // Los clientes simulan el vuelo (línea recta) en vez de recibir la posición cada tick:
+            // menos tráfico y, sobre todo, lo ven donde está AHORA en el servidor (no ~100 ms atrás
+            // por la interpolación), así esquivar los disparos enemigos es justo.
+            uint now = base.TimeManager.Tick;
+            float lead = 0f;
+            if (_fireTick != 0 && now > _fireTick)
+                lead = _speed * (float)base.TimeManager.TickDelta * Mathf.Min(now - _fireTick, (uint)Mathf.Max(0, _maxCatchUpTicks));
+            FlightObserversRpc(transform.position, _direction, _speed, now, lead);
+        }
+
+        // ---------- Vuelo simulado en los clientes (solo visual; el impacto lo decide el servidor) ----------
+
+        private bool _clientFlying;
+        private bool _clientStopped;
+        private Vector3 _clientOrigin;
+        private Vector3 _clientDirection;
+        private float _clientSpeed;
+        private float _clientLead;
+        private float _clientElapsed;
+
+        [ObserversRpc(BufferLast = true, ExcludeServer = true)]
+        private void FlightObserversRpc(Vector3 origin, Vector3 direction, float speed, uint spawnTick, float lead)
+        {
+            // Con NetworkTransform en el prefab la posición ya llega por la red: no pisarla.
+            if (TryGetComponent(out FishNet.Component.Transforming.NetworkTransform _)) return;
+
+            _clientOrigin = origin;
+            _clientDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : transform.forward;
+            _clientSpeed = speed;
+            _clientLead = lead;
+
+            // Lo que ya voló en el servidor desde que nació (latencia), acotado.
+            uint now = base.TimeManager.Tick;
+            float since = now > spawnTick ? (float)base.TimeManager.TicksToTime(now - spawnTick) : 0f;
+            _clientElapsed = Mathf.Clamp(since, 0f, 0.5f);
+
+            _clientStopped = false;
+            _clientFlying = true;
+            transform.rotation = Quaternion.LookRotation(_clientDirection);
+            transform.position = FlightPosition();
+        }
+
+        private Vector3 FlightPosition() => _clientOrigin + _clientDirection * (_clientLead + _clientSpeed * _clientElapsed);
+
+        private void Update()
+        {
+            if (!_clientFlying || _clientStopped || base.IsServerInitialized) return;
+
+            Vector3 from = transform.position;
+            _clientElapsed += Time.deltaTime;
+            Vector3 to = FlightPosition();
+
+            // Frena visualmente en paredes; el despawn real (y el VFX de impacto) lo manda el servidor.
+            if (Physics.Linecast(from, to, out RaycastHit hit, _coverMask, QueryTriggerInteraction.Ignore))
+            {
+                transform.position = hit.point;
+                _clientStopped = true;
+                return;
+            }
+
+            transform.position = to;
+            if (_clientElapsed > _lifetime + 0.5f) _clientStopped = true;
         }
 
         public override void OnStopServer()

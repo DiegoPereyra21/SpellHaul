@@ -14,7 +14,8 @@ namespace Game.Presentation.Combat
         [SerializeField] private float _maxMana = 100f;
         [SerializeField] private float _regenPerSecond = 8f;
 
-        private readonly SyncVar<float> _current = new SyncVar<float>();
+        // Cambia todos los frames (regeneración): cada 3 ticks alcanza (el cliente predice sus gastos).
+        private readonly SyncVar<float> _current = new SyncVar<float>(new SyncTypeSettings(0.05f));
 
         public float Current => _current.Value;
         public float Max => _maxMana;

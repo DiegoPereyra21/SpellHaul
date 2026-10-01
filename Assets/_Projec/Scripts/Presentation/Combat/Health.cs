@@ -18,7 +18,8 @@ namespace Game.Presentation.Combat
         [Tooltip("Parpadeo de daño; se dispara a todos los clientes cuando esta entidad recibe daño.")]
         [SerializeField] private DamageFlash _damageFlash;
 
-        private readonly SyncVar<float> _current = new SyncVar<float>();
+        // Cada tick (por defecto FishNet junta cambios cada 0,1 s): la vida tiene que verse al instante.
+        private readonly SyncVar<float> _current = new SyncVar<float>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
 
         public float Current => _current.Value;
         public float Max => _maxHealth;

@@ -15,9 +15,9 @@ namespace Game.Presentation.Combat
         [SerializeField] private ItemDatabase _database;
         [SerializeField] private GameObject _defaultWorldPrefab; // cubo placeholder
 
-        private readonly SyncVar<string> _itemId   = new SyncVar<string>();
-        private readonly SyncVar<int>    _quantity  = new SyncVar<int>();
-        private readonly SyncVar<float>  _durability = new SyncVar<float>();
+        private readonly SyncVar<string> _itemId   = new SyncVar<string>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
+        private readonly SyncVar<int>    _quantity  = new SyncVar<int>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
+        private readonly SyncVar<float>  _durability = new SyncVar<float>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
 
         public string ItemId   => _itemId.Value;
         public int    Quantity => _quantity.Value;

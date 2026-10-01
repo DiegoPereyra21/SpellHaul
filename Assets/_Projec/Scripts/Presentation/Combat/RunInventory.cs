@@ -22,11 +22,12 @@ namespace Game.Presentation.Combat
         [SerializeField] private GameObject _worldItemPrefab; // prefab con WorldItem + NetworkObject
 
         // Pockets: dos listas independientes. Vacíos representan slots libres.
-        private readonly SyncList<ItemStack> _pocketL = new SyncList<ItemStack>();
-        private readonly SyncList<ItemStack> _pocketR = new SyncList<ItemStack>();
+        // Cada tick: mover/equipar/recoger se tiene que ver al instante (por defecto se juntaba cada 0,1 s).
+        private readonly SyncList<ItemStack> _pocketL = new SyncList<ItemStack>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
+        private readonly SyncList<ItemStack> _pocketR = new SyncList<ItemStack>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
 
         // Equipamiento por slot. Indexado por (int)EquipmentSlot. Vacío = nada equipado.
-        private readonly SyncList<ItemStack> _equipment = new SyncList<ItemStack>();
+        private readonly SyncList<ItemStack> _equipment = new SyncList<ItemStack>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
 
         public IReadOnlyList<ItemStack> PocketL => _pocketL;
         public IReadOnlyList<ItemStack> PocketR => _pocketR;

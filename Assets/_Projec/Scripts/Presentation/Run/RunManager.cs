@@ -22,10 +22,10 @@ namespace Game.Presentation.Run
         private readonly Dictionary<int, PlayerRunStatus> _statuses = new();
 
         // Estado sincronizado a clientes.
-        private readonly SyncVar<int> _aliveCount = new SyncVar<int>();
-        private readonly SyncVar<int> _extractedCount = new SyncVar<int>();
-        private readonly SyncVar<int> _deadCount = new SyncVar<int>();
-        private readonly SyncVar<RunPhase> _phase = new SyncVar<RunPhase>(RunPhase.InProgress);
+        private readonly SyncVar<int> _aliveCount = new SyncVar<int>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
+        private readonly SyncVar<int> _extractedCount = new SyncVar<int>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
+        private readonly SyncVar<int> _deadCount = new SyncVar<int>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
+        private readonly SyncVar<RunPhase> _phase = new SyncVar<RunPhase>(RunPhase.InProgress, new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
         [SerializeField] private float _runDuration = 60f; // duración antes de la fase de peligro
         [Header("Fase de peligro")]
         [Tooltip("Daño aplicado a cada jugador vivo por cada tick, mientras dure la fase de peligro.")]

@@ -20,7 +20,7 @@ namespace Game.Presentation.Combat
         [Tooltip("URP Lit usa \"_BaseColor\"; Built-in Standard usa \"_Color\".")]
         [SerializeField] private string _colorProperty = "_BaseColor";
 
-        private readonly SyncList<ItemStack> _contents = new SyncList<ItemStack>();
+        private readonly SyncList<ItemStack> _contents = new SyncList<ItemStack>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
         private MaterialPropertyBlock _mpb;
         private int _colorPropertyId;
 
