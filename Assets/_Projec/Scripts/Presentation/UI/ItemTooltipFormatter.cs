@@ -26,6 +26,17 @@ namespace Game.Presentation.UI
                 return ($"{glove.Rarity} {glove.School} Glove", stats);
             }
 
+            // Consumible: efecto y tiempo de uso. Va en los slots de usables (teclas 1-2-3).
+            if (def is ConsumableItemSO consumable)
+            {
+                _effectLines.Clear();
+                consumable.DescribeEffect(_effectLines);
+                foreach (string line in _effectLines)
+                    stats.Add(new StatLine { Text = line, Sign = 1 });
+                stats.Add(new StatLine { Text = "Use from slots 1-2-3", Sign = 0 });
+                return ($"{def.Rarity} Consumable", stats);
+            }
+
             string type = def is EquipmentItemSO eq ? SlotDisplayName(eq.Slot) : def.Category.ToString();
 
             if (def is EquipmentItemSO equip)

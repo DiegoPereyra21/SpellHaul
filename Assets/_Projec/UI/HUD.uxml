@@ -52,6 +52,22 @@
                 <ui:Label name="slot-2-cd-text" class="slot-cd-text" />
                 <ui:Label name="slot-2-key" text="RMB" class="slot-key" />
             </ui:VisualElement>
+            <ui:VisualElement class="ability-bar-separator" />
+            <ui:VisualElement name="usable-0" class="usable-hud-slot">
+                <ui:Label name="usable-0-name" class="usable-hud-name" />
+                <ui:Label name="usable-0-qty" class="usable-hud-qty" />
+                <ui:Label text="1" class="slot-key" />
+            </ui:VisualElement>
+            <ui:VisualElement name="usable-1" class="usable-hud-slot">
+                <ui:Label name="usable-1-name" class="usable-hud-name" />
+                <ui:Label name="usable-1-qty" class="usable-hud-qty" />
+                <ui:Label text="2" class="slot-key" />
+            </ui:VisualElement>
+            <ui:VisualElement name="usable-2" class="usable-hud-slot">
+                <ui:Label name="usable-2-name" class="usable-hud-name" />
+                <ui:Label name="usable-2-qty" class="usable-hud-qty" />
+                <ui:Label text="3" class="slot-key" />
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:Label name="interact-prompt" text="" class="interact-prompt" />
         <ui:VisualElement name="crosshair-container" class="crosshair-container">
@@ -62,6 +78,12 @@
 
         <ui:VisualElement name="dash-bar" class="dash-bar" picking-mode="Ignore">
             <ui:VisualElement name="dash-bar-fill" class="dash-bar-fill" />
+        </ui:VisualElement>
+        <ui:VisualElement name="use-channel" class="use-channel" picking-mode="Ignore">
+            <ui:Label name="use-channel-label" class="use-channel-label" />
+            <ui:VisualElement class="use-channel-bg">
+                <ui:VisualElement name="use-channel-fill" class="use-channel-fill" />
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" />
 

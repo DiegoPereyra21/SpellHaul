@@ -23,6 +23,7 @@ namespace Game.EditorTools.Items
             public float Material;                  // categoría Material (apilables)
             public int MaterialMin, MaterialMax;
             public float Resource;                  // categoría Resource
+            public float PotionCommon, PotionRare, PotionEpic; // consumibles (pociones), por item
             public bool GuaranteeAtLeastOne;
         }
 
@@ -34,10 +35,10 @@ namespace Game.EditorTools.Items
         //   Cofre:     0.78 comunes · 0.39 raros · 0.10 épicos · madera 50% · cristal 30% (nunca vacío)
         private static readonly Profile[] Profiles =
         {
-            new Profile { AssetName = "LootTable_Enemy_Melee",         Common = 0.025f, Rare = 0.008f, Epic = 0.002f, Material = 0.45f, MaterialMin = 1, MaterialMax = 3, Resource = 0.10f, GuaranteeAtLeastOne = false },
-            new Profile { AssetName = "LootTable_Enemy_Ranged",        Common = 0.03f,  Rare = 0.012f, Epic = 0.003f, Material = 0.50f, MaterialMin = 1, MaterialMax = 3, Resource = 0.15f, GuaranteeAtLeastOne = false },
-            new Profile { AssetName = "LootTable_Enemy_PlantGuardian", Common = 0.04f,  Rare = 0.018f, Epic = 0.005f, Material = 0.60f, MaterialMin = 2, MaterialMax = 4, Resource = 0.25f, GuaranteeAtLeastOne = false },
-            new Profile { AssetName = "LootTable_Chest",               Common = 0.06f,  Rare = 0.03f,  Epic = 0.008f, Material = 0.50f, MaterialMin = 2, MaterialMax = 5, Resource = 0.30f, GuaranteeAtLeastOne = true },
+            new Profile { AssetName = "LootTable_Enemy_Melee",         Common = 0.025f, Rare = 0.008f, Epic = 0.002f, Material = 0.45f, MaterialMin = 1, MaterialMax = 3, Resource = 0.10f, PotionCommon = 0.10f, PotionRare = 0.03f, PotionEpic = 0.010f, GuaranteeAtLeastOne = false },
+            new Profile { AssetName = "LootTable_Enemy_Ranged",        Common = 0.03f,  Rare = 0.012f, Epic = 0.003f, Material = 0.50f, MaterialMin = 1, MaterialMax = 3, Resource = 0.15f, PotionCommon = 0.12f, PotionRare = 0.04f, PotionEpic = 0.010f, GuaranteeAtLeastOne = false },
+            new Profile { AssetName = "LootTable_Enemy_PlantGuardian", Common = 0.04f,  Rare = 0.018f, Epic = 0.005f, Material = 0.60f, MaterialMin = 2, MaterialMax = 4, Resource = 0.25f, PotionCommon = 0.18f, PotionRare = 0.06f, PotionEpic = 0.020f, GuaranteeAtLeastOne = false },
+            new Profile { AssetName = "LootTable_Chest",               Common = 0.06f,  Rare = 0.03f,  Epic = 0.008f, Material = 0.50f, MaterialMin = 2, MaterialMax = 5, Resource = 0.30f, PotionCommon = 0.25f, PotionRare = 0.10f, PotionEpic = 0.030f, GuaranteeAtLeastOne = true },
         };
 
         [MenuItem("Game/Items/Generate Loot Tables")]
@@ -134,8 +135,20 @@ namespace Game.EditorTools.Items
                 case ItemCategory.Resource:
                     chance = p.Resource;
                     return chance > 0f;
+                case ItemCategory.Consumable:
+                    // Pociones por rareza. Los consumibles muy raros (ej. la piedra de escape, a
+                    // futuro) van a tener su propia regla.
+                    if (item is not PotionItemSO) { chance = 0f; return false; }
+                    chance = item.Rarity switch
+                    {
+                        Rarity.Rare => p.PotionRare,
+                        Rarity.Epic => p.PotionEpic,
+                        _ => p.PotionCommon
+                    };
+                    max = item.Rarity == Rarity.Common ? Mathf.Min(2, item.MaxStack) : 1;
+                    return chance > 0f;
                 default:
-                    chance = 0f; // Consumable / Misc: todavía no dropean
+                    chance = 0f; // Misc: no dropea
                     return false;
             }
         }

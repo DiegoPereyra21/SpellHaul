@@ -1,6 +1,7 @@
 using FishNet.Object;
 using Game.Presentation.Abilities;
 using Game.Presentation.Combat;
+using Game.Core.Items;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -60,6 +61,18 @@ namespace Game.Presentation.UI
         private float _gloveRingProgress = 1f;
         private bool _gloveRingHasAbility;
         private Color _gloveRingColor = Color.white;
+
+        // Usables (teclas 1-2-3) y la barra de uso en curso.
+        private RunInventory _runInventory;
+        private UsableController _usableController;
+        private readonly VisualElement[] _usableSlots = new VisualElement[Game.Core.Items.ConsumableItemSO.UsableSlotCount];
+        private readonly Label[] _usableNames = new Label[Game.Core.Items.ConsumableItemSO.UsableSlotCount];
+        private readonly Label[] _usableQtys = new Label[Game.Core.Items.ConsumableItemSO.UsableSlotCount];
+        private bool _usablesDirty = true;
+        private int _shownChannelSlot = -2;
+        private VisualElement _useChannel;
+        private VisualElement _useChannelFill;
+        private Label _useChannelLabel;
 
         // Barrita del dash debajo de la mira.
         private VisualElement _dashBarFill;
@@ -155,6 +168,19 @@ namespace Game.Presentation.UI
             _interactPrompt = root.Q<Label>("interact-prompt");
             _cooldownRing = root.Q<VisualElement>("cooldown-ring");
             _dashBarFill = root.Q<VisualElement>("dash-bar-fill");
+
+            _runInventory = GetComponent<RunInventory>();
+            _usableController = GetComponent<UsableController>();
+            for (int i = 0; i < _usableSlots.Length; i++)
+            {
+                _usableSlots[i] = root.Q<VisualElement>($"usable-{i}");
+                _usableNames[i] = root.Q<Label>($"usable-{i}-name");
+                _usableQtys[i] = root.Q<Label>($"usable-{i}-qty");
+            }
+            _useChannel = root.Q<VisualElement>("use-channel");
+            _useChannelFill = root.Q<VisualElement>("use-channel-fill");
+            _useChannelLabel = root.Q<Label>("use-channel-label");
+            if (_runInventory != null) _runInventory.OnInventoryChanged += MarkUsablesDirty;
                         if (_cooldownRing != null)
                             _cooldownRing.generateVisualContent += DrawCooldownRing;
 
@@ -241,6 +267,53 @@ namespace Game.Presentation.UI
 
             if (_health != null)
                 _health.OnDamagedWithDirection -= PlayDamageIndicator;
+
+            if (_runInventory != null)
+                _runInventory.OnInventoryChanged -= MarkUsablesDirty;
+        }
+
+        private void MarkUsablesDirty() => _usablesDirty = true;
+
+        /// <summary>Owner. Slots de usables: nombre, cantidad y rareza (solo cuando cambia el inventario).</summary>
+        private void RefreshUsables()
+        {
+            if (!_usablesDirty || _runInventory == null) return;
+            _usablesDirty = false;
+
+            var usables = _runInventory.Usables;
+            for (int i = 0; i < _usableSlots.Length; i++)
+            {
+                if (_usableSlots[i] == null) continue;
+                ItemStack s = i < usables.Count ? usables[i] : ItemStack.Empty;
+                ItemSO def = s.IsEmpty ? null : _runInventory.Database.GetById(s.ItemId);
+
+                _usableSlots[i].EnableInClassList("usable-hud-slot--empty", def == null);
+                _usableSlots[i].EnableInClassList("rarity-rare", def != null && def.Rarity == Rarity.Rare);
+                _usableSlots[i].EnableInClassList("rarity-epic", def != null && def.Rarity == Rarity.Epic);
+                if (_usableNames[i] != null) _usableNames[i].text = def != null ? def.DisplayName : "";
+                if (_usableQtys[i] != null) _usableQtys[i].text = def != null ? s.Quantity.ToString() : "";
+            }
+        }
+
+        /// <summary>Owner. Barra "Drinking..." mientras se usa un consumible.</summary>
+        private void RefreshUseChannel()
+        {
+            if (_useChannel == null || _usableController == null) return;
+            int slot = _usableController.ChannelSlot;
+            if (slot != _shownChannelSlot)
+            {
+                _shownChannelSlot = slot;
+                _useChannel.style.display = slot >= 0 ? DisplayStyle.Flex : DisplayStyle.None;
+                for (int i = 0; i < _usableSlots.Length; i++)
+                    _usableSlots[i]?.EnableInClassList("usable-hud-slot--active", i == slot);
+                if (slot >= 0 && _useChannelLabel != null && _runInventory != null && slot < _runInventory.Usables.Count)
+                {
+                    var def = _runInventory.Database.GetById(_runInventory.Usables[slot].ItemId);
+                    _useChannelLabel.text = def != null ? $"Using {def.DisplayName}..." : "Using...";
+                }
+            }
+            if (slot >= 0 && _useChannelFill != null)
+                _useChannelFill.style.width = Length.Percent(_usableController.ChannelProgress * 100f);
         }
 
         private void Update()
@@ -276,6 +349,8 @@ namespace Game.Presentation.UI
             }
             
             RefreshGloveSlot();
+            RefreshUsables();
+            RefreshUseChannel();
             if (_gloveSlot != null && _abilities != null)
                 _gloveSlot.EnableInClassList("ability-slot--recast", _abilities.IsRecastReady(Game.Core.Abilities.AbilitySlots.Glove));
 

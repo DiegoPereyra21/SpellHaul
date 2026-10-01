@@ -44,7 +44,7 @@ namespace Game.Presentation.UI
         private LootContainer _openContainer;
 
         // ---------- Drag & drop ----------
-        private enum SlotZone { Equipment, PocketL, PocketR, Container }
+        private enum SlotZone { Equipment, PocketL, PocketR, Container, Usables } // mismos números que las zonas de RunInventory
         private struct DragInfo { public SlotZone Zone; public int Index; public ItemStack Stack; }
         private DragInfo _dragging;
         private bool _isDragging;
@@ -120,7 +120,6 @@ namespace Game.Presentation.UI
             _tooltipDescription = _root.Q<Label>("tooltip-description");
             _tooltipStats = _root.Q<VisualElement>("tooltip-stats");
             _containerLabel = _root.Q<Label>("container-label");
-            BuildUsableSlots();
 
             Game.Presentation.Audio.GameAudio.AttachButtonSounds(_root);
 
@@ -258,6 +257,7 @@ namespace Game.Presentation.UI
             HideTooltip();
             DrawEquipment();
             DrawPockets();
+            DrawUsables();
             DrawContainer();
         }
 
@@ -356,8 +356,8 @@ namespace Game.Presentation.UI
                     int slotIndex = i;
                     ItemStack stack = list[i];
                     System.Action onClick = null;
-                    if (!stack.IsEmpty && _database.GetById(stack.ItemId) is EquipmentItemSO)
-                        onClick = () => { SfxEquip(); QuickEquipServerRpc((int)zone, slotIndex); };
+                    if (!stack.IsEmpty && _database.GetById(stack.ItemId) is EquipmentItemSO or ConsumableItemSO)
+                        onClick = () => { SfxEquip(); QuickEquipServerRpc((int)zone, slotIndex); }; // consumible: a los usables
 
                     grid.Add(BuildItemSlot(stack, zone, slotIndex, onClick));
                 }
@@ -452,18 +452,26 @@ namespace Game.Presentation.UI
             return slot;
         }
 
-        /// <summary>Placeholders visuales (sin lógica todavía) para los 3 slots de usables.</summary>
-        private void BuildUsableSlots()
+        /// <summary>
+        /// Los 3 slots de usables (teclas 1-2-3). Solo aceptan consumibles: se arrastran desde los
+        /// pockets o el contenedor, o con clic/shift+clic sobre el consumible. Clic sobre un usable
+        /// lo devuelve a los pockets; ctrl+clic lo tira al suelo.
+        /// </summary>
+        private void DrawUsables()
         {
             if (_usableSlots == null) return;
             _usableSlots.Clear();
-            for (int i = 0; i < 3; i++)
+            var usables = _inventory.Usables;
+            for (int i = 0; i < usables.Count; i++)
             {
-                var slot = new VisualElement();
+                int slotIndex = i;
+                var slot = BuildItemSlot(usables[i], SlotZone.Usables, slotIndex,
+                    () => { SfxEquip(); UnequipUsableServerRpc(slotIndex); });
                 slot.AddToClassList("usable-slot");
 
                 var keyHint = new Label((i + 1).ToString());
                 keyHint.AddToClassList("usable-key-hint");
+                keyHint.pickingMode = PickingMode.Ignore;
                 slot.Add(keyHint);
 
                 _usableSlots.Add(slot);
@@ -644,6 +652,13 @@ namespace Game.Presentation.UI
         {
             if (!ServerCanAct()) return;
             _inventory.TryUnequip(equipmentSlotIndex);
+        }
+
+        [ServerRpc]
+        private void UnequipUsableServerRpc(int slot)
+        {
+            if (!ServerCanAct()) return;
+            _inventory.TryUnequipUsable(slot);
         }
 
         [ServerRpc]

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Game.Core.Items;
 using Game.Core.Run;
@@ -73,6 +74,7 @@ namespace Game.Presentation.Run
 
             if (loaded != null)
             {
+                EnsureUsableSlots(loaded);
                 _snapshot = loaded;
                 _initialized = true;
                 return true;
@@ -95,7 +97,8 @@ namespace Game.Presentation.Run
                 var loaded = await Storage.LoadAsync();
                 if (loaded != null)
                 {
-                    _snapshot = loaded;
+                    EnsureUsableSlots(loaded);
+                _snapshot = loaded;
                     _initialized = true;
                 }
                 return true;
@@ -146,6 +149,7 @@ namespace Game.Presentation.Run
         {
             if (PracticeSession.Active) return; // práctica: nada de la partida toca el loadout real
             if (snapshot == null) return;
+            EnsureUsableSlots(snapshot);
             if (ServerOwnsRun) { _snapshot = snapshot; _initialized = true; } // ya lo guardó el servidor
             else Save(snapshot);
         }
@@ -234,6 +238,13 @@ namespace Game.Presentation.Run
                 // Los items sueltos se reparten según la capacidad real de cada pocket del kit
                 // (L primero, después R). Si el kit trae más de lo que entra, el sobrante queda en
                 // L: la pantalla de Stash lo manda al stash y RunInventory lo reubica o lo dropea.
+                for (int i = 0; i < kit.Usables.Count && i < snap.Usables.Count; i++)
+                {
+                    var u = kit.Usables[i];
+                    if (u.Item is ConsumableItemSO)
+                        snap.Usables[i] = new ItemStack(u.Item.ItemId, Mathf.Clamp(u.Quantity, 1, u.Item.MaxStack), 1f);
+                }
+
                 int capL = KitPocketCapacity(kit, EquipmentSlot.PocketL);
                 int capR = KitPocketCapacity(kit, EquipmentSlot.PocketR);
                 foreach (var b in kit.StartingItems)
@@ -266,7 +277,18 @@ namespace Game.Presentation.Run
             int slotCount = System.Enum.GetValues(typeof(EquipmentSlot)).Length;
             for (int i = 0; i < slotCount; i++)
                 snap.Equipment.Add(ItemStack.Empty);
+            for (int i = 0; i < ConsumableItemSO.UsableSlotCount; i++)
+                snap.Usables.Add(ItemStack.Empty);
             return snap;
+        }
+
+        /// <summary>Completa la lista de usables de un loadout guardado antes de que existieran
+        /// (o con menos entradas): así todas las pantallas pueden indexar los 3 slots.</summary>
+        public static void EnsureUsableSlots(InventorySnapshot snap)
+        {
+            if (snap == null) return;
+            snap.Usables ??= new List<ItemStack>();
+            while (snap.Usables.Count < ConsumableItemSO.UsableSlotCount) snap.Usables.Add(ItemStack.Empty);
         }
     }
 }

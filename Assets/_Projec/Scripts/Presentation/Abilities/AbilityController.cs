@@ -346,6 +346,7 @@ namespace Game.Presentation.Abilities
         {
             AbilitySO ability = GetAbility(slot);
             if (ability == null) return;
+            RaiseAbilityUsed();
 
             // Lo lanzado sigue activo: este clic lo re-activa (ej. detonar el orbe en el aire).
             if (ability.IsRecastable && IsRecastReady(slot))
@@ -401,6 +402,7 @@ namespace Game.Presentation.Abilities
         {
             AbilitySO ability = GetAbility(slot);
             if (ability == null) return;
+            RaiseAbilityUsed();
 
             // Chequeos locales (feedback inmediato, no autoritativos). El cooldown de esta
             // habilidad recién se predice al SOLTAR (arranca cuando se dispara, no al cargar).
@@ -484,6 +486,7 @@ namespace Game.Presentation.Abilities
             // para que cargar más tiempo no "regale" cooldown gratis.
             _serverCharging[slot] = true;
             _serverChargeAbility[slot] = ability;
+            RaiseAbilityUsed();
             _serverChargeStartTick[slot] = base.TimeManager.Tick; // reloj del SERVIDOR: el cliente no decide la carga
 
             PlayChargeVfxObserversRpc(ability.MaxChargeDuration); // telegrafía para los demás
@@ -615,6 +618,7 @@ namespace Game.Presentation.Abilities
             }
 
             _serverCooldownEndTick[slot] = fire + CooldownTicks(slot, ability);
+            RaiseAbilityUsed();
 
             if (ability.WindupDuration > 0f)
             {
@@ -716,6 +720,7 @@ namespace Game.Presentation.Abilities
             }
 
             _serverCooldownEndTick[slot] = TicksFromNow(EffectiveCooldown(slot, ability));
+            RaiseAbilityUsed();
 
             Vector3 origin = _spellOrigin != null ? _spellOrigin.position : transform.position;
             if (ability.MuzzlePrefab != null) PlayMuzzleObserversRpc(origin, direction);
@@ -734,6 +739,7 @@ namespace Game.Presentation.Abilities
         {
             if (!CanActServer) return;
             if (slot < 0 || slot >= AbilitySlots.Count) return;
+            RaiseAbilityUsed();
             RecastRegistry.TryRecast(base.ObjectId, slot); // si ya detonó solo, no pasa nada
         }
 
@@ -837,6 +843,14 @@ namespace Game.Presentation.Abilities
 
 
         public void SetInputBlocked(bool blocked) => _inputBlocked = blocked;
+
+        /// <summary>True con el inventario o la pausa abiertos (UsableController tampoco lee input).</summary>
+        public bool IsInputBlocked => _inputBlocked;
+
+        /// <summary>Se dispara (en el dueño y en el servidor) al castear algo: el uso de un consumible
+        /// en curso se cancela.</summary>
+        public event Action OnAbilityUsed;
+        private void RaiseAbilityUsed() => OnAbilityUsed?.Invoke();
 
         public int AbilitySlotCount => AbilitySlots.Count;
 

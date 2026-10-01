@@ -32,7 +32,11 @@ namespace Game.Core.Items
         [FormerlySerializedAs("_backpack")]
         [SerializeField] private List<StartingItemEntry> _startingItems = new List<StartingItemEntry>();
 
+        [Tooltip("Consumibles en los slots de usables (teclas 1-2-3), en orden. Máximo 3.")]
+        [SerializeField] private List<StartingItemEntry> _usables = new List<StartingItemEntry>();
+
         public IReadOnlyList<EquipEntry> Equipment => _equipment;
+        public IReadOnlyList<StartingItemEntry> Usables => _usables;
         public IReadOnlyList<StartingItemEntry> StartingItems => _startingItems;
     }
 }

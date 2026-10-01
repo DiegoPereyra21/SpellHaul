@@ -94,6 +94,7 @@ namespace Game.EditorTools.Items
 
             int glovesCreated = GenerateGloves(ref skipped);
             created += glovesCreated;
+            created += GeneratePotions(ref skipped);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -149,6 +150,73 @@ namespace Game.EditorTools.Items
                 so.FindProperty("_ability").objectReferenceValue = abilityAsset;
                 so.FindProperty("_abilityPower").floatValue = def.Power;
                 so.FindProperty("_cooldownMultiplier").floatValue = def.Cooldown;
+                so.ApplyModifiedProperties();
+
+                AssetDatabase.CreateAsset(instance, assetPath);
+                created++;
+            }
+            return created;
+        }
+
+        private struct PotionDef
+        {
+            public string ItemId, DisplayName, Description;
+            public Rarity Rarity;
+            public float Health, Mana, Duration, UseTime;
+        }
+
+        /// <summary>
+        /// Pociones de vida y maná en 3 rarezas (Minor / normal / Greater). Apilan hasta 5, se
+        /// toman en 1 s (0.8 / 0.6 las mejores) y restauran en 3 s. Valores de partida.
+        /// </summary>
+        private static List<PotionDef> BuildPotions()
+        {
+            var list = new List<PotionDef>();
+            void Add(string id, string name, string desc, Rarity r, float hp, float mana, float useTime)
+                => list.Add(new PotionDef { ItemId = id, DisplayName = name, Description = desc, Rarity = r, Health = hp, Mana = mana, Duration = 3f, UseTime = useTime });
+
+            Add("health_potion_common", "Minor Health Potion", "Restores health over a few seconds.", Rarity.Common, 35f, 0f, 1f);
+            Add("health_potion_rare", "Health Potion", "Restores health over a few seconds.", Rarity.Rare, 55f, 0f, 0.8f);
+            Add("health_potion_epic", "Greater Health Potion", "Restores health over a few seconds.", Rarity.Epic, 80f, 0f, 0.6f);
+            Add("mana_potion_common", "Minor Mana Potion", "Restores mana over a few seconds.", Rarity.Common, 0f, 30f, 1f);
+            Add("mana_potion_rare", "Mana Potion", "Restores mana over a few seconds.", Rarity.Rare, 0f, 50f, 0.8f);
+            Add("mana_potion_epic", "Greater Mana Potion", "Restores mana over a few seconds.", Rarity.Epic, 0f, 75f, 0.6f);
+            return list;
+        }
+
+        private static int GeneratePotions(ref int skipped)
+        {
+            string folderPath = $"{ItemsRoot}/Consumables";
+            if (!AssetDatabase.IsValidFolder(folderPath)) CreateFolderRecursive(folderPath);
+
+            // Sonido al tomarla: el clip "heal" del proyecto si existe (se puede cambiar en el asset).
+            AudioClip drinkClip = null;
+            foreach (string guid in AssetDatabase.FindAssets("heal t:AudioClip"))
+            {
+                drinkClip = AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(guid));
+                if (drinkClip != null) break;
+            }
+
+            int created = 0;
+            foreach (var def in BuildPotions())
+            {
+                string assetPath = $"{folderPath}/{def.ItemId}.asset";
+                if (AssetDatabase.LoadAssetAtPath<ItemSO>(assetPath) != null) { skipped++; continue; }
+
+                var instance = ScriptableObject.CreateInstance<PotionItemSO>();
+                var so = new SerializedObject(instance);
+                so.FindProperty("_itemId").stringValue = def.ItemId;
+                so.FindProperty("_displayName").stringValue = def.DisplayName;
+                so.FindProperty("_description").stringValue = def.Description;
+                so.FindProperty("_category").enumValueIndex = (int)ItemCategory.Consumable;
+                so.FindProperty("_rarity").enumValueIndex = (int)def.Rarity;
+                so.FindProperty("_isStackable").boolValue = true;
+                so.FindProperty("_maxStack").intValue = 5;
+                so.FindProperty("_useTime").floatValue = def.UseTime;
+                so.FindProperty("_useClip").objectReferenceValue = drinkClip;
+                so.FindProperty("_health").floatValue = def.Health;
+                so.FindProperty("_mana").floatValue = def.Mana;
+                so.FindProperty("_duration").floatValue = def.Duration;
                 so.ApplyModifiedProperties();
 
                 AssetDatabase.CreateAsset(instance, assetPath);

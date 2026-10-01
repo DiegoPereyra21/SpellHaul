@@ -13,11 +13,15 @@ namespace Game.Core.Items
         public List<ItemStack> Equipment = new List<ItemStack>();
         public List<ItemStack> PocketL = new List<ItemStack>();
         public List<ItemStack> PocketR = new List<ItemStack>();
+        /// <summary>Slots de usables (teclas 1-2-3), uno por slot incluidos los vacíos. Los loadouts
+        /// guardados antes de existir quedan con la lista vacía (se completa al leer).</summary>
+        public List<ItemStack> Usables = new List<ItemStack>();
 
         /// <summary>Run en curso con este loadout en juego (inactiva fuera de una run). Viaja en la
         /// misma escritura que el loadout: extraer o morir guarda un snapshot nuevo y la limpia.</summary>
         public Game.Core.Run.ActiveRunInfo ActiveRun;
 
-        public bool IsEmpty => Equipment.Count == 0 && PocketL.Count == 0 && PocketR.Count == 0;
+        public bool IsEmpty => Equipment.Count == 0 && PocketL.Count == 0 && PocketR.Count == 0
+                               && (Usables == null || Usables.TrueForAll(u => u.IsEmpty));
     }
 }

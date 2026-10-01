@@ -163,7 +163,7 @@
     -unity-font-style: bold;
 }
 
-/* ---------- Usables (placeholder visual, sin lógica todavía) ---------- */
+/* ---------- Usables (teclas 1-2-3; solo consumibles) ---------- */
 
 .usable-slots {
     flex-direction: row;

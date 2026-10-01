@@ -23,6 +23,7 @@ var STARTER_KIT_KEY = "StarterKit";
 var STASH_SLOTS = 30;           // StashData.SlotCount
 var MAX_EQUIPMENT_SLOTS = 32;   // holgado: EquipmentSlot puede crecer al final
 var MAX_POCKET_ENTRIES = 12;    // RunInventory.MaxSnapshotPocketEntries
+var MAX_USABLE_SLOTS = 3;       // ConsumableItemSO.UsableSlotCount (teclas 1-2-3)
 var MAX_QUANTITY = 9999;
 var EPS = 0.0001;
 
@@ -100,8 +101,9 @@ function validStructure(loadout, stash) {
     if (!isList(loadout.Equipment, MAX_EQUIPMENT_SLOTS)) return false;
     if (!isList(loadout.PocketL, MAX_POCKET_ENTRIES)) return false;
     if (!isList(loadout.PocketR, MAX_POCKET_ENTRIES)) return false;
+    if (loadout.Usables !== undefined && loadout.Usables !== null && !isList(loadout.Usables, MAX_USABLE_SLOTS)) return false;
     if (!isList(stash.Slots, STASH_SLOTS)) return false;
-    var lists = [loadout.Equipment, loadout.PocketL, loadout.PocketR, stash.Slots];
+    var lists = [loadout.Equipment, loadout.PocketL, loadout.PocketR, loadout.Usables || [], stash.Slots];
     for (var l = 0; l < lists.length; l++)
         for (var i = 0; i < lists[l].length; i++)
             if (!validStack(lists[l][i])) return false;
@@ -111,7 +113,7 @@ function validStructure(loadout, stash) {
 // Por ItemId: cantidad total, suma de durabilidad (cantidad x durabilidad) y durabilidad máxima.
 function tally(loadout, stash) {
     var t = {};
-    var lists = [loadout.Equipment || [], loadout.PocketL || [], loadout.PocketR || [], (stash && stash.Slots) || []];
+    var lists = [loadout.Equipment || [], loadout.PocketL || [], loadout.PocketR || [], loadout.Usables || [], (stash && stash.Slots) || []];
     for (var l = 0; l < lists.length; l++) {
         for (var i = 0; i < lists[l].length; i++) {
             var s = lists[l][i];
@@ -157,6 +159,7 @@ function migrateProfile(cur) {
         if (migrateList(cur.loadout.Equipment)) loadoutChanged = true;
         if (migrateList(cur.loadout.PocketL)) loadoutChanged = true;
         if (migrateList(cur.loadout.PocketR)) loadoutChanged = true;
+        if (migrateList(cur.loadout.Usables)) loadoutChanged = true;
     }
     if (cur.stash && migrateList(cur.stash.Slots)) stashChanged = true;
     if (loadoutChanged || stashChanged) {
@@ -215,6 +218,8 @@ handlers.AbandonActiveRun = function (args, context) {
     var equipment = [];
     for (var i = 0; i < slots; i++) equipment.push(emptyStack());
 
-    writeProfile({ Equipment: equipment, PocketL: [], PocketR: [], ActiveRun: inactiveRun() }, null);
+    var usables = [];
+    for (var u = 0; u < MAX_USABLE_SLOTS; u++) usables.push(emptyStack());
+    writeProfile({ Equipment: equipment, PocketL: [], PocketR: [], Usables: usables, ActiveRun: inactiveRun() }, null);
     return result(true);
 };

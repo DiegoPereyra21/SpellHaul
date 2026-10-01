@@ -30,6 +30,7 @@ namespace Game.Presentation.UI
         private VisualElement _equipmentSlots;
         private VisualElement _pocketLGrid;
         private VisualElement _pocketRGrid;
+        private VisualElement _usablesGrid;
         private Label _pocketLLabel;
         private Label _pocketRLabel;
         private VisualElement _stashGrid;
@@ -40,7 +41,7 @@ namespace Game.Presentation.UI
         private Label _tooltipDescription;
         private VisualElement _tooltipStats;
 
-        private enum SlotZone { Equipment, PocketL, PocketR, Stash }
+        private enum SlotZone { Equipment, PocketL, PocketR, Stash, Usables }
 
         // Mientras se busca partida el equipo (loadout) no se puede tocar: el servidor de la run lo
         // va a leer así como está. El stash sí se puede ordenar.
@@ -86,6 +87,7 @@ namespace Game.Presentation.UI
             _equipmentSlots = _root.Q<VisualElement>("equipment-slots");
             _pocketLGrid = _root.Q<VisualElement>("pocket-l-grid");
             _pocketRGrid = _root.Q<VisualElement>("pocket-r-grid");
+            _usablesGrid = _root.Q<VisualElement>("usables-grid");
             _pocketLLabel = _root.Q<Label>("pocket-l-label");
             _pocketRLabel = _root.Q<Label>("pocket-r-label");
             _stashGrid = _root.Q<VisualElement>("stash-grid");
@@ -203,7 +205,29 @@ namespace Game.Presentation.UI
             HideTooltip();
             DrawEquipment();
             DrawPockets();
+            DrawUsables();
             DrawStash();
+        }
+
+        /// <summary>Slots de usables (teclas 1-2-3 en la run): solo consumibles. Clic los devuelve a
+        /// los pockets (o al stash); se cargan arrastrando o con shift+clic sobre un consumible.</summary>
+        private void DrawUsables()
+        {
+            if (_usablesGrid == null) return;
+            _usablesGrid.Clear();
+            PlayerLoadoutService.EnsureUsableSlots(Inv);
+            for (int i = 0; i < Inv.Usables.Count; i++)
+            {
+                int idx = i;
+                var slot = BuildItemSlot(Inv.Usables[i], SlotZone.Usables, idx,
+                    normalClick: () => UnequipUsable(idx),
+                    shiftClick: () => UnequipUsable(idx));
+                var key = new Label((i + 1).ToString());
+                key.AddToClassList("usable-key-hint");
+                key.pickingMode = PickingMode.Ignore;
+                slot.Add(key);
+                _usablesGrid.Add(slot);
+            }
         }
 
         // ---------- Equipamiento ----------
@@ -345,6 +369,7 @@ namespace Game.Presentation.UI
 
         private bool TryMutate(System.Func<bool> action, MutateSound sound = MutateSound.Move)
         {
+            PlayerLoadoutService.EnsureUsableSlots(Inv); // antes del backup: así no cuenta como cambio del loadout
             var backup = TakeBackup();
             bool ok = action() && NormalizeInventory();
 
@@ -382,6 +407,7 @@ namespace Game.Presentation.UI
         {
             int slotCount = System.Enum.GetValues(typeof(EquipmentSlot)).Length;
             while (Inv.Equipment.Count < slotCount) Inv.Equipment.Add(ItemStack.Empty);
+            PlayerLoadoutService.EnsureUsableSlots(Inv);
 
             return RebuildPocketWithRescue(EquipmentSlot.PocketL)
                 && RebuildPocketWithRescue(EquipmentSlot.PocketR);
@@ -412,7 +438,7 @@ namespace Game.Presentation.UI
 
         private sealed class Backup
         {
-            public List<ItemStack> Equipment, PocketL, PocketR, StashSlots;
+            public List<ItemStack> Equipment, PocketL, PocketR, Usables, StashSlots;
         }
 
         private Backup TakeBackup() => new Backup
@@ -420,6 +446,7 @@ namespace Game.Presentation.UI
             Equipment = new List<ItemStack>(Inv.Equipment),
             PocketL = new List<ItemStack>(Inv.PocketL),
             PocketR = new List<ItemStack>(Inv.PocketR),
+            Usables = new List<ItemStack>(Inv.Usables ?? new List<ItemStack>()),
             StashSlots = new List<ItemStack>(Stash.Slots),
         };
 
@@ -430,16 +457,16 @@ namespace Game.Presentation.UI
             ReplaceContents(Inv.Equipment, b.Equipment);
             ReplaceContents(Inv.PocketL, b.PocketL);
             ReplaceContents(Inv.PocketR, b.PocketR);
+            if (Inv.Usables != null) ReplaceContents(Inv.Usables, b.Usables);
             ReplaceContents(Stash.Slots, b.StashSlots);
         }
 
         private bool LoadoutMatches(Backup b)
             => SameStacks(Inv.Equipment, b.Equipment) && SameStacks(Inv.PocketL, b.PocketL)
-               && SameStacks(Inv.PocketR, b.PocketR);
+               && SameStacks(Inv.PocketR, b.PocketR) && SameStacks(Inv.Usables, b.Usables);
 
         private bool MatchesBackup(Backup b)
-            => SameStacks(Inv.Equipment, b.Equipment) && SameStacks(Inv.PocketL, b.PocketL)
-               && SameStacks(Inv.PocketR, b.PocketR) && SameStacks(Stash.Slots, b.StashSlots);
+            => LoadoutMatches(b) && SameStacks(Stash.Slots, b.StashSlots);
 
         private static void ReplaceContents(List<ItemStack> target, List<ItemStack> source)
         {
@@ -678,6 +705,7 @@ namespace Game.Presentation.UI
                 if (Resolve(item.ItemId) is not EquipmentItemSO equip) return false;
                 if (!ValidEquipTarget(equip, toIndex)) return false;
             }
+            if (toZone == SlotZone.Usables && Resolve(item.ItemId) is not ConsumableItemSO) return false;
 
             ItemStack existing = GetStack(toZone, toIndex);
 
@@ -700,6 +728,8 @@ namespace Game.Presentation.UI
                 if (Resolve(existing.ItemId) is not EquipmentItemSO exEquip || !ValidEquipTarget(exEquip, fromIndex))
                     return false;
             }
+            if (!existing.IsEmpty && fromZone == SlotZone.Usables && Resolve(existing.ItemId) is not ConsumableItemSO)
+                return false;
 
             SetStack(toZone, toIndex, item);
             SetStack(fromZone, fromIndex, existing);
@@ -721,6 +751,7 @@ namespace Game.Presentation.UI
                 case SlotZone.PocketL: return index >= 0 && index < Inv.PocketL.Count;
                 case SlotZone.PocketR: return index >= 0 && index < Inv.PocketR.Count;
                 case SlotZone.Stash: return index >= 0 && index < Stash.Slots.Count;
+                case SlotZone.Usables: return Inv.Usables != null && index >= 0 && index < Inv.Usables.Count;
             }
             return false;
         }
@@ -733,6 +764,7 @@ namespace Game.Presentation.UI
                 case SlotZone.PocketL: return (index >= 0 && index < Inv.PocketL.Count) ? Inv.PocketL[index] : ItemStack.Empty;
                 case SlotZone.PocketR: return (index >= 0 && index < Inv.PocketR.Count) ? Inv.PocketR[index] : ItemStack.Empty;
                 case SlotZone.Stash: return (index >= 0 && index < Stash.Slots.Count) ? Stash.Slots[index] : ItemStack.Empty;
+                case SlotZone.Usables: return (Inv.Usables != null && index >= 0 && index < Inv.Usables.Count) ? Inv.Usables[index] : ItemStack.Empty;
             }
             return ItemStack.Empty;
         }
@@ -745,6 +777,7 @@ namespace Game.Presentation.UI
                 case SlotZone.PocketL: if (index >= 0 && index < Inv.PocketL.Count) Inv.PocketL[index] = stack; break;
                 case SlotZone.PocketR: if (index >= 0 && index < Inv.PocketR.Count) Inv.PocketR[index] = stack; break;
                 case SlotZone.Stash: if (index >= 0 && index < Stash.Slots.Count) Stash.Slots[index] = stack; break;
+                case SlotZone.Usables: if (Inv.Usables != null && index >= 0 && index < Inv.Usables.Count) Inv.Usables[index] = stack; break;
             }
         }
 
@@ -768,6 +801,8 @@ namespace Game.Presentation.UI
         private bool TryEquip(ItemStack stack, System.Action removeFromSource)
         {
             if (stack.IsEmpty) return false;
+            if (Resolve(stack.ItemId) is ConsumableItemSO consumable)
+                return TryLoadUsable(stack, consumable, removeFromSource);
             if (Resolve(stack.ItemId) is not EquipmentItemSO equip) return false;
 
             int slotIndex;
@@ -796,6 +831,44 @@ namespace Game.Presentation.UI
                 return false;
 
             return true;
+        }
+
+        /// <summary>Carga un consumible en los usables: completa una pila igual o usa un slot vacío.
+        /// Lo que no entra vuelve a los pockets o al stash; si tampoco, TryMutate deshace todo.</summary>
+        private bool TryLoadUsable(ItemStack stack, ConsumableItemSO def, System.Action removeFromSource)
+        {
+            PlayerLoadoutService.EnsureUsableSlots(Inv);
+            int remaining = stack.Quantity;
+            for (int pass = 0; pass < 2 && remaining > 0; pass++)
+            {
+                for (int i = 0; i < Inv.Usables.Count && remaining > 0; i++)
+                {
+                    ItemStack u = Inv.Usables[i];
+                    bool fits = pass == 0 ? (!u.IsEmpty && u.ItemId == stack.ItemId) : u.IsEmpty;
+                    if (!fits) continue;
+                    int have = u.IsEmpty ? 0 : u.Quantity;
+                    int add = Mathf.Min(def.MaxStack - have, remaining);
+                    if (add <= 0) continue;
+                    Inv.Usables[i] = new ItemStack(stack.ItemId, have + add, stack.Durability);
+                    remaining -= add;
+                }
+            }
+            if (remaining == stack.Quantity) return false; // usables llenos
+
+            removeFromSource();
+            return remaining <= 0 || StoreSomewhere(new ItemStack(stack.ItemId, remaining, stack.Durability));
+        }
+
+        private void UnequipUsable(int index)
+        {
+            TryMutate(() =>
+            {
+                if (Inv.Usables == null || index < 0 || index >= Inv.Usables.Count) return false;
+                ItemStack stack = Inv.Usables[index];
+                if (stack.IsEmpty) return false;
+                Inv.Usables[index] = ItemStack.Empty;
+                return StoreSomewhere(stack);
+            }, MutateSound.Equip);
         }
 
         // ---------- Movimientos por clic ----------

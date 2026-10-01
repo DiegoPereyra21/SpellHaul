@@ -160,6 +160,7 @@ namespace Game.Presentation.UI
             foreach (var s in inv.Equipment) snap.Equipment.Add(s);
             foreach (var s in inv.PocketL) if (!s.IsEmpty) snap.PocketL.Add(s);
             foreach (var s in inv.PocketR) if (!s.IsEmpty) snap.PocketR.Add(s);
+            foreach (var s in inv.Usables) snap.Usables.Add(s);
             return snap;
         }
 

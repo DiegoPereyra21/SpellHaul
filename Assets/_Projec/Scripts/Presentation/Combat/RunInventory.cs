@@ -12,7 +12,8 @@ namespace Game.Presentation.Combat
     /// Inventario de run server-authoritative. Dos pockets independientes (L/R) + equipamiento
     /// (por slot), todos sincronizados por SyncList. Implementa IRunInventory (extracción salva,
     /// muerte pierde).
-    /// Zonas: 0 = Equipment, 1 = Pocket L, 2 = Pocket R, 3 = Container (LootContainer externo).
+    /// Zonas: 0 = Equipment, 1 = Pocket L, 2 = Pocket R, 3 = Container (LootContainer externo),
+    /// 4 = Usables (consumibles en las teclas 1-2-3; solo aceptan ConsumableItemSO).
     /// </summary>
     public class RunInventory : NetworkBehaviour, IRunInventory
     {
@@ -29,6 +30,13 @@ namespace Game.Presentation.Combat
         // Equipamiento por slot. Indexado por (int)EquipmentSlot. Vacío = nada equipado.
         private readonly SyncList<ItemStack> _equipment = new SyncList<ItemStack>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
 
+        // Slots de usables (teclas 1-2-3): un stack de consumible por slot.
+        private readonly SyncList<ItemStack> _usables = new SyncList<ItemStack>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
+
+        public const int UsablesZone = 4;
+
+        public IReadOnlyList<ItemStack> Usables => _usables;
+        public ItemDatabase Database => _database;
         public IReadOnlyList<ItemStack> PocketL => _pocketL;
         public IReadOnlyList<ItemStack> PocketR => _pocketR;
         public IReadOnlyList<ItemStack> Equipment => _equipment;
@@ -65,6 +73,8 @@ namespace Game.Presentation.Combat
             int slotCount = System.Enum.GetValues(typeof(EquipmentSlot)).Length;
             for (int i = 0; i < slotCount; i++)
                 _equipment.Add(ItemStack.Empty);
+            for (int i = 0; i < ConsumableItemSO.UsableSlotCount; i++)
+                _usables.Add(ItemStack.Empty);
 
             RebuildAllPocketCapacities();
 
@@ -141,6 +151,7 @@ namespace Game.Presentation.Combat
             foreach (var s in _equipment) if (!s.IsEmpty) pickedUp.Add(s);
             foreach (var s in _pocketL) if (!s.IsEmpty) pickedUp.Add(s);
             foreach (var s in _pocketR) if (!s.IsEmpty) pickedUp.Add(s);
+            foreach (var s in _usables) if (!s.IsEmpty) pickedUp.Add(s);
 
             ApplySnapshot(SanitizeSnapshot(loaded));
 
@@ -183,6 +194,7 @@ namespace Game.Presentation.Combat
             _pocketL.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
             _pocketR.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
             _equipment.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
+            _usables.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
             if (base.IsOwner)
             {
                 Game.Presentation.UI.RunSummary.BeginRun(_database);
@@ -275,6 +287,18 @@ namespace Game.Presentation.Combat
 
             dropped += SanitizePocket(snap.PocketL, clean.PocketL);
             dropped += SanitizePocket(snap.PocketR, clean.PocketR);
+
+            // Usables: solo consumibles, uno por slot (se conservan las posiciones).
+            for (int i = 0; i < ConsumableItemSO.UsableSlotCount; i++)
+            {
+                ItemStack s = snap.Usables != null && i < snap.Usables.Count ? snap.Usables[i] : ItemStack.Empty;
+                ItemSO def = s.IsEmpty ? null : _database.GetById(s.ItemId);
+                bool valid = def is ConsumableItemSO;
+                if (!s.IsEmpty && !valid) dropped++;
+                clean.Usables.Add(valid ? new ItemStack(s.ItemId, Mathf.Clamp(s.Quantity, 1, def.MaxStack), Mathf.Clamp01(s.Durability)) : ItemStack.Empty);
+            }
+            if (snap.Usables != null && snap.Usables.Count > ConsumableItemSO.UsableSlotCount)
+                dropped += snap.Usables.Count - ConsumableItemSO.UsableSlotCount;
 
             if (dropped > 0)
                 Debug.LogWarning($"[RunInventory] Loadout del cliente {base.Owner.ClientId} con {dropped} entradas inválidas: descartadas.");
@@ -483,6 +507,7 @@ namespace Game.Presentation.Combat
             foreach (var s in _equipment) snap.Equipment.Add(s);   // incluye vacíos: preserva los slots
             foreach (var s in _pocketL) if (!s.IsEmpty) snap.PocketL.Add(s);
             foreach (var s in _pocketR) if (!s.IsEmpty) snap.PocketR.Add(s);
+            foreach (var s in _usables) snap.Usables.Add(s);         // incluye vacíos: preserva las posiciones
             return snap;
         }
 
@@ -497,6 +522,10 @@ namespace Game.Presentation.Combat
             // Restaurar equipamiento por slot (el snapshot guarda un stack por cada slot, en orden).
             for (int i = 0; i < snap.Equipment.Count && i < _equipment.Count; i++)
                 _equipment[i] = snap.Equipment[i];
+
+            if (snap.Usables != null)
+                for (int i = 0; i < snap.Usables.Count && i < _usables.Count; i++)
+                    _usables[i] = snap.Usables[i];
 
             // Recalcular capacidad de ambos pockets según lo equipado del snapshot.
             RebuildAllPocketCapacities();
@@ -545,6 +574,8 @@ namespace Game.Presentation.Combat
 
             ItemStack stack = list[index];
             if (stack.IsEmpty) return false;
+            if (_database.GetById(stack.ItemId) is ConsumableItemSO consumable)
+                return TryMoveIntoUsables(zone, index, consumable);
             if (_database.GetById(stack.ItemId) is not EquipmentItemSO equip) return false;
 
             int slotIndex = ChooseEquipSlot(equip);
@@ -564,6 +595,76 @@ namespace Game.Presentation.Combat
             if (((EquipmentSlot)slotIndex).IsPocket())
                 RebuildAllPocketCapacities();
 
+            return true;
+        }
+
+        /// <summary>
+        /// Server-only. Shift+clic sobre un consumible de un pocket: lo junta con un usable del mismo
+        /// tipo que tenga lugar o lo pone en el primer slot de usables vacío. Lo que no entra queda
+        /// donde estaba.
+        /// </summary>
+        private bool TryMoveIntoUsables(int zone, int index, ConsumableItemSO def)
+        {
+            ItemStack stack = GetSlot(zone, index);
+            int remaining = stack.Quantity;
+
+            for (int i = 0; i < _usables.Count && remaining > 0; i++)
+            {
+                ItemStack u = _usables[i];
+                if (u.IsEmpty || u.ItemId != stack.ItemId) continue;
+                int add = Mathf.Min(def.MaxStack - u.Quantity, remaining);
+                if (add <= 0) continue;
+                _usables[i] = new ItemStack(u.ItemId, u.Quantity + add, u.Durability);
+                remaining -= add;
+            }
+            for (int i = 0; i < _usables.Count && remaining > 0; i++)
+            {
+                if (!_usables[i].IsEmpty) continue;
+                int add = Mathf.Min(def.MaxStack, remaining);
+                _usables[i] = new ItemStack(stack.ItemId, add, stack.Durability);
+                remaining -= add;
+            }
+
+            if (remaining == stack.Quantity) return false; // no había lugar
+            SetSlot(zone, index, remaining > 0 ? new ItemStack(stack.ItemId, remaining, stack.Durability) : ItemStack.Empty);
+            return true;
+        }
+
+        /// <summary>Server-only. Shift+clic sobre un consumible del contenedor: directo a los usables.</summary>
+        private bool TryTakeIntoUsables(LootContainer container, int index, ConsumableItemSO def)
+        {
+            ItemStack stack = container.Contents[index];
+            int remaining = stack.Quantity;
+            for (int pass = 0; pass < 2 && remaining > 0; pass++)
+            {
+                for (int i = 0; i < _usables.Count && remaining > 0; i++)
+                {
+                    ItemStack u = _usables[i];
+                    bool fits = pass == 0 ? (!u.IsEmpty && u.ItemId == stack.ItemId) : u.IsEmpty;
+                    if (!fits) continue;
+                    int have = u.IsEmpty ? 0 : u.Quantity;
+                    int add = Mathf.Min(def.MaxStack - have, remaining);
+                    if (add <= 0) continue;
+                    _usables[i] = new ItemStack(stack.ItemId, have + add, stack.Durability);
+                    remaining -= add;
+                }
+            }
+            if (remaining == stack.Quantity) return false;
+            container.ServerUpdateAt(index, remaining > 0 ? new ItemStack(stack.ItemId, remaining, stack.Durability) : ItemStack.Empty);
+            return true;
+        }
+
+        /// <summary>
+        /// Server-only. Gasta una unidad del usable 'slot' si sigue siendo 'itemId' (UsableController,
+        /// al terminar de usarlo). False si ya no estaba (lo movió o lo soltó mientras lo usaba).
+        /// </summary>
+        [Server]
+        public bool TryConsumeUsable(int slot, string itemId)
+        {
+            if (slot < 0 || slot >= _usables.Count) return false;
+            ItemStack u = _usables[slot];
+            if (u.IsEmpty || u.ItemId != itemId) return false;
+            _usables[slot] = u.Quantity > 1 ? new ItemStack(u.ItemId, u.Quantity - 1, u.Durability) : ItemStack.Empty;
             return true;
         }
 
@@ -596,6 +697,8 @@ namespace Game.Presentation.Combat
 
             ItemStack stack = container.Contents[index];
             if (stack.IsEmpty) return false;
+            if (_database.GetById(stack.ItemId) is ConsumableItemSO consumable)
+                return TryTakeIntoUsables(container, index, consumable);
             if (_database.GetById(stack.ItemId) is not EquipmentItemSO equip) return false;
 
             int slotIndex = ChooseEquipSlot(equip);
@@ -649,6 +752,20 @@ namespace Game.Presentation.Combat
             return true;
         }
 
+        /// <summary>Server-only. Saca un usable a los pockets (clic sobre el slot). Si no entra entero,
+        /// lo que sobra se queda en el slot.</summary>
+        [Server]
+        public bool TryUnequipUsable(int slot)
+        {
+            if (slot < 0 || slot >= _usables.Count) return false;
+            ItemStack u = _usables[slot];
+            if (u.IsEmpty) return false;
+            int left = TryAddItem(u.ItemId, u.Quantity);
+            if (left == u.Quantity) return false;
+            _usables[slot] = left > 0 ? new ItemStack(u.ItemId, left, u.Durability) : ItemStack.Empty;
+            return true;
+        }
+
         /// <summary>Server-only. Agrega un stack ya formado al inventario (para saqueo de contenedores).</summary>
         [Server]
         public int TryAddStack(ItemStack stack)
@@ -694,8 +811,13 @@ namespace Game.Presentation.Combat
                 if (_database.GetById(from.ItemId) is not EquipmentItemSO equip) return false;
                 if (!ValidEquipTarget(equip, toIndex)) return false;
             }
+            if (toZone == UsablesZone && _database.GetById(from.ItemId) is not ConsumableItemSO) return false;
 
             ItemStack to = GetSlot(toZone, toIndex);
+
+            // Un swap que mandaría algo que no es consumible a un slot de usables: no.
+            if (fromZone == UsablesZone && !to.IsEmpty && to.ItemId != from.ItemId
+                && _database.GetById(to.ItemId) is not ConsumableItemSO) return false;
 
             // Merge: mismo item apilable, destino no vacío.
             if (!to.IsEmpty && to.ItemId == from.ItemId)
@@ -783,6 +905,7 @@ namespace Game.Presentation.Combat
                     if (_database.GetById(dragged.ItemId) is not EquipmentItemSO equip) return false;
                     if (!ValidEquipTarget(equip, toIndex)) return false;
                 }
+                if (toZone == UsablesZone && _database.GetById(dragged.ItemId) is not ConsumableItemSO) return false;
 
                 if (!existing.IsEmpty && existing.ItemId == dragged.ItemId)
                 {
@@ -831,6 +954,7 @@ namespace Game.Presentation.Combat
                 0 => index >= 0 && index < _equipment.Count,
                 1 => index >= 0 && index < _pocketL.Count,
                 2 => index >= 0 && index < _pocketR.Count,
+                UsablesZone => index >= 0 && index < _usables.Count,
                 _ => false
             };
         }
@@ -842,6 +966,7 @@ namespace Game.Presentation.Combat
                 0 => (index >= 0 && index < _equipment.Count) ? _equipment[index] : ItemStack.Empty,
                 1 => (index >= 0 && index < _pocketL.Count) ? _pocketL[index] : ItemStack.Empty,
                 2 => (index >= 0 && index < _pocketR.Count) ? _pocketR[index] : ItemStack.Empty,
+                UsablesZone => (index >= 0 && index < _usables.Count) ? _usables[index] : ItemStack.Empty,
                 _ => ItemStack.Empty
             };
         }
@@ -853,6 +978,7 @@ namespace Game.Presentation.Combat
                 case 0: if (index >= 0 && index < _equipment.Count) _equipment[index] = stack; break;
                 case 1: if (index >= 0 && index < _pocketL.Count) _pocketL[index] = stack; break;
                 case 2: if (index >= 0 && index < _pocketR.Count) _pocketR[index] = stack; break;
+                case UsablesZone: if (index >= 0 && index < _usables.Count) _usables[index] = stack; break;
             }
         }
 
@@ -881,6 +1007,7 @@ namespace Game.Presentation.Combat
             foreach (var s in _pocketL) if (!s.IsEmpty) loot.Add(s);
             foreach (var s in _pocketR) if (!s.IsEmpty) loot.Add(s);
             foreach (var s in _equipment) if (!s.IsEmpty) loot.Add(s);
+            foreach (var s in _usables) if (!s.IsEmpty) loot.Add(s);
 
             if (loot.Count > 0 && _lootContainerPrefab != null)
             {
@@ -915,6 +1042,7 @@ namespace Game.Presentation.Combat
             for (int i = 0; i < _pocketL.Count; i++) _pocketL[i] = ItemStack.Empty;
             for (int i = 0; i < _pocketR.Count; i++) _pocketR[i] = ItemStack.Empty;
             for (int i = 0; i < _equipment.Count; i++) _equipment[i] = ItemStack.Empty;
+            for (int i = 0; i < _usables.Count; i++) _usables[i] = ItemStack.Empty;
             RebuildAllPocketCapacities();
         }
     }

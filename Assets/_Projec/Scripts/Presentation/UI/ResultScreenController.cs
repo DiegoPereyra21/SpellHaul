@@ -86,6 +86,7 @@ namespace Game.Presentation.UI
                 foreach (var s in snapshot.Equipment) if (!s.IsEmpty) items.Add(s);
                 foreach (var s in snapshot.PocketL) if (!s.IsEmpty) items.Add(s);
                 foreach (var s in snapshot.PocketR) if (!s.IsEmpty) items.Add(s);
+                if (snapshot.Usables != null) foreach (var s in snapshot.Usables) if (!s.IsEmpty) items.Add(s);
             }
 
             var db = RunSummary.Database;

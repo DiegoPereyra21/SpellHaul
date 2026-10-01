@@ -354,3 +354,16 @@
     background-color: rgba(35, 36, 48, 0.8);
     border-color: rgba(181, 139, 249, 0.6);
 }
+
+/* ---------- Usables (teclas 1-2-3 en la run) ---------- */
+.usables-grid {
+    width: 296px;
+}
+
+.usable-key-hint {
+    position: absolute;
+    bottom: 3px;
+    left: 6px;
+    color: rgb(97, 98, 111);
+    font-size: 12px;
+}

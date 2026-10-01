@@ -191,6 +191,94 @@
     background-color: rgb(90, 92, 108);
 }
 
+/* --- Usables (teclas 1-2-3) --- */
+.ability-bar-separator {
+    width: 1px;
+    margin: 14px 10px;
+    background-color: rgba(68, 70, 88, 0.6);
+}
+
+.usable-hud-slot {
+    width: 70px;
+    height: 84px;
+    margin: 7px 4px;
+    background-color: rgba(20, 21, 30, 0.85);
+    border-width: 1px;
+    border-color: rgba(68, 70, 88, 0.5);
+    border-radius: 10px;
+    justify-content: flex-end;
+    align-items: flex-start;
+    overflow: hidden;
+    position: relative;
+}
+
+.usable-hud-slot.usable-hud-slot--empty {
+    opacity: 0.45;
+}
+
+.usable-hud-slot.usable-hud-slot--active {
+    border-color: rgb(237, 238, 245);
+    border-width: 2px;
+}
+
+.usable-hud-slot.rarity-rare { border-color: rgb(90, 180, 255); }
+.usable-hud-slot.rarity-epic { border-color: rgb(210, 110, 245); }
+
+.usable-hud-name {
+    position: absolute;
+    top: 8px;
+    left: 2px;
+    right: 2px;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    color: rgb(210, 211, 219);
+    font-size: 11px;
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.usable-hud-qty {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    color: rgb(237, 238, 245);
+    font-size: 14px;
+    -unity-font-style: bold;
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* Barra de uso (tomando una poción), debajo de la mira. */
+.use-channel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 160px;
+    margin-left: -80px;
+    margin-top: 44px;
+    align-items: center;
+    display: none;
+}
+
+.use-channel-label {
+    color: rgb(237, 238, 245);
+    font-size: 13px;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.use-channel-bg {
+    width: 160px;
+    height: 6px;
+    background-color: rgba(20, 21, 30, 0.85);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.use-channel-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgb(103, 210, 131);
+}
+
 .slot-key {
     color: rgb(210, 211, 219);
     font-size: 15px;

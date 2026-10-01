@@ -283,7 +283,7 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 - **`CommitProfile`.** Rechaza en estos casos:
   - `no_profile`, si no hay perfil;
   - `in_run`, si hay una marca activa;
-  - `invalid_structure`, si la estructura es inválida (límites: Equipment ≤ 32, pockets ≤ 12, stash = 30, cantidad 1..9999, durabilidad 0..1);
+  - `invalid_structure`, si la estructura es inválida (límites: Equipment ≤ 32, pockets ≤ 12, Usables ≤ 3, stash = 30, cantidad 1..9999, durabilidad 0..1);
   - `new_item:`, `more_items:` o `durability_up:`, si la **conservación** falla. Por cada ItemId, la cantidad total y la suma de durabilidad no pueden subir.
 
   Además fuerza `ActiveRun` inactivo: el cliente no puede marcar ni desmarcar runs.
@@ -326,6 +326,35 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
   - Recoger una mochila la autoequipa. Quitar una mochila rescata los slots que quedan afuera.
 - **Ordenar.** `TrySortPockets(ItemSortMode)` ordena por ServerRpc. El orden por rareza no mezcla items distintos.
 - **Extracción y muerte.** Implementa `IRunInventory`. Al morir, `DropAll` crea un `LootContainer` (el cadáver) con todo lo que llevaba.
+
+### Usables (consumibles)
+- **Slots:** 3 slots (teclas 1-2-3) guardados en `InventorySnapshot.Usables`. La lista incluye los vacíos para conservar las posiciones. Los loadouts viejos sin la lista se completan al leerse (`PlayerLoadoutService.EnsureUsableSlots`).
+- **Inventario de la run:** en `RunInventory` son la zona 4 (`_usables`, una SyncList). Solo aceptan `ConsumableItemSO`.
+- **Cómo se cargan:**
+  - arrastrando el consumible a un slot;
+  - con clic o shift+clic sobre un consumible en los pockets, el stash o un contenedor: completa una pila igual o usa un slot vacío.
+- **Cómo se sacan:** clic sobre el usable lo devuelve a los pockets; ctrl+clic lo tira al suelo.
+- **Muerte:** se pierden igual que el resto del equipo.
+- **Definiciones:**
+  - `ConsumableItemSO` es la base abstracta: `UseTime`, `UseClip`, `Apply(IConsumableExecutor, userId)` y `DescribeEffect`.
+  - `PotionItemSO` restaura vida y/o maná en `_duration` segundos.
+  - Los efectos los produce `UsableController` a través del puerto `IConsumableExecutor`.
+
+| Poción | ItemId | Restaura | Tiempo para tomarla |
+|---|---|---|---|
+| Minor / Health / Greater Health Potion | `health_potion_common/rare/epic` | 35 / 55 / 80 de vida en 3 s | 1 / 0.8 / 0.6 s |
+| Minor / Mana / Greater Mana Potion | `mana_potion_common/rare/epic` | 30 / 50 / 75 de maná en 3 s | 1 / 0.8 / 0.6 s |
+
+Apilan hasta 5. Aparecen en el loot con chances propias por rareza (perfil `Potion*` en `LootTableGenerator`).
+
+- **Uso** (`UsableController`, que va en el prefab Player):
+  1. El dueño aprieta 1, 2 o 3 (lee el teclado directo; no hay rebinding todavía) y envía `UseServerRpc`.
+  2. El servidor valida: que el jugador esté vivo, que el slot tenga un consumible y que no haya otro uso en curso. Después arranca la canalización.
+  3. **Cancelación:** se cancela sin gastar si el jugador castea (ataque, guante, dash o re-activación; evento `AbilityController.OnAbilityUsed`), si el slot cambia o si muere.
+  4. Al terminar, `RunInventory.TryConsumeUsable` gasta una unidad y se aplica el efecto.
+  5. El HUD muestra los 3 slots junto a la barra de habilidades y una barra "Using …" debajo de la mira.
+- **Sin ralentización:** tomar una poción no frena el movimiento, porque haría falta tocar Prediction v2.
+- **Pendiente:** piedra de escape (un objeto que se lanza y te teletransporta donde cae). Requiere `ServerTeleport` en `PlayerMovementController` y una receta cara de crafting.
 
 ### Stash
 - `StashData` tiene 30 slots fijos y la gestiona `StashService`.
@@ -511,7 +540,7 @@ Todo con UI Toolkit. El orden entre paneles se maneja con `sortingOrder` de cada
 
 ### En partida
 - **`InventoryUIController`** (se abre con Tab):
-  - equipo, pockets, 3 "usables" (placeholder sin lógica) y la columna del contenedor abierto;
+  - equipo, pockets, los 3 usables (consumibles, teclas 1-2-3) y la columna del contenedor abierto;
   - botones de orden y tecla R;
   - redibujo agrupado (`RequestRedraw` y redibujo en `LateUpdate`);
   - sonidos al abrir contenedores, con un acento para rare y epic;
@@ -625,7 +654,6 @@ CMD ["/game/SpellHaul-LinuxServer.x86_64", "-server", "-batchmode", "-nographics
 - Brillo, que requiere habilitar post-processing.
 - Contenido de la fase de peligro (hunters y noche) y generación procedural del mapa (seed del servidor).
 - Más guantes y escuelas (Control, Movilidad…).
-- Qué son los "usables".
 - `LoginWithSteam` (falta el AppID) y QoS real para la latencia del matchmaking.
 - CI/CD del servidor.
 
