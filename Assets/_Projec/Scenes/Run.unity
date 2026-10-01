@@ -232,7 +232,7 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 273250573}
   _networkObjectCache: {fileID: 0}
-  _runDuration: 120
+  _runDuration: 300
   _dangerPhaseDamagePerTick: 12
   _dangerPhaseTickInterval: 1
   _endGraceSeconds: 75
@@ -1435,10 +1435,6 @@ MonoBehaviour:
   _orbExplosionPoolSize: 4
   _projectileMuzzlePrefab: {fileID: 0}
   _projectileMuzzlePoolSize: 8
-  _parryActivePrefab: {fileID: 3305186517166574312, guid: a72eccff5c419b74e85d054a93b6fe21, type: 3}
-  _parryActivePoolSize: 1
-  _parrySuccessPrefab: {fileID: 3305186517166574312, guid: 2a667cf7183c2224fbfbfb0936084215, type: 3}
-  _parrySuccessPoolSize: 4
   _sfxPrefab: {fileID: 450910410763093139, guid: 65bf631a4f7a4bf40aa9b93e0602e297, type: 3}
   _sfxPoolSize: 12
 --- !u!4 &1226519079
