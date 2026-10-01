@@ -158,9 +158,10 @@
 .icon-cyan   { background-color: rgb(62, 204, 226); }
 
 /* Color del ícono del slot del guante según su escuela (GloveSchool). */
-.icon-gold.school-destruction { background-color: rgb(232, 112, 76); }
-.icon-gold.school-restoration { background-color: rgb(103, 210, 131); }
-.icon-gold.school-illusion    { background-color: rgb(196, 168, 255); }
+.icon-gold.school-fire { background-color: rgb(232, 112, 76); }
+.icon-gold.school-nature { background-color: rgb(103, 210, 131); }
+.icon-gold.school-light    { background-color: rgb(196, 168, 255); }
+.icon-gold.school-earth    { background-color: rgb(196, 150, 96); }
 
 /* Habilidad re-activable en vuelo (ej. detonar el orbe de destello): el slot se resalta. */
 .ability-slot--recast {

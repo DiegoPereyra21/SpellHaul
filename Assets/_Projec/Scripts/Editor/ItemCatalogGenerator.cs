@@ -185,6 +185,20 @@ namespace Game.EditorTools.Items
                 AssetDatabase.CreateAsset(flash, $"{AbilitiesFolder}/Ability_FlashOrb_.asset");
                 Debug.LogWarning("[ItemCatalogGenerator] Creado Ability_FlashOrb_: asignale el prefab del proyectil (FlashProjectile) y, si querés, los sonidos de casteo/detonación.", flash);
             }
+
+            if (!existing.Contains("id_earthwall"))
+            {
+                if (!AssetDatabase.IsValidFolder(AbilitiesFolder)) CreateFolderRecursive(AbilitiesFolder);
+                var wall = ScriptableObject.CreateInstance<Game.Core.Abilities.Abilities.EarthWallAbilitySO>();
+                var so = new SerializedObject(wall);
+                so.FindProperty("_abilityId").stringValue = "id_earthwall";
+                so.FindProperty("_displayName").stringValue = "Earth Wall";
+                so.FindProperty("_cooldown").floatValue = 12f;
+                so.FindProperty("_resourceCost").floatValue = 35f;
+                so.ApplyModifiedProperties();
+                AssetDatabase.CreateAsset(wall, $"{AbilitiesFolder}/Ability_EarthWall_.asset");
+                Debug.LogWarning("[ItemCatalogGenerator] Creado Ability_EarthWall_: asignale el prefab del muro (EarthWall).", wall);
+            }
         }
 
         /// <summary>
@@ -216,7 +230,7 @@ namespace Game.EditorTools.Items
 
             AddFamily("orb_gloves", "Orb Gloves",
                 "Hold right click to charge an orb, release to throw it. It explodes on impact; a longer charge hits harder and flies farther.",
-                GloveSchool.Destruction, "id_chargedorb", new[]
+                GloveSchool.Fire, "id_chargedorb", new[]
             {
                 (Rarity.Common, 1.0f, 1.0f),
                 (Rarity.Rare,   1.2f, 0.9f),
@@ -225,7 +239,7 @@ namespace Game.EditorTools.Items
 
             AddFamily("mending_gloves", "Mending Gloves",
                 "Right click to heal yourself instantly.",
-                GloveSchool.Restoration, "id_heal", new[]
+                GloveSchool.Nature, "id_heal", new[]
             {
                 (Rarity.Common, 1.0f, 1.0f),
                 (Rarity.Rare,   1.3f, 0.9f),
@@ -234,11 +248,20 @@ namespace Game.EditorTools.Items
 
             AddFamily("flare_gloves", "Flare Gloves",
                 "Right click to launch a slow orb of light. Right click again to detonate it mid-air; it also bursts on impact. The flash blinds everyone who looks at it, you included.",
-                GloveSchool.Illusion, "id_flashorb", new[]
+                GloveSchool.Light, "id_flashorb", new[]
             {
                 (Rarity.Common, 1.0f, 1.0f),
                 (Rarity.Rare,   1.2f, 0.9f),
                 (Rarity.Epic,   1.4f, 0.8f),
+            });
+
+            AddFamily("stone_gloves", "Stone Gloves",
+                "Right click to raise an earth wall where you aim (or right in front of you). It blocks movement, projectiles and sight for everyone until it breaks or crumbles.",
+                GloveSchool.Earth, "id_earthwall", new[]
+            {
+                (Rarity.Common, 1.0f, 1.0f),
+                (Rarity.Rare,   1.3f, 0.9f),
+                (Rarity.Epic,   1.6f, 0.8f),
             });
 
             return list;

@@ -80,6 +80,68 @@ namespace Game.Presentation.Abilities
             }
         }
 
+        // Suelo válido para el muro: lo bastante plano (normal hacia arriba).
+        private const float MinGroundNormalY = 0.6f;
+
+        public void SpawnEarthWall(GameObject prefab, Vector3 origin, Vector3 aimPoint, Vector3 aimDirection,
+            float maxRange, float fallbackDistance, float health, float duration, int casterNetworkId)
+        {
+            if (!InstanceFinder.IsServerStarted) return;
+            if (prefab == null)
+            {
+                Debug.LogWarning("[NetworkAbilityExecutor] Muro de tierra sin prefab: asignarlo en el EarthWallAbilitySO.");
+                return;
+            }
+            if (!InstanceFinder.ServerManager.Objects.Spawned.TryGetValue(casterNetworkId, out NetworkObject casterNob)) return;
+
+            Vector3 feet = casterNob.transform.position;
+            int ground = LayerMask.GetMask("Ground");
+
+            // El punto apuntado lo calcula el cliente: el servidor lo re-valida con su propio rayo
+            // (desde el SpellOrigin autoritativo hacia ese punto, solo contra Ground).
+            Vector3 toAim = aimPoint - origin;
+            bool placed = false;
+            Vector3 point = default;
+            if (toAim.sqrMagnitude > 0.01f &&
+                Physics.Raycast(origin, toAim.normalized, out RaycastHit hit, maxRange + 1f, ground, QueryTriggerInteraction.Ignore) &&
+                hit.normal.y >= MinGroundNormalY &&
+                Vector3.Distance(feet, hit.point) <= maxRange)
+            {
+                point = hit.point;
+                placed = true;
+            }
+
+            if (!placed)
+            {
+                // Delante del jugador a distancia fija, apoyado en el suelo que haya ahí.
+                Vector3 flat = new Vector3(aimDirection.x, 0f, aimDirection.z);
+                if (flat.sqrMagnitude < 0.0001f) flat = casterNob.transform.forward;
+                flat.Normalize();
+                Vector3 probe = feet + flat * fallbackDistance;
+                point = Physics.Raycast(probe + Vector3.up * 2f, Vector3.down, out RaycastHit down, 6f, ground, QueryTriggerInteraction.Ignore)
+                    ? down.point
+                    : new Vector3(probe.x, feet.y, probe.z);
+            }
+
+            // Mirando al caster (solo en horizontal).
+            Vector3 face = feet - point;
+            face.y = 0f;
+            if (face.sqrMagnitude < 0.0001f) face = -casterNob.transform.forward;
+            Quaternion rotation = Quaternion.LookRotation(face.normalized, Vector3.up);
+
+            NetworkObject nob = InstanceFinder.NetworkManager.GetPooledInstantiated(
+                prefab.GetComponent<NetworkObject>(), point, rotation, true);
+            if (nob.TryGetComponent(out EarthWall wall))
+            {
+                InstanceFinder.ServerManager.Spawn(nob);
+                wall.ServerInitialize(health, duration);
+            }
+            else
+            {
+                Debug.LogWarning("[NetworkAbilityExecutor] El prefab del muro no tiene EarthWall.");
+            }
+        }
+
         public void StartDash(int casterNetworkId, Vector3 direction, float speed, float duration)
         {
             if (!InstanceFinder.IsServerStarted) return;

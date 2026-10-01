@@ -25,6 +25,13 @@ namespace Game.Core.Abilities
         void SpawnFlashProjectile(GameObject prefab, Vector3 origin, Vector3 direction, float speed, float lifetime,
             float flashRadius, float playerBlindSeconds, float aiBlindSeconds, int casterNetworkId, int slot);
 
+        /// <summary>
+        /// Levanta un muro de tierra en el suelo apuntado (validado por el servidor) o, si no hay
+        /// suelo válido a alcance, a fallbackDistance delante del caster. El muro mira al caster.
+        /// </summary>
+        void SpawnEarthWall(GameObject prefab, Vector3 origin, Vector3 aimPoint, Vector3 aimDirection,
+            float maxRange, float fallbackDistance, float health, float duration, int casterNetworkId);
+
         /// <summary>Spawnea un orbe cargado con trayectoria balística hacia el punto de mira.</summary>
         void SpawnChargedOrb(GameObject orbPrefab, Vector3 origin, Vector3 aimPoint, float damage, float explosionRadius, float visualScale, float launchSpeed, float gravity, int casterNetworkId, int slot);
     }

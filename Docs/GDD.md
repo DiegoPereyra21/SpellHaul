@@ -292,7 +292,7 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 | Enum | Valores |
 |---|---|
 | `EquipmentSlot` | Boots, Hat, Robe, Glove, PocketL, PocketR |
-| `GloveSchool` | Destruction, Restoration, Illusion |
+| `GloveSchool` | Fire, Nature, Light, Earth (antes Destruction, Restoration, Illusion; mismo orden) |
 | `ItemCategory`, `Rarity`, `StatType`, `RunPhase`, `PlayerRunStatus`, `RunOutcome` | (sin detallar) |
 
 - El orden visual de los slots no es el orden del enum. Lo definen las extensiones de `EquipmentSlotExtensions` (`DisplayOrder`: Hat, Robe, Glove, Boots, PocketL, PocketR), `DisplayRank`, `DisplayIndices` y `DisplayName`.
@@ -372,7 +372,7 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 ### Guantes
 - Son una categoría propia (`ItemCategory.Glove`), ocupan el slot Glove y **definen la habilidad del clic derecho**. Sin guante equipado el clic derecho no hace nada.
 - No dan stats pasivos. Tienen:
-  - una **escuela** (`GloveSchool`), que se muestra en el tooltip ("Destruction Glove") y como color del ícono en el HUD;
+  - una **escuela** (`GloveSchool`), que se muestra en el tooltip ("Rare Fire Glove") y como color del ícono en el HUD;
   - una `AbilitySO`, compartida por todas las rarezas de esa familia;
   - **potencia** (`_abilityPower`, multiplica daño o curación) y **cooldown** (`_cooldownMultiplier`). Ambos mejoran con la rareza.
 - `AbilityController` resuelve la habilidad con `RunInventory.EquippedGlove`. Funciona en el servidor y en todos los clientes, porque el equipo se sincroniza a todos.
@@ -386,9 +386,19 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 
 | Familia | ItemId | Escuela | Habilidad (`AbilityId`) | Potencia C/R/E | Cooldown C/R/E |
 |---|---|---|---|---|---|
-| Orb Gloves | `orb_gloves_<rareza>` | Destruction | Orbe cargado (`id_chargedorb`) | ×1.0 / ×1.2 / ×1.45 | ×1.0 / ×0.9 / ×0.8 |
-| Mending Gloves | `mending_gloves_<rareza>` | Restoration | Cura instantánea (`id_heal`) | ×1.0 / ×1.3 / ×1.6 | ×1.0 / ×0.9 / ×0.8 |
-| Flare Gloves | `flare_gloves_<rareza>` | Illusion | Orbe de destello (`id_flashorb`) | ×1.0 / ×1.2 / ×1.4 (duración del cegado) | ×1.0 / ×0.9 / ×0.8 |
+| Orb Gloves | `orb_gloves_<rareza>` | Fire | Orbe cargado (`id_chargedorb`) | ×1.0 / ×1.2 / ×1.45 | ×1.0 / ×0.9 / ×0.8 |
+| Mending Gloves | `mending_gloves_<rareza>` | Nature | Cura instantánea (`id_heal`) | ×1.0 / ×1.3 / ×1.6 | ×1.0 / ×0.9 / ×0.8 |
+| Flare Gloves | `flare_gloves_<rareza>` | Light | Orbe de destello (`id_flashorb`) | ×1.0 / ×1.2 / ×1.4 (duración del cegado) | ×1.0 / ×0.9 / ×0.8 |
+| Stone Gloves | `stone_gloves_<rareza>` | Earth | Muro de tierra (`id_earthwall`) | ×1.0 / ×1.3 / ×1.6 (vida y duración) | ×1.0 / ×0.9 / ×0.8 |
+
+**Escuelas como elementos:** Fire (daño), Nature (curación), Light (control y visión) y Earth (defensa). Las habilidades nuevas se agrupan por esa temática.
+
+**Muro de tierra** (`EarthWallAbilitySO` + `EarthWall`)
+- **Ubicación:** sale del suelo apuntado si está a 15 m o menos y es plano (normal.y ≥ 0.6). El servidor lo re-valida con su propio rayo contra Ground desde el SpellOrigin. Si no es válido, aparece a 4 m delante del jugador, apoyado en el suelo. Siempre mira al caster.
+- **Base:** vida 150 y 6 s de duración (los dos escalan con la rareza); cooldown 12 s y maná 35.
+- **Animación:** sube del suelo en 0.25 s y se hunde en 0.2 s al vencer o romperse. Se anima localmente en cada lado.
+- **Bloqueo:** frena a todos. El cuerpo está en la capa Ground (movimiento, proyectiles, visión de IA, regla de cobertura y flash). Un hijo en Hitbox recibe el daño.
+- **Vida:** usa `Health` con `ServerSetMaxHealth` y `CountsAsKill = false`, para que romperlo no cuente como kill.
 
 **Orbe de destello** (`FlashOrbAbilitySO` + `FlashProjectile`)
 - **Vuelo:** proyectil lento en línea recta (12 m/s, 3 s de vida, cooldown base 14 s). En vuelo es chico (`_flightScale` 0.35).
@@ -431,7 +441,7 @@ El índice de slot viaja por red y define el binding (`CastSlot0..2`): no reorde
 |---|---|---|---|
 | `Primary` (0) | Clic izquierdo | Proyectil básico (`_primaryAbility`) | Fijo. Windup de telegrafía opcional |
 | `Mobility` (1) | Shift | Dash (`_mobilityAbility`) | Fijo. Predicho y reconciliado. Ease-out, en la dirección de mirada (permite dash vertical) |
-| `Glove` (2) | Clic derecho | La del guante equipado | Vacío sin guante. Hoy: orbe cargado, cura instantánea u orbe de destello |
+| `Glove` (2) | Clic derecho | La del guante equipado | Vacío sin guante. Hoy: orbe cargado, cura instantánea, orbe de destello o muro de tierra |
 
 El parry fue eliminado.
 

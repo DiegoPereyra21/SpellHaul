@@ -423,9 +423,10 @@ namespace Game.Presentation.UI
         /// <summary>Color de la escuela del guante (mismo que HUD.uss / Gloves.uss).</summary>
         private static Color SchoolColor(Game.Core.Items.GloveSchool school) => school switch
         {
-            Game.Core.Items.GloveSchool.Destruction => new Color(0.91f, 0.44f, 0.30f),
-            Game.Core.Items.GloveSchool.Restoration => new Color(0.40f, 0.82f, 0.51f),
-            Game.Core.Items.GloveSchool.Illusion => new Color(0.77f, 0.66f, 1f),
+            Game.Core.Items.GloveSchool.Fire => new Color(0.91f, 0.44f, 0.30f),
+            Game.Core.Items.GloveSchool.Nature => new Color(0.40f, 0.82f, 0.51f),
+            Game.Core.Items.GloveSchool.Light => new Color(0.77f, 0.66f, 1f),
+            Game.Core.Items.GloveSchool.Earth => new Color(0.77f, 0.59f, 0.38f),
             _ => Color.white
         };
 

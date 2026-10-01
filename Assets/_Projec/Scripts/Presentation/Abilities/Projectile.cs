@@ -393,7 +393,7 @@ namespace Game.Presentation.Abilities
                 damageable.ApplyDamage(_damage, _casterNetworkId);
                 if (damageable is Health health) // único implementador de IDamageable
                 {
-                    isKill = health.IsDead;
+                    isKill = health.IsDead && health.CountsAsKill;
                     dealt = Mathf.Max(0f, before - health.Current); // ya con la protección del objetivo
                 }
             }

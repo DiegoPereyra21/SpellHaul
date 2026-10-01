@@ -1,5 +1,5 @@
 /* Guantes: estilo propio en stash, inventario de run y tooltip (GloveVisuals.cs).
-   Color por escuela (GloveSchool). Escuela nueva = agregar su bloque de colores al final.
+   Color por escuela (GloveSchool: Fire, Nature, Light, Earth). Escuela nueva = agregar su bloque de colores al final.
    El color del borde de las casillas sigue siendo el de la rareza. */
 
 /* ---------- Casilla de grilla ---------- */
@@ -56,32 +56,42 @@
 }
 
 /* ---------- Colores por escuela ---------- */
-/* Destruction: brasa */
-.item-slot.item-glove.school-destruction { background-color: rgba(232, 112, 76, 0.16); }
-.school-destruction .glove-band,
-.school-destruction .glove-badge          { background-color: rgb(232, 112, 76); }
-.equip-slot-glove.school-destruction      { border-left-color: rgb(232, 112, 76); background-color: rgba(232, 112, 76, 0.10); }
-.equip-slot-glove.school-destruction .glove-dot { background-color: rgb(232, 112, 76); }
-.equip-slot-glove.school-destruction .glove-ability { color: rgb(240, 150, 120); }
-.tooltip-glove.school-destruction         { border-left-color: rgb(232, 112, 76); }
-.tooltip-glove.school-destruction .tooltip-type { color: rgb(240, 150, 120); }
+/* Fire: brasa */
+.item-slot.item-glove.school-fire { background-color: rgba(232, 112, 76, 0.16); }
+.school-fire .glove-band,
+.school-fire .glove-badge          { background-color: rgb(232, 112, 76); }
+.equip-slot-glove.school-fire      { border-left-color: rgb(232, 112, 76); background-color: rgba(232, 112, 76, 0.10); }
+.equip-slot-glove.school-fire .glove-dot { background-color: rgb(232, 112, 76); }
+.equip-slot-glove.school-fire .glove-ability { color: rgb(240, 150, 120); }
+.tooltip-glove.school-fire         { border-left-color: rgb(232, 112, 76); }
+.tooltip-glove.school-fire .tooltip-type { color: rgb(240, 150, 120); }
 
-/* Restoration: verde */
-.item-slot.item-glove.school-restoration { background-color: rgba(103, 210, 131, 0.16); }
-.school-restoration .glove-band,
-.school-restoration .glove-badge          { background-color: rgb(103, 210, 131); }
-.equip-slot-glove.school-restoration      { border-left-color: rgb(103, 210, 131); background-color: rgba(103, 210, 131, 0.10); }
-.equip-slot-glove.school-restoration .glove-dot { background-color: rgb(103, 210, 131); }
-.equip-slot-glove.school-restoration .glove-ability { color: rgb(140, 225, 160); }
-.tooltip-glove.school-restoration         { border-left-color: rgb(103, 210, 131); }
-.tooltip-glove.school-restoration .tooltip-type { color: rgb(140, 225, 160); }
+/* Nature: verde */
+.item-slot.item-glove.school-nature { background-color: rgba(103, 210, 131, 0.16); }
+.school-nature .glove-band,
+.school-nature .glove-badge          { background-color: rgb(103, 210, 131); }
+.equip-slot-glove.school-nature      { border-left-color: rgb(103, 210, 131); background-color: rgba(103, 210, 131, 0.10); }
+.equip-slot-glove.school-nature .glove-dot { background-color: rgb(103, 210, 131); }
+.equip-slot-glove.school-nature .glove-ability { color: rgb(140, 225, 160); }
+.tooltip-glove.school-nature         { border-left-color: rgb(103, 210, 131); }
+.tooltip-glove.school-nature .tooltip-type { color: rgb(140, 225, 160); }
 
-/* Illusion: violeta claro */
-.item-slot.item-glove.school-illusion { background-color: rgba(196, 168, 255, 0.16); }
-.school-illusion .glove-band,
-.school-illusion .glove-badge          { background-color: rgb(196, 168, 255); }
-.equip-slot-glove.school-illusion      { border-left-color: rgb(196, 168, 255); background-color: rgba(196, 168, 255, 0.10); }
-.equip-slot-glove.school-illusion .glove-dot { background-color: rgb(196, 168, 255); }
-.equip-slot-glove.school-illusion .glove-ability { color: rgb(214, 196, 255); }
-.tooltip-glove.school-illusion         { border-left-color: rgb(196, 168, 255); }
-.tooltip-glove.school-illusion .tooltip-type { color: rgb(214, 196, 255); }
+/* Light: violeta claro */
+.item-slot.item-glove.school-light { background-color: rgba(196, 168, 255, 0.16); }
+.school-light .glove-band,
+.school-light .glove-badge          { background-color: rgb(196, 168, 255); }
+.equip-slot-glove.school-light      { border-left-color: rgb(196, 168, 255); background-color: rgba(196, 168, 255, 0.10); }
+.equip-slot-glove.school-light .glove-dot { background-color: rgb(196, 168, 255); }
+.equip-slot-glove.school-light .glove-ability { color: rgb(214, 196, 255); }
+.tooltip-glove.school-light         { border-left-color: rgb(196, 168, 255); }
+.tooltip-glove.school-light .tooltip-type { color: rgb(214, 196, 255); }
+
+/* Earth: ocre */
+.item-slot.item-glove.school-earth { background-color: rgba(196, 150, 96, 0.16); }
+.school-earth .glove-band,
+.school-earth .glove-badge          { background-color: rgb(196, 150, 96); }
+.equip-slot-glove.school-earth      { border-left-color: rgb(196, 150, 96); background-color: rgba(196, 150, 96, 0.10); }
+.equip-slot-glove.school-earth .glove-dot { background-color: rgb(196, 150, 96); }
+.equip-slot-glove.school-earth .glove-ability { color: rgb(220, 182, 135); }
+.tooltip-glove.school-earth         { border-left-color: rgb(196, 150, 96); }
+.tooltip-glove.school-earth .tooltip-type { color: rgb(220, 182, 135); }

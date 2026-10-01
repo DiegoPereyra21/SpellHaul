@@ -17,6 +17,10 @@ namespace Game.Presentation.Combat
         [SerializeField] private float _maxHealth = 100f;
         [Tooltip("Parpadeo de daño; se dispara a todos los clientes cuando esta entidad recibe daño.")]
         [SerializeField] private DamageFlash _damageFlash;
+        [Tooltip("Si destruirla cuenta como kill (kill marker, contador de kills). Falso para objetos como el muro de tierra.")]
+        [SerializeField] private bool _countsAsKill = true;
+
+        public bool CountsAsKill => _countsAsKill;
 
         // Cada tick (por defecto FishNet junta cambios cada 0,1 s): la vida tiene que verse al instante.
         private readonly SyncVar<float> _current = new SyncVar<float>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
@@ -30,6 +34,15 @@ namespace Game.Presentation.Combat
         public override void OnStartServer()
         {
             _current.Value = _maxHealth;
+        }
+
+        /// <summary>Server-only. Cambia la vida máxima y la llena (ej. muro de tierra según la rareza del guante).
+        /// La vida máxima no se sincroniza: en clientes Max sigue siendo la del prefab.</summary>
+        public void ServerSetMaxHealth(float max)
+        {
+            if (!base.IsServerStarted || max <= 0f) return;
+            _maxHealth = max;
+            _current.Value = max;
         }
 
         /// <summary>Server-only. Vuelve la entidad inmune a daño (ej. tras extraer).</summary>

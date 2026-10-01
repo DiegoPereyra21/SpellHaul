@@ -179,7 +179,7 @@ namespace Game.Presentation.Abilities
                     if (damageable is Health health)
                     {
                         dealt += Mathf.Max(0f, before - health.Current);
-                        if (health.IsDead) isKill = true;
+                        if (health.IsDead && health.CountsAsKill) isKill = true;
                     }
                 }
             }
