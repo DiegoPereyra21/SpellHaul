@@ -20,10 +20,10 @@ namespace Game.Presentation.UI
         public static bool IsPaused { get; private set; }
 
         private VisualElement _pauseRoot;
+        private VisualElement _settingsContainer;
         private Button _leaveButton;
         private bool _leaveArmed;
         private bool _leaving;
-        private float _lastPreview;
 
         private PlayerMovementController _movement;
         private AbilityController _abilities;
@@ -44,10 +44,7 @@ namespace Game.Presentation.UI
             _deathHandler = GetComponent<PlayerDeathHandler>();
             _avatar = GetComponent<PlayerAvatarState>();
 
-            BindSlider("pause-volume-master", () => AudioVolumes.Master, v => AudioVolumes.Master = v);
-            BindSlider("pause-volume-effects", () => AudioVolumes.Effects, v => AudioVolumes.Effects = v);
-            BindSlider("pause-volume-interface", () => AudioVolumes.Interface, v => AudioVolumes.Interface = v);
-            BindSlider("pause-sensitivity", () => LookSettings.Sensitivity, v => LookSettings.Sensitivity = v, preview: false);
+            _settingsContainer = _pauseRoot.Q<VisualElement>("pause-settings");
 
             var resume = _pauseRoot.Q<Button>("pause-resume");
             if (resume != null) resume.clicked += () => SetPaused(false);
@@ -83,6 +80,7 @@ namespace Game.Presentation.UI
         {
             if (_pauseRoot == null || paused == IsPaused) return;
             IsPaused = paused;
+            if (paused) Game.Presentation.Settings.SettingsPanel.Build(_settingsContainer); // refleja la pantalla actual
             _pauseRoot.style.display = paused ? DisplayStyle.Flex : DisplayStyle.None;
 
             UnityEngine.Cursor.lockState = paused ? CursorLockMode.None : CursorLockMode.Locked;
@@ -92,7 +90,7 @@ namespace Game.Presentation.UI
             GameAudio.Ui(l => paused ? l.UiOpen : l.UiClose);
             if (!paused)
             {
-                AudioVolumes.Save();
+                Game.Presentation.Settings.SettingsPanel.Save();
                 DisarmLeave();
             }
         }
@@ -110,7 +108,7 @@ namespace Game.Presentation.UI
             IsPaused = false;
             _leaving = false;
             if (_pauseRoot != null) _pauseRoot.style.display = DisplayStyle.None;
-            AudioVolumes.Save();
+            Game.Presentation.Settings.SettingsPanel.Save();
             DisarmLeave();
         }
 
@@ -166,20 +164,5 @@ namespace Game.Presentation.UI
             _leaveButton.SetEnabled(true);
         }
 
-        // ---------- Opciones ----------
-
-        private void BindSlider(string name, System.Func<float> get, System.Action<float> set, bool preview = true)
-        {
-            var slider = _pauseRoot.Q<Slider>(name);
-            if (slider == null) return;
-            slider.SetValueWithoutNotify(get());
-            slider.RegisterValueChangedCallback(evt =>
-            {
-                set(evt.newValue);
-                if (!preview || Time.unscaledTime - _lastPreview < 0.15f) return;
-                _lastPreview = Time.unscaledTime;
-                GameAudio.Ui(l => l.UiClick);
-            });
-        }
     }
 }

@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <Style src="MainMenu.uss" />
+    <Style src="Settings.uss" />
     <ui:VisualElement name="menu-root" class="menu-root">
         <ui:VisualElement class="menu-content">
             <ui:Label text="SPELLHAUL" class="game-title" />
@@ -37,12 +38,9 @@
         </ui:VisualElement>
 
         <!-- Opciones (volúmenes). Oculto por defecto. -->
-        <ui:VisualElement name="options-panel" class="lobby-panel">
+        <ui:VisualElement name="options-panel" class="lobby-panel options-panel">
             <ui:Label text="Options" class="lobby-title" />
-            <ui:Slider name="volume-master" label="Master Volume" low-value="0" high-value="1" class="options-slider" />
-            <ui:Slider name="volume-effects" label="Effects" low-value="0" high-value="1" class="options-slider" />
-            <ui:Slider name="volume-interface" label="Interface" low-value="0" high-value="1" class="options-slider" />
-            <ui:Slider name="mouse-sensitivity" label="Mouse Sensitivity" low-value="0.2" high-value="3" class="options-slider" />
+            <ui:VisualElement name="options-settings" />
             <ui:Button name="options-close" text="Close" class="menu-button quit options-close" />
         </ui:VisualElement>
 

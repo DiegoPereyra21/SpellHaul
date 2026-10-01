@@ -1,0 +1,79 @@
+/* Panel de opciones compartido (menú principal y menú de pausa). Lo arma SettingsPanel. */
+
+.settings {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Regular.ttf");
+}
+
+.settings-section {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: rgb(150, 132, 190);
+    margin-top: 14px;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(181, 139, 249, 0.2);
+}
+
+.settings-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 36px;
+    margin: 2px 0;
+}
+
+.settings-label {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    width: 190px;
+    font-size: 16px;
+    color: rgb(200, 201, 212);
+}
+
+.settings-slider {
+    flex-grow: 1;
+    margin: 0;
+}
+
+.settings-slider .unity-base-slider__tracker {
+    background-color: rgba(60, 62, 80, 0.8);
+    border-color: rgba(95, 98, 117, 0.6);
+}
+
+.settings-slider .unity-base-slider__dragger {
+    background-color: rgb(186, 146, 253);
+    border-color: rgb(186, 146, 253);
+}
+
+.settings-value {
+    width: 64px;
+    font-size: 15px;
+    color: rgb(170, 172, 185);
+    -unity-text-align: middle-right;
+}
+
+.settings-dropdown {
+    flex-grow: 1;
+    margin: 0;
+}
+
+.settings-dropdown .unity-base-popup-field__input,
+.settings-dropdown .unity-base-field__input {
+    background-color: rgba(25, 26, 36, 0.9);
+    border-color: rgba(95, 98, 117, 0.6);
+    border-radius: 6px;
+    color: rgb(220, 221, 229);
+    font-size: 15px;
+    min-height: 30px;
+}
+
+.settings-toggle {
+    margin: 0;
+}
+
+.settings-toggle .unity-toggle__checkmark {
+    background-color: rgba(25, 26, 36, 0.9);
+    border-color: rgba(181, 139, 249, 0.6);
+    width: 20px;
+    height: 20px;
+}

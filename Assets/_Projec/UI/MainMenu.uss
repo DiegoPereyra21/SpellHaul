@@ -267,3 +267,7 @@
 .options-close {
     margin-top: 16px;
 }
+
+.lobby-panel.options-panel {
+    width: 600px;
+}

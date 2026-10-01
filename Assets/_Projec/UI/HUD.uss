@@ -318,7 +318,7 @@
 }
 
 .pause-panel {
-    width: 540px;
+    width: 600px;
     padding: 30px 36px;
     background-color: rgba(14, 14, 24, 0.97);
     border-width: 1px;

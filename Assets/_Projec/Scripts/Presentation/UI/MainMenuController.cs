@@ -42,8 +42,8 @@ namespace Game.Presentation.UI
         private VisualElement _noticePanel;
         private Label _noticeMessage;
         private VisualElement _optionsPanel;
+        private VisualElement _optionsSettings;
         private Button _optionsButton;
-        private float _lastVolumePreview;
 
         // El menú se dibuja encima del Stash (para que el banner y los avisos se vean con el Stash
         // abierto); mientras el Stash está abierto el menú queda en "modo overlay" (ver USS).
@@ -95,15 +95,7 @@ namespace Game.Presentation.UI
             if (_optionsButton != null) _optionsButton.clicked += ShowOptions;
             var optionsClose = root.Q<Button>("options-close");
             if (optionsClose != null) optionsClose.clicked += HideOptions;
-            BindVolumeSlider(root.Q<Slider>("volume-master"), () => Game.Presentation.Audio.AudioVolumes.Master, v => Game.Presentation.Audio.AudioVolumes.Master = v);
-            BindVolumeSlider(root.Q<Slider>("volume-effects"), () => Game.Presentation.Audio.AudioVolumes.Effects, v => Game.Presentation.Audio.AudioVolumes.Effects = v);
-            BindVolumeSlider(root.Q<Slider>("volume-interface"), () => Game.Presentation.Audio.AudioVolumes.Interface, v => Game.Presentation.Audio.AudioVolumes.Interface = v);
-            var sensitivity = root.Q<Slider>("mouse-sensitivity");
-            if (sensitivity != null)
-            {
-                sensitivity.SetValueWithoutNotify(Game.Presentation.Player.LookSettings.Sensitivity);
-                sensitivity.RegisterValueChangedCallback(evt => Game.Presentation.Player.LookSettings.Sensitivity = evt.newValue);
-            }
+            _optionsSettings = root.Q<VisualElement>("options-settings");
 
             _document.sortingOrder = SortingOrderAboveStash;
             Game.Presentation.Audio.GameAudio.AttachButtonSounds(root);
@@ -460,31 +452,19 @@ namespace Game.Presentation.UI
 
         private void ShowOptions()
         {
+            // Se arma al abrir: así refleja la resolución / modo de ventana actuales.
+            Game.Presentation.Settings.SettingsPanel.Build(_optionsSettings);
             if (_optionsPanel != null) _optionsPanel.style.display = DisplayStyle.Flex;
             RefreshMenuState();
         }
 
         private void HideOptions()
         {
-            Game.Presentation.Audio.AudioVolumes.Save();
+            Game.Presentation.Settings.SettingsPanel.Save();
             if (_optionsPanel != null) _optionsPanel.style.display = DisplayStyle.None;
             RefreshMenuState();
         }
 
-        /// <summary>Slider de volumen: arranca con el valor guardado y lo aplica al moverlo (con un
-        /// sonido de prueba, espaciado para no saturar mientras se arrastra).</summary>
-        private void BindVolumeSlider(Slider slider, System.Func<float> get, System.Action<float> set)
-        {
-            if (slider == null) return;
-            slider.SetValueWithoutNotify(get());
-            slider.RegisterValueChangedCallback(evt =>
-            {
-                set(evt.newValue);
-                if (Time.unscaledTime - _lastVolumePreview < 0.15f) return;
-                _lastVolumePreview = Time.unscaledTime;
-                Game.Presentation.Audio.GameAudio.Ui(l => l.UiClick);
-            });
-        }
 
         private void HideNotice()
         {
