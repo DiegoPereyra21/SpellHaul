@@ -87,3 +87,39 @@
 .settings-scroll .unity-scroll-view__content-container {
     padding-right: 12px;
 }
+
+/* ---------- Pestañas (mismo estilo que Stash / Crafting / Trader) ---------- */
+.settings-tabs {
+    flex-direction: row;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(181, 139, 249, 0.2);
+}
+
+.settings-tab {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    font-size: 15px;
+    padding: 6px 16px;
+    margin: 0 6px 0 0;
+    color: rgb(160, 162, 176);
+    background-color: rgba(25, 26, 36, 0.6);
+    border-width: 1px;
+    border-color: rgba(95, 98, 117, 0.4);
+    border-radius: 6px;
+}
+
+.settings-tab:hover {
+    border-color: rgba(181, 139, 249, 0.6);
+}
+
+.settings-tab.settings-tab--active {
+    color: rgb(237, 238, 245);
+    border-color: rgb(181, 139, 249);
+    background-color: rgba(181, 139, 249, 0.18);
+}
+
+/* Alto fijo: cambiar de pestaña no hace saltar el tamaño del panel. */
+.settings-pages {
+    min-height: 300px;
+}

@@ -7,17 +7,56 @@ using UnityEngine.UIElements;
 namespace Game.Presentation.Settings
 {
     /// <summary>
-    /// Arma el contenido de opciones (Audio, Controls, Display) dentro de un contenedor de UI. Lo
-    /// usan el menú principal y el menú de pausa, así que las dos pantallas muestran exactamente lo
-    /// mismo. Los estilos están en UI/Settings.uss (cada documento lo incluye).
+    /// Arma el contenido de opciones dentro de un contenedor de UI, en pestañas (Audio, Controls,
+    /// Display, HUD) como las del Stash. Lo usan el menú principal y el menú de pausa, así que las dos
+    /// pantallas muestran exactamente lo mismo. Los estilos están en UI/Settings.uss (cada documento
+    /// lo incluye). Recuerda la última pestaña abierta mientras dure la sesión.
     /// </summary>
     public static class SettingsPanel
     {
-        public static void Build(VisualElement container)
+        private static string _lastTab = "Audio";
+
+        public static void Build(VisualElement root)
         {
-            if (container == null) return;
-            container.Clear();
-            container.AddToClassList("settings");
+            if (root == null) return;
+            root.Clear();
+            root.AddToClassList("settings");
+
+            var tabBar = new VisualElement();
+            tabBar.AddToClassList("settings-tabs");
+            root.Add(tabBar);
+            var pages = new VisualElement();
+            pages.AddToClassList("settings-pages");
+            root.Add(pages);
+
+            var tabButtons = new Dictionary<string, Button>();
+            var pageByName = new Dictionary<string, VisualElement>();
+            VisualElement container = null;
+
+            void Select(string name)
+            {
+                _lastTab = name;
+                foreach (var kv in pageByName)
+                    kv.Value.style.display = kv.Key == name ? DisplayStyle.Flex : DisplayStyle.None;
+                foreach (var kv in tabButtons)
+                    kv.Value.EnableInClassList("settings-tab--active", kv.Key == name);
+            }
+
+            // Cada sección es una pestaña: lo que se agrega después va a su página.
+            void Section(VisualElement _, string title)
+            {
+                var page = new VisualElement();
+                page.AddToClassList("settings-page");
+                pages.Add(page);
+                pageByName[title] = page;
+                container = page;
+
+                var tab = new Button { text = title };
+                tab.AddToClassList("settings-tab");
+                tab.clicked += () => { GameAudio.Ui(l => l.UiClick); Select(title); };
+                tabBar.Add(tab);
+                tabButtons[title] = tab;
+            }
 
             float lastPreview = -10f;
             void PreviewSound()
@@ -91,6 +130,8 @@ namespace Game.Presentation.Settings
                 HudSettings.CrosshairSize, v => HudSettings.CrosshairSize = v, v => $"{Mathf.RoundToInt(v * 100f)}%");
             ToggleRow(container, "Damage Numbers", HudSettings.ShowDamageNumbers, v => HudSettings.ShowDamageNumbers = v);
             ToggleRow(container, "Show FPS and Ping", HudSettings.ShowNetStats, v => HudSettings.ShowNetStats = v);
+
+            Select(pageByName.ContainsKey(_lastTab) ? _lastTab : "Audio");
         }
 
         /// <summary>Guarda en disco lo cambiado (llamar al cerrar el panel).</summary>
@@ -101,13 +142,6 @@ namespace Game.Presentation.Settings
         }
 
         private static string Percent(float v) => $"{Mathf.RoundToInt(v * 100f)}%";
-
-        private static void Section(VisualElement container, string title)
-        {
-            var label = new Label(title.ToUpperInvariant());
-            label.AddToClassList("settings-section");
-            container.Add(label);
-        }
 
         private static VisualElement Row(VisualElement container, string label)
         {
