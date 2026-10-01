@@ -55,11 +55,14 @@
         </ui:VisualElement>
         <ui:Label name="interact-prompt" text="" class="interact-prompt" />
         <ui:VisualElement name="crosshair-container" class="crosshair-container">
-            <ui:VisualElement name="dash-ring" class="dash-ring" />
+            <ui:VisualElement name="cooldown-ring" class="cooldown-ring" />
             <ui:VisualElement name="crosshair" class="crosshair" />
             <ui:VisualElement name="hitmarker" class="hitmarker" />
         </ui:VisualElement>
 
+        <ui:VisualElement name="dash-bar" class="dash-bar" picking-mode="Ignore">
+            <ui:VisualElement name="dash-bar-fill" class="dash-bar-fill" />
+        </ui:VisualElement>
         <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" />
 
         <!-- Menú de pausa (Esc). La partida sigue: es solo un menú, no detiene el juego. -->

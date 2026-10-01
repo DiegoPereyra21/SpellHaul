@@ -1,6 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <Style src="InventoryScreen.uss" />
     <Style src="Gloves.uss" />
+    <Style src="ItemCommon.uss" />
     <ui:VisualElement name="inv-root" class="inv-root">
 
         <ui:VisualElement name="inv-panel" class="inv-panel">

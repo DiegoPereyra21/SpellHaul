@@ -23,7 +23,7 @@ namespace Game.Presentation.UI
             if (def is GloveItemSO glove)
             {
                 BuildGlove(glove, stats);
-                return ($"{glove.School} Glove", stats);
+                return ($"{glove.Rarity} {glove.School} Glove", stats);
             }
 
             string type = def is EquipmentItemSO eq ? SlotDisplayName(eq.Slot) : def.Category.ToString();
@@ -37,7 +37,20 @@ namespace Game.Presentation.UI
                     stats.Add(FormatModifier(mod));
             }
 
-            return (type, stats);
+            return ($"{def.Rarity} {type}", stats);
+        }
+
+        /// <summary>
+        /// Etiqueta de rareza ("COMMON" / "RARE" / "EPIC") para las filas del equipo: se ve de un
+        /// vistazo qué rareza tiene cada pieza puesta. Estilo en ItemCommon.uss.
+        /// </summary>
+        public static UnityEngine.UIElements.Label CreateRarityTag(ItemSO def)
+        {
+            var tag = new UnityEngine.UIElements.Label(def != null ? def.Rarity.ToString().ToUpperInvariant() : "");
+            tag.AddToClassList("rarity-tag");
+            tag.AddToClassList("rarity-tag--" + (def != null ? def.Rarity.ToString().ToLowerInvariant() : "common"));
+            tag.pickingMode = UnityEngine.UIElements.PickingMode.Ignore;
+            return tag;
         }
 
         private static readonly List<string> _effectLines = new List<string>();

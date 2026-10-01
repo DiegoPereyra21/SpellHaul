@@ -287,10 +287,34 @@
     align-items: center;
 }
 
-.dash-ring {
+.cooldown-ring {
     position: absolute;
     width: 40px;
     height: 40px;
+}
+
+/* Barrita del dash, debajo de la mira. */
+.dash-bar {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 26px;
+    height: 3px;
+    margin-left: -13px;
+    margin-top: 27px;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.dash-bar-fill {
+    height: 100%;
+    width: 100%;
+    background-color: rgba(103, 230, 255, 0.5);
+}
+
+.dash-bar-fill--ready {
+    background-color: rgba(103, 230, 255, 0.95);
 }
 
 .hitmarker {

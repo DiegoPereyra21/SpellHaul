@@ -54,8 +54,16 @@ namespace Game.Presentation.UI
         private int _lastAlive = -1, _lastExtracted = -1, _lastDead = -1;
         private readonly int[] _lastCooldownKey = { int.MinValue, int.MinValue, int.MinValue }; // por AbilitySlots. MinValue = sin dibujar aún, -1 = oculto
 
-        private VisualElement _dashRing;
-        private float _dashRingProgress; // 0 = vacío (en cooldown), 1 = lleno (listo)
+        // Aro alrededor de la mira: mitad izquierda = clic principal, mitad derecha = guante.
+        private VisualElement _cooldownRing;
+        private float _primaryRingProgress = 1f; // 0 = recién usado, 1 = listo
+        private float _gloveRingProgress = 1f;
+        private bool _gloveRingHasAbility;
+        private Color _gloveRingColor = Color.white;
+
+        // Barrita del dash debajo de la mira.
+        private VisualElement _dashBarFill;
+        private float _dashBarProgress = -1f;
 
         [Header("Hitmarker")]
         [SerializeField] private AudioSource _hitMarkerAudio;
@@ -145,9 +153,10 @@ namespace Game.Presentation.UI
             _runDanger = root.Q<Label>("run-danger");
             _runCounter = root.Q<Label>("run-counter");
             _interactPrompt = root.Q<Label>("interact-prompt");
-            _dashRing = root.Q<VisualElement>("dash-ring");
-                        if (_dashRing != null)
-                            _dashRing.generateVisualContent += DrawDashRing;
+            _cooldownRing = root.Q<VisualElement>("cooldown-ring");
+            _dashBarFill = root.Q<VisualElement>("dash-bar-fill");
+                        if (_cooldownRing != null)
+                            _cooldownRing.generateVisualContent += DrawCooldownRing;
 
             _hitMarker = root.Q<VisualElement>("hitmarker");
             _statModifiers = root.Q<VisualElement>("stat-modifiers");
@@ -365,13 +374,32 @@ namespace Game.Presentation.UI
                 }
             }
 
-            if (_dashRing != null && _abilities != null)
+            if (_cooldownRing != null && _abilities != null)
             {
-                float newProgress = 1f - _abilities.GetCooldownProgress(Game.Core.Abilities.AbilitySlots.Mobility);
-                if (!Mathf.Approximately(newProgress, _dashRingProgress))
+                float primary = 1f - _abilities.GetCooldownProgress(Game.Core.Abilities.AbilitySlots.Primary);
+                var glove = _abilities.CurrentGlove;
+                bool hasGlove = glove != null && glove.Ability != null;
+                float gloveProgress = hasGlove ? 1f - _abilities.GetCooldownProgress(Game.Core.Abilities.AbilitySlots.Glove) : 0f;
+                Color gloveColor = hasGlove ? SchoolColor(glove.School) : Color.white;
+                if (!Mathf.Approximately(primary, _primaryRingProgress) || !Mathf.Approximately(gloveProgress, _gloveRingProgress)
+                    || hasGlove != _gloveRingHasAbility || gloveColor != _gloveRingColor)
                 {
-                    _dashRingProgress = newProgress;
-                    _dashRing.MarkDirtyRepaint(); // redibujar el aro
+                    _primaryRingProgress = primary;
+                    _gloveRingProgress = gloveProgress;
+                    _gloveRingHasAbility = hasGlove;
+                    _gloveRingColor = gloveColor;
+                    _cooldownRing.MarkDirtyRepaint(); // redibujar el aro
+                }
+            }
+
+            if (_dashBarFill != null && _abilities != null)
+            {
+                float dash = 1f - _abilities.GetCooldownProgress(Game.Core.Abilities.AbilitySlots.Mobility);
+                if (!Mathf.Approximately(dash, _dashBarProgress))
+                {
+                    _dashBarProgress = dash;
+                    _dashBarFill.style.width = Length.Percent(dash * 100f);
+                    _dashBarFill.EnableInClassList("dash-bar-fill--ready", dash >= 1f);
                 }
             }
 
@@ -390,33 +418,56 @@ namespace Game.Presentation.UI
                 _damageIndicator.MarkDirtyRepaint();
         }
 
-        private void DrawDashRing(MeshGenerationContext ctx)
+        private static readonly Color PrimaryRingColor = new Color(0.71f, 0.55f, 0.98f); // violeta del slot LMB
+
+        /// <summary>Color de la escuela del guante (mismo que HUD.uss / Gloves.uss).</summary>
+        private static Color SchoolColor(Game.Core.Items.GloveSchool school) => school switch
+        {
+            Game.Core.Items.GloveSchool.Destruction => new Color(0.91f, 0.44f, 0.30f),
+            Game.Core.Items.GloveSchool.Restoration => new Color(0.40f, 0.82f, 0.51f),
+            Game.Core.Items.GloveSchool.Illusion => new Color(0.77f, 0.66f, 1f),
+            _ => Color.white
+        };
+
+        /// <summary>
+        /// Aro de cooldowns alrededor de la mira. Mitad izquierda = clic principal, mitad derecha =
+        /// habilidad del guante (vacía sin guante). Cada mitad se llena de abajo hacia arriba.
+        /// </summary>
+        private void DrawCooldownRing(MeshGenerationContext ctx)
         {
             var painter = ctx.painter2D;
-            float size = _dashRing.resolvedStyle.width;
+            float size = _cooldownRing.resolvedStyle.width;
             if (size <= 0f) return;
 
             Vector2 center = new Vector2(size / 2f, size / 2f);
             float radius = size / 2f - 3f;
+            const float gap = 7f; // grados libres arriba y abajo entre las dos mitades
+            const float span = 180f - 2f * gap;
 
-            // Fondo del aro (tenue).
-            painter.strokeColor = new Color(1f, 1f, 1f, 0.15f);
+            // En UI Toolkit 0° = derecha y los ángulos crecen en sentido horario (90° = abajo).
+            // Izquierda: de abajo (90°+gap) hacia arriba pasando por 180°.
+            DrawHalf(painter, center, radius, 90f + gap, span, _primaryRingProgress, PrimaryRingColor, true, true);
+            // Derecha: de abajo (90°-gap) hacia arriba pasando por 0°.
+            DrawHalf(painter, center, radius, 90f - gap, -span, _gloveRingProgress, _gloveRingColor, _gloveRingHasAbility, false);
+        }
+
+        private static void DrawHalf(Painter2D painter, Vector2 center, float radius, float start, float sweep,
+            float progress, Color color, bool active, bool clockwise)
+        {
+            ArcDirection dir = clockwise ? ArcDirection.Clockwise : ArcDirection.CounterClockwise;
+
+            painter.strokeColor = new Color(1f, 1f, 1f, active ? 0.15f : 0.06f); // fondo tenue
             painter.lineWidth = 3f;
             painter.BeginPath();
-            painter.Arc(center, radius, 0f, 360f);
+            painter.Arc(center, radius, start, start + sweep, dir);
             painter.Stroke();
 
-            // Progreso: se llena de vacío a completo. Empieza arriba (-90°) en sentido horario.
-            if (_dashRingProgress > 0f)
-            {
-                painter.strokeColor = _dashRingProgress >= 1f
-                    ? new Color(0.4f, 0.9f, 1f, 0.95f)   // listo: cian brillante
-                    : new Color(0.4f, 0.9f, 1f, 0.5f);   // cargando: cian tenue
-                painter.lineWidth = 3f;
-                painter.BeginPath();
-                painter.Arc(center, radius, -90f, -90f + 360f * _dashRingProgress);
-                painter.Stroke();
-            }
+            if (!active || progress <= 0f) return;
+            color.a = progress >= 1f ? 0.95f : 0.5f; // listo: brillante; cargando: tenue
+            painter.strokeColor = color;
+            painter.BeginPath();
+            painter.Arc(center, radius, start, start + sweep * Mathf.Clamp01(progress), dir);
+            painter.Stroke();
         }
 
         /// <summary>Llamado (owner-only) cuando el servidor confirma que un ataque propio conectó.</summary>

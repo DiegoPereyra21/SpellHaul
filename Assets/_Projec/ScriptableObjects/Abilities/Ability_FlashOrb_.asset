@@ -19,8 +19,8 @@ MonoBehaviour:
   _resourceCost: 30
   _windupDuration: 0
   _muzzlePrefab: {fileID: 0}
-  _castClip: {fileID: 0}
-  _impactClip: {fileID: 0}
+  _castClip: {fileID: 8300000, guid: 11a43e81eda78a7428cbb1154c9c9d85, type: 3}
+  _impactClip: {fileID: 8300000, guid: 36cd5c61bbb7e564a90d68c6effb42c4, type: 3}
   _surfaceImpactClip: {fileID: 0}
   _projectilePrefab: {fileID: 3210444030165870087, guid: 161748ff2f4ba21438f6d44dd322223c, type: 3}
   _speed: 12

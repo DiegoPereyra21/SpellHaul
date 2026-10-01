@@ -310,6 +310,7 @@ namespace Game.Presentation.UI
                     name.AddToClassList(ItemTooltipFormatter.RarityClass(def));
                     itemWrap.Add(name);
                     GloveVisuals.ApplyToEquipRow(slot, itemWrap, dot, name, def);
+                    itemWrap.Add(ItemTooltipFormatter.CreateRarityTag(def));
 
                     slot.Add(itemWrap);
 

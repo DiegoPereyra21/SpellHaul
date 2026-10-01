@@ -20,10 +20,20 @@ namespace Game.Presentation.Abilities
     {
         [Tooltip("Radio del sweep de colisión en vuelo.")]
         [SerializeField] private float _castRadius = 0.25f;
-        [Tooltip("Contra qué choca en vuelo. Vacío = Hitbox + Ground.")]
+        [Tooltip("Capas extra contra las que choca en vuelo. Hitbox y Ground se agregan siempre (sin Hitbox atravesaba a los enemigos).")]
         [SerializeField] private LayerMask _hitMask;
         [Tooltip("Qué tapa la vista del destello. Vacío = Ground.")]
         [SerializeField] private LayerMask _occluderMask;
+
+        [Header("Visual")]
+        [Tooltip("Hijo con las partículas del orbe. Vacío = el primer hijo con ParticleSystem.")]
+        [SerializeField] private Transform _visual;
+        [Tooltip("Escala del orbe en vuelo (chico a propósito: el destello es lo que impacta).")]
+        [SerializeField] private float _flightScale = 0.35f;
+        [Tooltip("Cuánto crece el destello al detonar, como fracción del radio de efecto.")]
+        [SerializeField] private float _burstSizeOfRadius = 0.45f;
+        [Tooltip("Color de la luz del destello.")]
+        [SerializeField] private Color _burstLightColor = new Color(0.92f, 0.88f, 1f);
 
         private Vector3 _velocity;
         private float _lifetime;
@@ -43,12 +53,35 @@ namespace Game.Presentation.Abilities
 
         private void Awake()
         {
-            if (_hitMask.value == 0) _hitMask = LayerMask.GetMask("Hitbox", "Ground");
+            _hitMask |= LayerMask.GetMask("Hitbox", "Ground");
             if (_occluderMask.value == 0) _occluderMask = LayerMask.GetMask("Ground");
 
             // Colisión resuelta a mano: un collider sólido haría que la gente choque con el orbe.
             foreach (var col in GetComponentsInChildren<Collider>(true))
                 col.enabled = false;
+
+            ApplyFlightScale();
+        }
+
+        /// <summary>Achica el orbe en vuelo (todas las instancias, sin sincronizar: es fijo).</summary>
+        private void ApplyFlightScale()
+        {
+            if (_visual == null)
+            {
+                foreach (Transform child in transform)
+                    if (child.GetComponentInChildren<ParticleSystem>(true) != null) { _visual = child; break; }
+            }
+            if (_visual == null) return;
+
+            // Las partículas solo respetan la escala del transform en modo Hierarchy.
+            foreach (var ps in _visual.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var main = ps.main;
+                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            }
+            foreach (var trail in _visual.GetComponentsInChildren<TrailRenderer>(true))
+                trail.widthMultiplier *= _flightScale;
+            _visual.localScale = Vector3.one * _flightScale;
         }
 
         [Server]
@@ -161,6 +194,7 @@ namespace Game.Presentation.Abilities
         private void FlashObserversRpc(Vector3 point, float radius, float maxBlindSeconds)
         {
             VFXManager.PlayOrbExplosion(point);
+            FlashBurst.Play(point, radius * _burstSizeOfRadius, radius, _visual, _flightScale, _burstLightColor);
             FlashOverlay.Trigger(point, radius, maxBlindSeconds);
         }
     }

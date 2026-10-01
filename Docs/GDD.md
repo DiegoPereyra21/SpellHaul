@@ -391,7 +391,10 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 | Flare Gloves | `flare_gloves_<rareza>` | Illusion | Orbe de destello (`id_flashorb`) | ×1.0 / ×1.2 / ×1.4 (duración del cegado) | ×1.0 / ×0.9 / ×0.8 |
 
 **Orbe de destello** (`FlashOrbAbilitySO` + `FlashProjectile`)
-- **Vuelo:** proyectil lento en línea recta (12 m/s, 3 s de vida, cooldown base 14 s).
+- **Vuelo:** proyectil lento en línea recta (12 m/s, 3 s de vida, cooldown base 14 s). En vuelo es chico (`_flightScale` 0.35).
+- **Choque:** `FlashProjectile` siempre agrega Hitbox y Ground a `_hitMask`. Antes, el prefab tenía Ground+Player y atravesaba a los enemigos.
+- **Visual de la detonación** (`FlashBurst`, del lado del cliente): una copia del orbe crece rápido hasta aproximadamente el 45% del radio y una luz puntual se enciende y se apaga.
+- **Sonidos:** `maximize_003` al lanzar y `glass_004` al detonar (Kenney).
 - **Detonación:** detona en cuatro casos:
   - al chocar con Hitbox o Ground (menos el caster);
   - al terminar su vida;
@@ -482,6 +485,7 @@ Todo con UI Toolkit. El orden entre paneles se maneja con `sortingOrder` de cada
   - Durante la búsqueda se muestra un banner con temporizador y botón para cancelar. Se puede abrir el stash mientras busca: el menú pasa a modo overlay (`sortingOrder` 10) por encima del stash.
 - **`StashScreenController`.** Ver §7. Expone los eventos `Shown` y `Hidden`.
 
+- **Rareza del equipo puesto:** en el stash y en el inventario de la run, cada fila del loadout muestra una etiqueta COMMON/RARE/EPIC y el nombre en el color de la rareza (`ItemCommon.uss`). El tipo del tooltip incluye la rareza ("Rare Hat").
 - **Tooltips** (stash e inventario): `TooltipPlacement` los ubica arriba del slot. Si no entran, abajo, y si tampoco, al costado. Siempre quedan dentro del panel.
 
 ### En partida
@@ -494,6 +498,8 @@ Todo con UI Toolkit. El orden entre paneles se maneja con `sortingOrder` de cada
 - **`HUDController`.** Muestra:
   - vida y maná;
   - cooldowns de los 3 slots, con el del guante mostrando el nombre de la habilidad o "No Glove";
+  - aro alrededor de la mira: la mitad izquierda es el cooldown del clic principal (violeta) y la derecha el del guante (color de la escuela; vacía sin guante). Cada mitad se llena de abajo hacia arriba;
+  - barrita del dash debajo de la mira;
   - aro de cooldown del dash;
   - hitmarker y kill marker;
   - aviso de daño direccional;

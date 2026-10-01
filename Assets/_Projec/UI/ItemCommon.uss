@@ -1,0 +1,30 @@
+/* Estilos de item compartidos entre stash (menú) e inventario de la run. */
+
+/* Etiqueta de rareza en las filas del equipo puesto (ItemTooltipFormatter.CreateRarityTag). */
+.rarity-tag {
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    padding: 1px 6px;
+    margin-left: 8px;
+    border-radius: 4px;
+    border-width: 1px;
+}
+
+.rarity-tag--common {
+    color: rgb(200, 201, 210);
+    border-color: rgba(200, 201, 210, 0.35);
+    background-color: rgba(200, 201, 210, 0.08);
+}
+
+.rarity-tag--rare {
+    color: rgb(110, 190, 255);
+    border-color: rgba(90, 180, 255, 0.6);
+    background-color: rgba(90, 180, 255, 0.15);
+}
+
+.rarity-tag--epic {
+    color: rgb(220, 140, 250);
+    border-color: rgba(210, 110, 245, 0.6);
+    background-color: rgba(210, 110, 245, 0.15);
+}

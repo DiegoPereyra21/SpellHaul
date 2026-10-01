@@ -255,8 +255,10 @@ namespace Game.Presentation.UI
 
                     var name = new Label(def != null ? def.DisplayName : stack.ItemId);
                     name.AddToClassList("equip-item-name");
+                    name.AddToClassList(ItemTooltipFormatter.RarityClass(def));
                     itemWrap.Add(name);
                     GloveVisuals.ApplyToEquipRow(row, itemWrap, dot, name, def);
+                    itemWrap.Add(ItemTooltipFormatter.CreateRarityTag(def));
 
                     row.Add(itemWrap);
 
