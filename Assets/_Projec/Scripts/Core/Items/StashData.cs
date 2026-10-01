@@ -9,7 +9,7 @@ namespace Game.Core.Items
     [System.Serializable]
     public class StashData
     {
-        public const int SlotCount = 30;
+        public const int SlotCount = 42; // antes 30: los stashes guardados se completan al leer (EnsureSlots)
 
         public List<ItemStack> Slots = new List<ItemStack>();
 
@@ -50,6 +50,13 @@ namespace Game.Core.Items
             }
 
             return remaining;
+        }
+
+        /// <summary>Completa con slots vacíos un stash guardado con menos slots (ej. cuando eran 30).</summary>
+        public void EnsureSlots()
+        {
+            Slots ??= new List<ItemStack>();
+            while (Slots.Count < SlotCount) Slots.Add(ItemStack.Empty);
         }
 
         public ItemStack TakeAt(int index)

@@ -27,7 +27,7 @@ var STARTER_KIT_KEY = "StarterKit";
 var WALLET_KEY = "Wallet";
 var ECONOMY_KEY = "Economy";
 
-var STASH_SLOTS = 30;           // StashData.SlotCount
+var STASH_SLOTS = 42;           // StashData.SlotCount (antes 30: los stashes viejos se completan)
 var MAX_EQUIPMENT_SLOTS = 32;   // holgado: EquipmentSlot puede crecer al final
 var MAX_POCKET_ENTRIES = 12;    // RunInventory.MaxSnapshotPocketEntries
 var MAX_USABLE_SLOTS = 3;       // ConsumableItemSO.UsableSlotCount (teclas 1-2-3)

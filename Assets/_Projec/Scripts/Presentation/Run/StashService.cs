@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Game.Presentation.Run
 {
     /// <summary>
-    /// Persiste el stash del jugador (30 slots) entre sesiones. Stash es una cache en memoria de
+    /// Persiste el stash del jugador (StashData.SlotCount slots) entre sesiones. Stash es una cache en memoria de
     /// lectura instantánea. La lectura va por IStashStorage (local hasta que PlayFabSession activa
     /// el de PlayFab); la escritura la hace ProfileSaveQueue, junto con el loadout.
     /// </summary>
@@ -69,6 +69,7 @@ namespace Game.Presentation.Run
             if (_initialized) return true;
 
             _stash = loaded ?? new StashData();
+            _stash.EnsureSlots();
             _initialized = true;
             return true;
         }
@@ -80,6 +81,7 @@ namespace Game.Presentation.Run
             {
                 var loaded = await Storage.LoadAsync();
                 _stash = loaded ?? _stash ?? new StashData();
+                _stash.EnsureSlots();
                 _initialized = true;
                 return true;
             }

@@ -279,11 +279,11 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 ### CloudScript (`PlayFab/cloudscript.js`, Legacy)
 - **Subida.** Se sube a mano en Game Manager → Automation → CloudScript → Revisions (Legacy) y se despliega la revisión. No usar el add-on de GitHub.
 - **Respuesta.** Todas las funciones devuelven un string JSON `{"ok":bool,"reason":"..."}`.
-- **`EnsureProfile`.** Si no hay loadout, escribe el Title Data `StarterKit` con la marca inactiva, más un stash vacío de 30 slots.
+- **`EnsureProfile`.** Si no hay loadout, escribe el Title Data `StarterKit` con la marca inactiva, más un stash vacío de 42 slots.
 - **`CommitProfile`.** Rechaza en estos casos:
   - `no_profile`, si no hay perfil;
   - `in_run`, si hay una marca activa;
-  - `invalid_structure`, si la estructura es inválida (límites: Equipment ≤ 32, pockets ≤ 12, Usables ≤ 3, stash = 30, cantidad 1..9999, durabilidad 0..1);
+  - `invalid_structure`, si la estructura es inválida (límites: Equipment ≤ 32, pockets ≤ 12, Usables ≤ 3, stash ≤ 42, cantidad 1..9999, durabilidad 0..1);
   - `new_item:`, `more_items:` o `durability_up:`, si la **conservación** falla. Por cada ItemId, la cantidad total y la suma de durabilidad no pueden subir.
 
   Además fuerza `ActiveRun` inactivo: el cliente no puede marcar ni desmarcar runs.
@@ -357,7 +357,7 @@ Apilan hasta 5. Aparecen en el loot con chances propias por rareza (perfil `Poti
 - **Pendiente:** piedra de escape (un objeto que se lanza y te teletransporta donde cae). Requiere `ServerTeleport` en `PlayerMovementController` y una receta cara de crafting.
 
 ### Stash
-- `StashData` tiene 30 slots fijos y la gestiona `StashService`.
+- `StashData` tiene 42 slots fijos (eran 30; los stashes guardados con menos se completan al leer con `EnsureSlots`) y la gestiona `StashService`. Se muestran 7×6.
 - **Pantalla** (`StashScreenController`): Loadout, Pocket L y Pocket R (12 celdas cada uno; las que superan la capacidad quedan bloqueadas) y la grilla del Stash.
 - **Interacciones** (igual que en la run):
   - clic para mover;

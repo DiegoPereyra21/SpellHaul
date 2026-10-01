@@ -617,7 +617,13 @@
 }
 
 .equip-slot {
-    padding: 9px 6px;
+    padding: 13px 8px;
+    margin-bottom: 4px;
+}
+
+.equip-slot.equip-slot-bag {
+    padding: 10px 8px;
+    margin-top: 6px;
 }
 
 .equip-slot-label {
@@ -654,7 +660,7 @@
 }
 
 .stash-grid-big {
-    width: 552px;   /* 6 por fila, 5 filas */
+    width: 644px;   /* 7 por fila, 6 filas (42) */
 }
 
 .stash-view {
@@ -662,7 +668,7 @@
 }
 
 .stash-header-row {
-    width: 552px;
+    width: 644px;
     margin-right: 0;
     align-items: center;
     margin-bottom: 4px;
@@ -691,8 +697,23 @@
     font-size: 17px;
 }
 
+.recipe-info {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: 16px;
+}
+
 .recipe-input {
-    font-size: 14px;
+    font-size: 16px;
+    margin-right: 14px;
+}
+
+/* El botón no se achica aunque la receta tenga muchos ingredientes. */
+.economy-btn {
+    flex-shrink: 0;
+    min-width: 120px;
+    font-size: 15px;
+    padding: 8px 18px;
 }
 
 .item-slot.trade-slot {
