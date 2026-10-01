@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb16d1eb00dda8f4dbe8730e6ec8997c, type: 3}
+  m_Name: Ability_EarthWall_
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Abilities.Abilities.EarthWallAbilitySO
+  _abilityId: id_earthwall
+  _displayName: Earth Wall
+  _icon: {fileID: 0}
+  _cooldown: 12
+  _resourceCost: 35
+  _windupDuration: 0
+  _muzzlePrefab: {fileID: 0}
+  _castClip: {fileID: 0}
+  _impactClip: {fileID: 0}
+  _surfaceImpactClip: {fileID: 0}
+  _wallPrefab: {fileID: 5903723072595320161, guid: 774f8545eaceac145812f22bbc6d6762, type: 3}
+  _health: 150
+  _duration: 6
+  _maxRange: 15
+  _fallbackDistance: 4
