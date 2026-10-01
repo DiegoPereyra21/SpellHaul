@@ -830,7 +830,7 @@ MonoBehaviour:
     Rotation: 2
     Scale: 2
   _changeFrameRate: 1
-  _frameRate: 60
+  _frameRate: 120
   _shareIds: 1
   _startOnHeadless: 0
 --- !u!114 &2001619999

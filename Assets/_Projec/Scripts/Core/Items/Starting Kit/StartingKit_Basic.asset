@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Core.Items.StartingKitSO
   _equipment:
   - Slot: 3
-    Item: {fileID: 11400000, guid: b4bb20f73a4b78b4782db1de1373fdc0, type: 2}
+    Item: {fileID: 11400000, guid: 15e2c52fd2f810640828b84f7b364f89, type: 2}
   - Slot: 2
     Item: {fileID: 11400000, guid: c585bf659424a8a4e8749b95e7753cbc, type: 2}
   - Slot: 5

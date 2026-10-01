@@ -163,26 +163,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""priority"": 0
                 },
                 {
-                    ""name"": ""CastSlot3"",
-                    ""type"": ""Button"",
-                    ""id"": ""89160e8f-c81b-4369-8351-ff7a661812fa"",
-                    ""expectedControlType"": """",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false,
-                    ""priority"": 0
-                },
-                {
-                    ""name"": ""CastSlot4"",
-                    ""type"": ""Button"",
-                    ""id"": ""edce1668-7617-467d-8bc4-e28e7c4fdb53"",
-                    ""expectedControlType"": """",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false,
-                    ""priority"": 0
-                },
-                {
                     ""name"": ""Interact"",
                     ""type"": ""Button"",
                     ""id"": ""40b2670c-255b-4315-826d-8a7031d91a6f"",
@@ -223,17 +203,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Interact"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""bcc52c31-d305-4cb7-9626-89c1ebbfe30e"",
-                    ""path"": ""<Keyboard>/f"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""CastSlot4"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -357,17 +326,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""action"": ""CastSlot2"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""c52dd921-994e-422a-aba1-98dbef40e107"",
-                    ""path"": ""<Keyboard>/q"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""CastSlot3"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -383,8 +341,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         m_Player_CastSlot0 = m_Player.FindAction("CastSlot0", throwIfNotFound: true);
         m_Player_CastSlot1 = m_Player.FindAction("CastSlot1", throwIfNotFound: true);
         m_Player_CastSlot2 = m_Player.FindAction("CastSlot2", throwIfNotFound: true);
-        m_Player_CastSlot3 = m_Player.FindAction("CastSlot3", throwIfNotFound: true);
-        m_Player_CastSlot4 = m_Player.FindAction("CastSlot4", throwIfNotFound: true);
         m_Player_Interact = m_Player.FindAction("Interact", throwIfNotFound: true);
         m_Player_ToggleInventory = m_Player.FindAction("ToggleInventory", throwIfNotFound: true);
     }
@@ -474,8 +430,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_CastSlot0;
     private readonly InputAction m_Player_CastSlot1;
     private readonly InputAction m_Player_CastSlot2;
-    private readonly InputAction m_Player_CastSlot3;
-    private readonly InputAction m_Player_CastSlot4;
     private readonly InputAction m_Player_Interact;
     private readonly InputAction m_Player_ToggleInventory;
     /// <summary>
@@ -517,14 +471,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/CastSlot2".
         /// </summary>
         public InputAction @CastSlot2 => m_Wrapper.m_Player_CastSlot2;
-        /// <summary>
-        /// Provides access to the underlying input action "Player/CastSlot3".
-        /// </summary>
-        public InputAction @CastSlot3 => m_Wrapper.m_Player_CastSlot3;
-        /// <summary>
-        /// Provides access to the underlying input action "Player/CastSlot4".
-        /// </summary>
-        public InputAction @CastSlot4 => m_Wrapper.m_Player_CastSlot4;
         /// <summary>
         /// Provides access to the underlying input action "Player/Interact".
         /// </summary>
@@ -580,12 +526,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @CastSlot2.started += instance.OnCastSlot2;
             @CastSlot2.performed += instance.OnCastSlot2;
             @CastSlot2.canceled += instance.OnCastSlot2;
-            @CastSlot3.started += instance.OnCastSlot3;
-            @CastSlot3.performed += instance.OnCastSlot3;
-            @CastSlot3.canceled += instance.OnCastSlot3;
-            @CastSlot4.started += instance.OnCastSlot4;
-            @CastSlot4.performed += instance.OnCastSlot4;
-            @CastSlot4.canceled += instance.OnCastSlot4;
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
@@ -624,12 +564,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @CastSlot2.started -= instance.OnCastSlot2;
             @CastSlot2.performed -= instance.OnCastSlot2;
             @CastSlot2.canceled -= instance.OnCastSlot2;
-            @CastSlot3.started -= instance.OnCastSlot3;
-            @CastSlot3.performed -= instance.OnCastSlot3;
-            @CastSlot3.canceled -= instance.OnCastSlot3;
-            @CastSlot4.started -= instance.OnCastSlot4;
-            @CastSlot4.performed -= instance.OnCastSlot4;
-            @CastSlot4.canceled -= instance.OnCastSlot4;
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
@@ -725,20 +659,6 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnCastSlot2(InputAction.CallbackContext context);
-        /// <summary>
-        /// Method invoked when associated input action "CastSlot3" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
-        /// </summary>
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnCastSlot3(InputAction.CallbackContext context);
-        /// <summary>
-        /// Method invoked when associated input action "CastSlot4" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
-        /// </summary>
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnCastSlot4(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "Interact" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

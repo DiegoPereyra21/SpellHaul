@@ -24,7 +24,6 @@ GameObject:
   - component: {fileID: 7481302007928117156}
   - component: {fileID: 8706064901918070629}
   - component: {fileID: 2259917246576972072}
-  - component: {fileID: 4993243696847190182}
   - component: {fileID: 1777269769133244397}
   - component: {fileID: 3572806112232256929}
   - component: {fileID: 6256248262321206928}
@@ -139,7 +138,7 @@ MonoBehaviour:
   - {fileID: 8706064901918070629}
   - {fileID: 2259917246576972072}
   - {fileID: 0}
-  - {fileID: 4993243696847190182}
+  - {fileID: 0}
   - {fileID: 3572806112232256929}
   - {fileID: 6256248262321206928}
   InitializedParentNetworkBehaviour: {fileID: 0}
@@ -271,12 +270,8 @@ MonoBehaviour:
   _componentIndexCache: 4
   _addedNetworkObject: {fileID: 4708353133064893462}
   _networkObjectCache: {fileID: 4708353133064893462}
-  _equippedAbilities:
-  - {fileID: 11400000, guid: b2a3ca598b396af488768a465a1c7883, type: 2}
-  - {fileID: 11400000, guid: 90f13828a9fb2dc4691fa7e86538a3ef, type: 2}
-  - {fileID: 11400000, guid: 4112d1e7b40003246bfe71587db94385, type: 2}
-  - {fileID: 11400000, guid: 667d44c822fe9ab4da9ac1f801c23b15, type: 2}
-  - {fileID: 11400000, guid: 2cad02fc93c9950468e00023f999f1b2, type: 2}
+  _primaryAbility: {fileID: 11400000, guid: b2a3ca598b396af488768a465a1c7883, type: 2}
+  _mobilityAbility: {fileID: 11400000, guid: 90f13828a9fb2dc4691fa7e86538a3ef, type: 2}
   _aimOrigin: {fileID: 6013468344885175688}
   _spellOrigin: {fileID: 4367747561309807429}
   _aimMask:
@@ -431,21 +426,6 @@ MonoBehaviour:
   _abilities: {fileID: 1907102855803517485}
   _interaction: {fileID: 8706064901918070629}
   _document: {fileID: 0}
---- !u!114 &4993243696847190182
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 708038747777476914}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6e64c2025b09bd74b891f1790e633760, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Abilities.ParryHandler
-  _componentIndexCache: 14
-  _addedNetworkObject: {fileID: 4708353133064893462}
-  _networkObjectCache: {fileID: 4708353133064893462}
 --- !u!114 &1777269769133244397
 MonoBehaviour:
   m_ObjectHideFlags: 0
