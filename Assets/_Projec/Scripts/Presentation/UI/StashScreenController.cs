@@ -31,6 +31,7 @@ namespace Game.Presentation.UI
         private VisualElement _pocketLGrid;
         private VisualElement _pocketRGrid;
         private VisualElement _usablesGrid;
+        private EconomyPanel _economy;
         private Label _pocketLLabel;
         private Label _pocketRLabel;
         private VisualElement _stashGrid;
@@ -113,12 +114,18 @@ namespace Game.Presentation.UI
 
             _root.RegisterCallback<PointerUpEvent>(_ => { if (_isDragging) CancelDrag(); });
 
+            // Pestañas Stash / Crafting / Trader (la grilla del stash vive en la primera).
+            _economy = new EconomyPanel(_root, _database, () => Stash, ShowTooltip, HideTooltip,
+                () => { if (IsVisible && Stash != null) Redraw(); });
+
             ProfileSaveQueue.OnProfileReloaded += HandleProfileReloaded;
         }
 
         private void OnDisable()
         {
             ProfileSaveQueue.OnProfileReloaded -= HandleProfileReloaded;
+            _economy?.Dispose();
+            _economy = null;
         }
 
         /// <summary>PlayFab rechazó un cambio y el perfil se volvió a leer: mostrar lo real.</summary>
@@ -155,6 +162,7 @@ namespace Game.Presentation.UI
 
             bool wasVisible = IsVisible;
             _root.style.display = DisplayStyle.Flex;
+            if (!wasVisible) _economy?.OnShown(); // pestaña Stash y oro actualizado
             Redraw();
             if (!wasVisible)
             {
@@ -207,6 +215,7 @@ namespace Game.Presentation.UI
             DrawPockets();
             DrawUsables();
             DrawStash();
+            _economy?.Redraw();
         }
 
         /// <summary>Slots de usables (teclas 1-2-3 en la run): solo consumibles. Clic los devuelve a

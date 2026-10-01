@@ -18,6 +18,10 @@ namespace Game.Presentation.Run
         public const string EnsureProfileFunction = "EnsureProfile";
         public const string CommitProfileFunction = "CommitProfile";
         public const string AbandonActiveRunFunction = "AbandonActiveRun";
+        public const string CraftFunction = "Craft";
+        public const string SellFunction = "Sell";
+        public const string BuyFunction = "Buy";
+        public const string WalletKey = "Wallet";
 
         [Serializable]
         private class CloudResult

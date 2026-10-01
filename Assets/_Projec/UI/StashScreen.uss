@@ -367,3 +367,122 @@
     color: rgb(97, 98, 111);
     font-size: 12px;
 }
+
+/* ---------- Pestañas Stash / Crafting / Trader (EconomyPanel) ---------- */
+.economy-column {
+    width: 560px;
+}
+
+.economy-tabs {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.economy-tab {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    font-size: 15px;
+    padding: 6px 16px;
+    margin: 0 6px 0 0;
+    color: rgb(160, 162, 176);
+    background-color: rgba(25, 26, 36, 0.6);
+    border-width: 1px;
+    border-color: rgba(95, 98, 117, 0.4);
+    border-radius: 6px;
+}
+
+.economy-tab:hover {
+    border-color: rgba(181, 139, 249, 0.6);
+}
+
+.economy-tab.tab-active {
+    color: rgb(237, 238, 245);
+    border-color: rgb(181, 139, 249);
+    background-color: rgba(181, 139, 249, 0.18);
+}
+
+.gold-label {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    margin-left: auto;
+    color: rgb(228, 183, 80);
+    font-size: 17px;
+}
+
+.economy-view {
+    display: none;
+    height: 600px;
+}
+
+.recipe-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 6px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(48, 49, 66, 0.4);
+}
+
+.recipe-info {
+    flex-shrink: 1;
+}
+
+.recipe-name {
+    -unity-font-definition: url("/Assets/_Projec/Fonts/Manrope-Bold.ttf");
+    font-size: 16px;
+}
+
+.recipe-inputs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.recipe-input {
+    font-size: 13px;
+    margin-right: 12px;
+}
+
+.recipe-input--ok      { color: rgb(150, 210, 160); }
+.recipe-input--missing { color: rgb(220, 110, 105); }
+
+.economy-btn {
+    min-width: 90px;
+}
+
+.sell-slot {
+    position: relative;
+}
+
+.sell-price {
+    position: absolute;
+    bottom: 2px;
+    left: 0;
+    right: 0;
+    -unity-text-align: middle-center;
+    color: rgb(228, 183, 80);
+    font-size: 12px;
+    -unity-font-style: bold;
+}
+
+.sell-slot--armed {
+    border-color: rgb(228, 183, 80);
+    border-width: 2px;
+}
+
+.economy-status {
+    margin-top: 8px;
+    min-height: 20px;
+    color: rgb(220, 110, 105);
+    font-size: 14px;
+}
+
+.economy-status.economy-status--ok {
+    color: rgb(200, 201, 212);
+}
+
+.economy-note {
+    color: rgb(130, 132, 146);
+    font-size: 14px;
+    -unity-font-style: italic;
+    margin: 12px 0;
+}

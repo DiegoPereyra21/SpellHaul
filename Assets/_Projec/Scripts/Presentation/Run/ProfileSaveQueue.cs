@@ -48,6 +48,10 @@ namespace Game.Presentation.Run
         /// <summary>True mientras quede algo sin confirmar por el backend.</summary>
         public static bool PendingSync => _pendingLoadoutJson != null || _pendingStashJson != null;
 
+        /// <summary>True si queda algo pendiente o hay una escritura en vuelo (EconomyService espera
+        /// esto antes de craftear/vender: CloudScript tiene que ver el stash ya guardado).</summary>
+        public static bool Busy => PendingSync || _running;
+
         public static void EnqueueLoadout(InventorySnapshot snapshot)
         {
             if (snapshot == null) return;

@@ -127,6 +127,12 @@ namespace Game.EditorTools.Items
 
             switch (item.Category)
             {
+                case ItemCategory.Material when item.Rarity != Rarity.Common:
+                    // Materiales elementales (crafteo de guantes y pociones): más raros y de a pocos.
+                    chance = p.Material * 0.35f;
+                    min = 1;
+                    max = Mathf.Clamp(2, 1, item.MaxStack);
+                    return chance > 0f;
                 case ItemCategory.Material:
                     chance = p.Material;
                     min = Mathf.Clamp(p.MaterialMin, 1, item.MaxStack);

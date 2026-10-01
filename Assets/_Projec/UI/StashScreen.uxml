@@ -28,16 +28,32 @@
                     <ui:VisualElement name="usables-grid" class="grid usables-grid" />
                 </ui:VisualElement>
 
-                <ui:VisualElement class="mgmt-column">
-                    <ui:VisualElement class="stash-header-row">
-                        <ui:Label name="stash-label" text="Stash" class="grid-header" />
-                        <ui:VisualElement class="sort-buttons">
-                            <ui:Label text="Sort" class="sort-caption" />
-                            <ui:Button name="sort-type" text="Type" class="sort-btn has-ui-sound" />
-                            <ui:Button name="sort-rarity" text="Rarity" class="sort-btn has-ui-sound" />
-                        </ui:VisualElement>
+                <ui:VisualElement class="mgmt-column economy-column">
+                    <ui:VisualElement class="economy-tabs">
+                        <ui:Button name="tab-stash" text="Stash" class="economy-tab has-ui-sound" />
+                        <ui:Button name="tab-crafting" text="Crafting" class="economy-tab has-ui-sound" />
+                        <ui:Button name="tab-trader" text="Trader" class="economy-tab has-ui-sound" />
+                        <ui:Label name="gold-label" text="— Gold" class="gold-label" />
                     </ui:VisualElement>
-                    <ui:VisualElement name="stash-grid" class="grid stash-grid-big" />
+                    <ui:VisualElement name="stash-view">
+                        <ui:VisualElement class="stash-header-row">
+                            <ui:Label name="stash-label" text="Stash" class="grid-header" />
+                            <ui:VisualElement class="sort-buttons">
+                                <ui:Label text="Sort" class="sort-caption" />
+                                <ui:Button name="sort-type" text="Type" class="sort-btn has-ui-sound" />
+                                <ui:Button name="sort-rarity" text="Rarity" class="sort-btn has-ui-sound" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="stash-grid" class="grid stash-grid-big" />
+                    </ui:VisualElement>
+                    <ui:ScrollView name="crafting-view" class="economy-view" />
+                    <ui:ScrollView name="trader-view" class="economy-view">
+                        <ui:Label text="Buy" class="grid-header" />
+                        <ui:VisualElement name="trader-offers" />
+                        <ui:Label text="Sell — click an item twice" class="grid-header" />
+                        <ui:VisualElement name="trader-sell-grid" class="grid stash-grid-big" />
+                    </ui:ScrollView>
+                    <ui:Label name="economy-status" class="economy-status" />
                 </ui:VisualElement>
 
             </ui:VisualElement>

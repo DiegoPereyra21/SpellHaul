@@ -22,6 +22,10 @@ namespace Game.Core.Items
         [SerializeField] private bool _isStackable = false;
         [SerializeField, Min(1)] private int _maxStack = 1;
         
+        [Header("Economía")]
+        [Tooltip("Valor en oro (el vendedor paga una fracción). 0 = automático según rareza y categoría (EconomyConfig).")]
+        [SerializeField, Min(0)] private int _baseValue = 0;
+
         [Header("Mundo")]
         [Tooltip("Prefab 3D que aparece en el suelo al dropearse. Si está vacío usa el prefab genérico.")]
         [SerializeField] public GameObject WorldPrefab;
@@ -34,6 +38,7 @@ namespace Game.Core.Items
         public int MaxStack => _isStackable ? Mathf.Max(1, _maxStack) : 1;
         public ItemCategory Category => _category;
         public Rarity Rarity => _rarity;
+        public int BaseValue => _baseValue;
         /// <summary>True si este item se puede equipar (los EquipmentItemSO lo sobrescriben).</summary>
         public virtual bool IsEquipment => false;
     }

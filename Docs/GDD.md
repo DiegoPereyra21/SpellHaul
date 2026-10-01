@@ -373,6 +373,30 @@ Apilan hasta 5. Aparecen en el loot con chances propias por rareza (perfil `Poti
 - Protection se muestra en %.
 - La rareza se indica con un color de clase en el borde de la celda. En el stash, el contorno remarcado se ve solo en partida.
 
+### Economía del hub: crafteo y vendedor
+- **Dónde:** en la pantalla del Stash del menú, la columna derecha tiene las pestañas **Stash**, **Crafting** y **Trader**, más el oro arriba. Las arma `EconomyPanel`, que vive dentro de `StashScreenController`; no es un componente de escena.
+- **Oro:** se guarda en la Player Data de solo lectura **`Wallet`** (`{"Gold":N}`), no ocupa slots y no se lleva a la run, así que no se pierde al morir. Solo lo escribe CloudScript. `EnsureProfile` crea la billetera en 0.
+- **Configuración:** `EconomyConfigSO` (`Resources/EconomyConfig.asset`) define:
+  - el valor de cada item: `ItemSO._baseValue`, o uno automático por rareza (Common 20 / Rare 60 / Epic 180) multiplicado por categoría (Material ×0.25, Resource ×0.5, Consumable ×0.6);
+  - la tasa de venta (40%);
+  - las recetas y las ofertas.
+- **Cómo lo usa el servidor:** CloudScript usa una copia de esa configuración en el Title Data **`Economy`**, que se exporta con **Game/Economy/Copy Economy JSON**. Si cambiás el asset sin volver a exportar, el menú muestra cosas que el servidor rechaza.
+- **Funciones de CloudScript:** las tres trabajan solo sobre el stash y se rechazan con una run activa (`in_run`). Escriben stash y oro en una sola llamada.
+  - **`Craft {RecipeId}`:** verifica materiales y oro en el stash, saca los ingredientes y agrega el resultado. Al mejorar un equipo (por ejemplo, un guante Common que pasa a Rare) se conserva su durabilidad.
+  - **`Sell {SlotIndex, ItemId}`:** vende el stack entero a `floor(valor × tasa)` por unidad. Si el slot ya no tiene ese item, rechaza.
+  - **`Buy {OfferId}`:** cobra el oro y agrega la oferta al stash.
+- **Cliente:** `EconomyService` espera a que no haya guardados pendientes (`ProfileSaveQueue.Busy`), llama a CloudScript y relee stash y oro.
+- **En la UI:**
+  - Vender pide dos clics sobre la casilla: el primero muestra "Sell?" y el segundo confirma.
+  - Las recetas muestran cuánto tenés de cada ingrediente en el stash.
+- **Materiales elementales** (Material, Rare, apilan hasta 10): `ember_shard` (Fire), `living_sap` (Nature y pociones de vida), `light_dust` (Light y pociones de maná) y `earth_core` (Earth). Aparecen en el loot con un 35% de la chance de los materiales comunes, de a 1–2 unidades.
+- **Recetas por defecto** (las crea **Game/Economy/Generate Default Economy** sin pisar las que ya existen):
+  - **Pociones Common / Rare / Epic:** 2 BlackWood + 1 / 3 de su material (10 / 40 oro); la Epic lleva 4 del material + 1 RedCrystal (120 oro).
+  - **Guante Common:** 3 BlackWood + 2 del material de su escuela + 50 oro.
+  - **Guante Rare:** el Common + 4 del material + 1 RedCrystal + 150 oro.
+  - **Guante Epic:** el Rare + 6 del material + 2 RedCrystal + 400 oro.
+- **Vendedor:** stock fijo: Minor Health Potion (40), Minor Mana Potion (40) y BlackWood (15).
+
 ## 8. Equipamiento y stats
 
 ### Bases (`PlayerStats`)
@@ -648,7 +672,7 @@ CMD ["/game/SpellHaul-LinuxServer.x86_64", "-server", "-batchmode", "-nographics
 - Audio, opciones y HUD extras.
 
 **Pendiente o abierto**
-- **Progresión:** trader y crafting, economía del hub (la opción recomendada como siguiente paso).
+- **Progresión:** más recetas (equipo, mejorar rareza de otros items), stock rotativo del vendedor, piedra de escape.
 - Rebinding de teclas.
 - Íconos de items (faltan los assets; hoy son placeholders).
 - Brillo, que requiere habilitar post-processing.
