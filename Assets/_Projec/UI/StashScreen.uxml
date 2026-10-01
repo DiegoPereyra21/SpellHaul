@@ -4,28 +4,31 @@
     <Style src="ItemCommon.uss" />
     <ui:VisualElement name="stash-root" class="stash-root">
         <ui:VisualElement class="stash-panel">
-            <ui:Label text="Stash" class="stash-title" />
+            <ui:VisualElement class="stash-top-bar">
+                <ui:Label text="Stash" class="stash-title" />
+                <ui:Label text="Click to move between pockets and stash · Shift-click to auto-equip · Drag to place" class="hint" />
+                <ui:Button name="stash-close" text="Close" class="stash-close-btn" />
+            </ui:VisualElement>
 
             <ui:VisualElement class="management-columns">
 
-                <ui:VisualElement name="loadout-column" class="mgmt-column">
-                    <ui:Label text="Loadout" class="column-header" />
-                    <ui:Label name="loadout-lock-note" text="Locked while searching for a run" class="loadout-lock-note" />
-                    <ui:VisualElement name="equipment-slots" class="equipment-slots" />
+                <!-- Loadout + pockets: se atenúan juntos mientras se busca partida. -->
+                <ui:VisualElement name="loadout-column" class="loadout-area">
+                    <ui:VisualElement class="mgmt-column loadout-list-column">
+                        <ui:Label text="Loadout" class="column-header" />
+                        <ui:Label name="loadout-lock-note" text="Locked while searching for a run" class="loadout-lock-note" />
+                        <ui:VisualElement name="equipment-slots" class="equipment-slots" />
 
-                    <ui:VisualElement class="pockets-row">
-                        <ui:VisualElement class="pocket-column">
-                            <ui:Label name="pocket-l-label" text="Pocket L" class="grid-header" />
-                            <ui:VisualElement name="pocket-l-grid" class="grid backpack-grid" />
-                        </ui:VisualElement>
-                        <ui:VisualElement class="pocket-column">
-                            <ui:Label name="pocket-r-label" text="Pocket R" class="grid-header" />
-                            <ui:VisualElement name="pocket-r-grid" class="grid backpack-grid" />
-                        </ui:VisualElement>
+                        <ui:Label text="Usables (1-2-3)" class="grid-header" />
+                        <ui:VisualElement name="usables-grid" class="grid usables-grid" />
                     </ui:VisualElement>
 
-                    <ui:Label text="Usables (1-2-3)" class="grid-header" />
-                    <ui:VisualElement name="usables-grid" class="grid usables-grid" />
+                    <ui:VisualElement class="mgmt-column pockets-row">
+                        <ui:Label name="pocket-l-label" text="Pocket L" class="grid-header grid-header--first" />
+                        <ui:VisualElement name="pocket-l-grid" class="grid backpack-grid" />
+                        <ui:Label name="pocket-r-label" text="Pocket R" class="grid-header" />
+                        <ui:VisualElement name="pocket-r-grid" class="grid backpack-grid" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
 
                 <ui:VisualElement class="mgmt-column economy-column">
@@ -35,9 +38,9 @@
                         <ui:Button name="tab-trader" text="Trader" class="economy-tab has-ui-sound" />
                         <ui:Label name="gold-label" text="— Gold" class="gold-label" />
                     </ui:VisualElement>
-                    <ui:VisualElement name="stash-view">
+                    <ui:VisualElement name="stash-view" class="stash-view">
                         <ui:VisualElement class="stash-header-row">
-                            <ui:Label name="stash-label" text="Stash" class="grid-header" />
+                            <ui:Label name="stash-label" text="Stash" class="grid-header grid-header--first" />
                             <ui:VisualElement class="sort-buttons">
                                 <ui:Label text="Sort" class="sort-caption" />
                                 <ui:Button name="sort-type" text="Type" class="sort-btn has-ui-sound" />
@@ -48,7 +51,7 @@
                     </ui:VisualElement>
                     <ui:ScrollView name="crafting-view" class="economy-view" />
                     <ui:ScrollView name="trader-view" class="economy-view">
-                        <ui:Label text="Buy" class="grid-header" />
+                        <ui:Label text="Buy" class="grid-header grid-header--first" />
                         <ui:VisualElement name="trader-offers" class="trader-offers" />
                         <ui:Label text="Sell — click an item twice" class="grid-header" />
                         <ui:VisualElement name="trader-sell-grid" class="grid stash-grid-big" />
@@ -57,9 +60,6 @@
                 </ui:VisualElement>
 
             </ui:VisualElement>
-
-            <ui:Label text="Click an item to move it between pockets and stash · Shift-click to auto-equip · Drag to place manually" class="hint" />
-            <ui:Button name="stash-close" text="Close" class="stash-close-btn" />
         </ui:VisualElement>
         <ui:VisualElement name="item-tooltip" class="item-tooltip" picking-mode="Ignore">
             <ui:Label name="tooltip-title" class="tooltip-title" />
