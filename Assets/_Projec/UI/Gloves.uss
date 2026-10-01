@@ -75,3 +75,13 @@
 .equip-slot-glove.school-restoration .glove-ability { color: rgb(140, 225, 160); }
 .tooltip-glove.school-restoration         { border-left-color: rgb(103, 210, 131); }
 .tooltip-glove.school-restoration .tooltip-type { color: rgb(140, 225, 160); }
+
+/* Illusion: violeta claro */
+.item-slot.item-glove.school-illusion { background-color: rgba(196, 168, 255, 0.16); }
+.school-illusion .glove-band,
+.school-illusion .glove-badge          { background-color: rgb(196, 168, 255); }
+.equip-slot-glove.school-illusion      { border-left-color: rgb(196, 168, 255); background-color: rgba(196, 168, 255, 0.10); }
+.equip-slot-glove.school-illusion .glove-dot { background-color: rgb(196, 168, 255); }
+.equip-slot-glove.school-illusion .glove-ability { color: rgb(214, 196, 255); }
+.tooltip-glove.school-illusion         { border-left-color: rgb(196, 168, 255); }
+.tooltip-glove.school-illusion .tooltip-type { color: rgb(214, 196, 255); }

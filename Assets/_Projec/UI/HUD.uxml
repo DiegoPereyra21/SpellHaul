@@ -60,6 +60,8 @@
             <ui:VisualElement name="hitmarker" class="hitmarker" />
         </ui:VisualElement>
 
+        <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" />
+
         <!-- Menú de pausa (Esc). La partida sigue: es solo un menú, no detiene el juego. -->
         <ui:VisualElement name="pause-root" class="pause-root">
             <ui:VisualElement class="pause-panel">

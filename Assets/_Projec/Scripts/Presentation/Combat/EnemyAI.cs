@@ -83,6 +83,16 @@ namespace Game.Presentation.Combat
         {
             if (!base.IsServerInitialized) return; // la IA corre SOLO en el servidor
 
+            // Cegado (orbe de destello): pierde el objetivo y se queda quieto hasta recuperar la vista.
+            if (Blindness.IsBlindNow(this))
+            {
+                _target = null;
+                _state = State.Idle;
+                _hasPatrolTarget = false;
+                if (_agent != null && _agent.isOnNavMesh) _agent.ResetPath();
+                return;
+            }
+
             switch (_state)
             {
                 case State.Idle: TickIdle(); break;

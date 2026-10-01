@@ -75,6 +75,14 @@ namespace Game.Presentation.Combat
         {
             if (!base.IsServerStarted) return;
 
+            // Cegado (orbe de destello): sin objetivo ni ataques hasta recuperar la vista.
+            if (Blindness.IsBlindNow(this))
+            {
+                _target = null;
+                SetState(State.Idle);
+                return;
+            }
+
             // Acquire / validate target.
             if (!TargetIsValid())
             {

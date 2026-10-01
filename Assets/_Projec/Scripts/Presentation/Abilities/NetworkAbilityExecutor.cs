@@ -56,6 +56,30 @@ namespace Game.Presentation.Abilities
             }
         }
 
+        public void SpawnFlashProjectile(GameObject prefab, Vector3 origin, Vector3 direction, float speed, float lifetime,
+            float flashRadius, float playerBlindSeconds, float aiBlindSeconds, int casterNetworkId, int slot)
+        {
+            if (!InstanceFinder.IsServerStarted) return;
+            if (prefab == null)
+            {
+                Debug.LogWarning("[NetworkAbilityExecutor] Orbe de destello sin prefab: asignarlo en el FlashOrbAbilitySO.");
+                return;
+            }
+
+            Vector3 dir = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
+            NetworkObject nob = InstanceFinder.NetworkManager.GetPooledInstantiated(
+                prefab.GetComponent<NetworkObject>(), origin + dir * 0.5f, Quaternion.LookRotation(dir), true);
+            if (nob.TryGetComponent(out FlashProjectile flash))
+            {
+                InstanceFinder.ServerManager.Spawn(nob);
+                flash.Initialize(dir, speed, lifetime, flashRadius, playerBlindSeconds, aiBlindSeconds, casterNetworkId, slot);
+            }
+            else
+            {
+                Debug.LogWarning("[NetworkAbilityExecutor] El prefab del orbe de destello no tiene FlashProjectile.");
+            }
+        }
+
         public void StartDash(int casterNetworkId, Vector3 direction, float speed, float duration)
         {
             if (!InstanceFinder.IsServerStarted) return;

@@ -18,6 +18,13 @@ namespace Game.Core.Abilities
         /// <summary>Aplica curación/buff directo al caster.</summary>
         void ApplySelfEffect(int casterNetworkId, float healAmount);
 
+        /// <summary>
+        /// Spawnea un proyectil lento que al detonar (choque, fin de vida o re-activación del
+        /// caster) ciega: a los jugadores según su mirada y distancia, a la IA por un tiempo fijo.
+        /// </summary>
+        void SpawnFlashProjectile(GameObject prefab, Vector3 origin, Vector3 direction, float speed, float lifetime,
+            float flashRadius, float playerBlindSeconds, float aiBlindSeconds, int casterNetworkId, int slot);
+
         /// <summary>Spawnea un orbe cargado con trayectoria balística hacia el punto de mira.</summary>
         void SpawnChargedOrb(GameObject orbPrefab, Vector3 origin, Vector3 aimPoint, float damage, float explosionRadius, float visualScale, float launchSpeed, float gravity, int casterNetworkId, int slot);
     }

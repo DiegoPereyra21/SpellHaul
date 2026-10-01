@@ -193,6 +193,11 @@ namespace Game.Presentation.UI
             var extras = GetComponent<HudExtras>();
             if (extras == null) extras = gameObject.AddComponent<HudExtras>();
             extras.Init(root, _abilities, _cam);
+
+            // Cegado por el orbe de destello (lo calcula este cliente para su propia cámara).
+            var flash = GetComponent<FlashOverlay>();
+            if (flash == null) flash = gameObject.AddComponent<FlashOverlay>();
+            flash.Init(root, _cam);
         }
 
         /// <summary>Owner. Actualiza el slot del clic derecho solo cuando cambia el guante equipado.</summary>
@@ -262,6 +267,8 @@ namespace Game.Presentation.UI
             }
             
             RefreshGloveSlot();
+            if (_gloveSlot != null && _abilities != null)
+                _gloveSlot.EnableInClassList("ability-slot--recast", _abilities.IsRecastReady(Game.Core.Abilities.AbilitySlots.Glove));
 
             // Cooldowns
             if (_abilities != null)

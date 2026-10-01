@@ -107,6 +107,8 @@ namespace Game.EditorTools.Items
             if (!AssetDatabase.IsValidFolder(folderPath))
                 CreateFolderRecursive(folderPath);
 
+            EnsureAbilityAssets();
+
             var abilities = new Dictionary<string, Game.Core.Abilities.AbilitySO>();
             foreach (string guid in AssetDatabase.FindAssets("t:AbilitySO"))
             {
@@ -155,6 +157,36 @@ namespace Game.EditorTools.Items
             return created;
         }
 
+        private const string AbilitiesFolder = "Assets/_Projec/ScriptableObjects/Abilities";
+
+        /// <summary>
+        /// Crea las AbilitySO que usan los guantes y todavía no existen (por AbilityId), con valores
+        /// de partida. Lo que necesita arrastrarse a mano (prefab, VFX, audio) queda avisado en consola.
+        /// </summary>
+        private static void EnsureAbilityAssets()
+        {
+            var existing = new HashSet<string>();
+            foreach (string guid in AssetDatabase.FindAssets("t:AbilitySO"))
+            {
+                var a = AssetDatabase.LoadAssetAtPath<Game.Core.Abilities.AbilitySO>(AssetDatabase.GUIDToAssetPath(guid));
+                if (a != null && !string.IsNullOrEmpty(a.AbilityId)) existing.Add(a.AbilityId);
+            }
+
+            if (!existing.Contains("id_flashorb"))
+            {
+                if (!AssetDatabase.IsValidFolder(AbilitiesFolder)) CreateFolderRecursive(AbilitiesFolder);
+                var flash = ScriptableObject.CreateInstance<Game.Core.Abilities.Abilities.FlashOrbAbilitySO>();
+                var so = new SerializedObject(flash);
+                so.FindProperty("_abilityId").stringValue = "id_flashorb";
+                so.FindProperty("_displayName").stringValue = "Flash Orb";
+                so.FindProperty("_cooldown").floatValue = 14f;     // largo a propósito: es control fuerte
+                so.FindProperty("_resourceCost").floatValue = 30f;
+                so.ApplyModifiedProperties();
+                AssetDatabase.CreateAsset(flash, $"{AbilitiesFolder}/Ability_FlashOrb_.asset");
+                Debug.LogWarning("[ItemCatalogGenerator] Creado Ability_FlashOrb_: asignale el prefab del proyectil (FlashProjectile) y, si querés, los sonidos de casteo/detonación.", flash);
+            }
+        }
+
         /// <summary>
         /// Guantes: una familia por habilidad. La rareza escala la potencia (daño/curación) y
         /// acorta el cooldown. Valores de partida para balancear jugando.
@@ -198,6 +230,15 @@ namespace Game.EditorTools.Items
                 (Rarity.Common, 1.0f, 1.0f),
                 (Rarity.Rare,   1.3f, 0.9f),
                 (Rarity.Epic,   1.6f, 0.8f),
+            });
+
+            AddFamily("flare_gloves", "Flare Gloves",
+                "Right click to launch a slow orb of light. Right click again to detonate it mid-air; it also bursts on impact. The flash blinds everyone who looks at it, you included.",
+                GloveSchool.Illusion, "id_flashorb", new[]
+            {
+                (Rarity.Common, 1.0f, 1.0f),
+                (Rarity.Rare,   1.2f, 0.9f),
+                (Rarity.Epic,   1.4f, 0.8f),
             });
 
             return list;

@@ -160,6 +160,13 @@
 /* Color del ícono del slot del guante según su escuela (GloveSchool). */
 .icon-gold.school-destruction { background-color: rgb(232, 112, 76); }
 .icon-gold.school-restoration { background-color: rgb(103, 210, 131); }
+.icon-gold.school-illusion    { background-color: rgb(196, 168, 255); }
+
+/* Habilidad re-activable en vuelo (ej. detonar el orbe de destello): el slot se resalta. */
+.ability-slot--recast {
+    border-color: rgb(237, 238, 245);
+    border-width: 2px;
+}
 
 /* Nombre de la habilidad del guante (o "No Glove"). */
 .slot-name {
@@ -320,6 +327,18 @@
     right: 0;
     bottom: 0;
     border-width: 0px;
+}
+
+/* Destello (orbe de destello): blanco a pantalla completa, la opacidad la maneja FlashOverlay. */
+.flash-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgb(255, 255, 255);
+    opacity: 0;
+    display: none;
 }
 
 .damage-indicator {

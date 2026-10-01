@@ -106,6 +106,15 @@ namespace Game.Core.Abilities
         }
 
         /// <summary>
+        /// True si, mientras lo lanzado sigue activo, volver a apretar el botón lo activa (ej.
+        /// detonar el orbe de destello en el aire) en vez de castear de nuevo.
+        /// </summary>
+        public virtual bool IsRecastable => false;
+
+        /// <summary>Segundos después de castear durante los que se puede re-activar (solo si IsRecastable).</summary>
+        public virtual float RecastWindow => 0f;
+
+        /// <summary>
         /// Líneas de efecto para el tooltip (en inglés, las ve el jugador), con la potencia que
         /// aporta el guante ya aplicada. Ej: "Heals 39". Por defecto ninguna.
         /// </summary>

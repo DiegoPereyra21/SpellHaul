@@ -60,6 +60,10 @@ namespace Game.Presentation.Abilities
         private readonly AbilitySO[] _serverChargeAbility = new AbilitySO[AbilitySlots.Count];
         private readonly AbilitySO[] _localChargeAbility = new AbilitySO[AbilitySlots.Count];
 
+        // Owner. Hasta cuándo (Time.unscaledTime) lo lanzado por el slot se puede re-activar
+        // (habilidades IsRecastable). 0 = nada activo.
+        private readonly float[] _localRecastUntil = new float[AbilitySlots.Count];
+
         private Mana _mana;
         private RunInventory _inventory;
         private PlayerMovementController _movement;
@@ -110,6 +114,7 @@ namespace Game.Presentation.Abilities
                 _localChargeAbility[i] = null;
                 _serverChargeAbility[i] = null;
                 _hasPendingAim[i] = false;
+                _localRecastUntil[i] = 0f;
             }
             _trajectoryPreview?.Hide();
             _chargeVfx?.EndCharge();
@@ -342,6 +347,14 @@ namespace Game.Presentation.Abilities
             AbilitySO ability = GetAbility(slot);
             if (ability == null) return;
 
+            // Lo lanzado sigue activo: este clic lo re-activa (ej. detonar el orbe en el aire).
+            if (ability.IsRecastable && IsRecastReady(slot))
+            {
+                _localRecastUntil[slot] = 0f;
+                RecastServerRpc(slot);
+                return;
+            }
+
             // Chequeos locales (feedback inmediato, no autoritativos).
             if (IsOnCooldown(_localCooldownEndTick[slot])) return;
             if (PredictedLocalMana() < ability.ResourceCost) { PlayCastRejectedSound(); return; }
@@ -349,6 +362,8 @@ namespace Game.Presentation.Abilities
             // Predicción local de cooldown y maná. El maná real lo descuenta y sincroniza el servidor.
             PredictCooldownLocally(slot, ability);
             RecordLocalManaSpend(ability.ResourceCost);
+            if (ability.IsRecastable)
+                _localRecastUntil[slot] = Time.unscaledTime + ability.WindupDuration + ability.RecastWindow;
 
             ResolveAim(out Vector3 aimDirection, out Vector3 aimPoint);
 
@@ -708,10 +723,37 @@ namespace Game.Presentation.Abilities
             return true;
         }
 
+        // ---------- Re-activación (IsRecastable) ----------
+
+        /// <summary>Owner. True si lo lanzado por el slot sigue activo y el próximo clic lo re-activa.</summary>
+        public bool IsRecastReady(int slot)
+            => slot >= 0 && slot < _localRecastUntil.Length && Time.unscaledTime < _localRecastUntil[slot];
+
+        [ServerRpc]
+        private void RecastServerRpc(int slot)
+        {
+            if (!CanActServer) return;
+            if (slot < 0 || slot >= AbilitySlots.Count) return;
+            RecastRegistry.TryRecast(base.ObjectId, slot); // si ya detonó solo, no pasa nada
+        }
+
+        /// <summary>Server. Lo lanzado por el slot ya no está (detonó/chocó): el dueño deja de ofrecer la re-activación.</summary>
+        public void NotifyRecastEnded(int slot)
+        {
+            if (base.Owner.IsActive) RecastEndedTargetRpc(base.Owner, slot);
+        }
+
+        [TargetRpc]
+        private void RecastEndedTargetRpc(FishNet.Connection.NetworkConnection conn, int slot)
+        {
+            if (slot >= 0 && slot < _localRecastUntil.Length) _localRecastUntil[slot] = 0f;
+        }
+
         [TargetRpc]
         private void RejectCastTargetRpc(FishNet.Connection.NetworkConnection conn, int slot, float cooldownRemaining)
         {
             PlayCastRejectedSound();
+            _localRecastUntil[slot] = 0f; // el cast no salió: no hay nada que re-activar
             // Llega el tiempo RESTANTE, no un tick absoluto del servidor: el tick del servidor no
             // significa nada en el reloj local del cliente. Se convierte a ticks LOCALES acá.
             _localCooldownEndTick[slot] = cooldownRemaining > 0f ? TicksFromNow(cooldownRemaining) : 0u;

@@ -65,6 +65,14 @@ namespace Game.Presentation.Combat
         {
             if (!base.IsServerStarted) return;
 
+            // Cegado (orbe de destello): sin objetivo ni disparos hasta recuperar la vista.
+            if (Blindness.IsBlindNow(this))
+            {
+                _target = null;
+                _fireTimer = _fireRate;
+                return;
+            }
+
             // Buscar target si no tenemos.
             if (!TargetIsValid())
                 _target = FindNearestPlayer(_detectionRadius);

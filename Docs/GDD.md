@@ -292,7 +292,7 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 | Enum | Valores |
 |---|---|
 | `EquipmentSlot` | Boots, Hat, Robe, Glove, PocketL, PocketR |
-| `GloveSchool` | Destruction, Restoration |
+| `GloveSchool` | Destruction, Restoration, Illusion |
 | `ItemCategory`, `Rarity`, `StatType`, `RunPhase`, `PlayerRunStatus`, `RunOutcome` | (sin detallar) |
 
 - El orden visual de los slots no es el orden del enum. Lo definen las extensiones de `EquipmentSlotExtensions` (`DisplayOrder`: Hat, Robe, Glove, Boots, PocketL, PocketR), `DisplayRank`, `DisplayIndices` y `DisplayName`.
@@ -388,6 +388,28 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 |---|---|---|---|---|---|
 | Orb Gloves | `orb_gloves_<rareza>` | Destruction | Orbe cargado (`id_chargedorb`) | ×1.0 / ×1.2 / ×1.45 | ×1.0 / ×0.9 / ×0.8 |
 | Mending Gloves | `mending_gloves_<rareza>` | Restoration | Cura instantánea (`id_heal`) | ×1.0 / ×1.3 / ×1.6 | ×1.0 / ×0.9 / ×0.8 |
+| Flare Gloves | `flare_gloves_<rareza>` | Illusion | Orbe de destello (`id_flashorb`) | ×1.0 / ×1.2 / ×1.4 (duración del cegado) | ×1.0 / ×0.9 / ×0.8 |
+
+**Orbe de destello** (`FlashOrbAbilitySO` + `FlashProjectile`)
+- **Vuelo:** proyectil lento en línea recta (12 m/s, 3 s de vida, cooldown base 14 s).
+- **Detonación:** detona en cuatro casos:
+  - al chocar con Hitbox o Ground (menos el caster);
+  - al terminar su vida;
+  - al volver a apretar el clic derecho mientras vuela;
+  - no hace daño.
+- **Re-activación genérica:**
+  - `AbilitySO.IsRecastable` / `RecastWindow` habilitan la re-activación de una habilidad.
+  - Mientras la ventana está abierta, el slot se resalta en el HUD y el próximo clic envía `RecastServerRpc`.
+  - El servidor busca lo lanzado en `RecastRegistry` (por caster y slot) y llama a `IRecastable.Recast()`.
+  - Al detonar, `AbilityController.NotifyRecastEnded` cierra la ventana del dueño.
+- **Cegado de jugadores** (`FlashOverlay`, del lado del cliente):
+  - El servidor solo envía el punto, el radio y la duración máxima; cada cliente calcula su propio cegado.
+  - Requisitos: línea de visión (Linecast contra Ground) y estar dentro del radio.
+  - Intensidad según la mirada: de frente, completa; de costado, menor; de espaldas, casi nada. También baja con la distancia.
+  - Se ve como una pantalla blanca que se mantiene y luego se desvanece.
+  - Afecta también al caster.
+  - Es visual: un cliente modificado podría ignorarlo, igual que en cualquier flashbang.
+- **Cegado de IA** (servidor): `Blindness` se agrega en runtime. Mientras dure, `EnemyAI`, `RangedEnemyAI` y `PlantGuardianAI` pierden el objetivo y no atacan.
 
 - **Guante nuevo:**
   1. Si hace falta, crear la `AbilitySO` con un `AbilityId` único.
@@ -406,7 +428,7 @@ El índice de slot viaja por red y define el binding (`CastSlot0..2`): no reorde
 |---|---|---|---|
 | `Primary` (0) | Clic izquierdo | Proyectil básico (`_primaryAbility`) | Fijo. Windup de telegrafía opcional |
 | `Mobility` (1) | Shift | Dash (`_mobilityAbility`) | Fijo. Predicho y reconciliado. Ease-out, en la dirección de mirada (permite dash vertical) |
-| `Glove` (2) | Clic derecho | La del guante equipado | Vacío sin guante. Hoy: orbe cargado o cura instantánea |
+| `Glove` (2) | Clic derecho | La del guante equipado | Vacío sin guante. Hoy: orbe cargado, cura instantánea u orbe de destello |
 
 El parry fue eliminado.
 

@@ -8,6 +8,7 @@ namespace Game.Core.Items
     public enum GloveSchool
     {
         Destruction, // daño (orbe cargado)
-        Restoration  // curación
+        Restoration, // curación
+        Illusion     // control: cegar (orbe de destello)
     }
 }
