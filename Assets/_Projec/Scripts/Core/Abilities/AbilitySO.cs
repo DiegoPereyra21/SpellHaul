@@ -47,7 +47,7 @@ namespace Game.Core.Abilities
         [Header("Audio")]
         [Tooltip("Sonido al castear. Audible para todos los jugadores cercanos (3D).")]
         [SerializeField] private AudioClip _castClip;
-        [Tooltip("Sonido al impactar/tener éxito: proyectil = impacto, orbe = explosión, parry = bloqueo exitoso.")]
+        [Tooltip("Sonido al impactar/tener éxito: proyectil = impacto, orbe = explosión.")]
         [SerializeField] private AudioClip _impactClip;
         [Tooltip("Solo proyectil: sonido al pegar en geometría (pared/piso) en vez de un objetivo. Opcional.")]
         [SerializeField] private AudioClip _surfaceImpactClip;
@@ -104,6 +104,12 @@ namespace Game.Core.Abilities
             launchSpeed = 0f;
             gravity = 0f;
         }
+
+        /// <summary>
+        /// Líneas de efecto para el tooltip (en inglés, las ve el jugador), con la potencia que
+        /// aporta el guante ya aplicada. Ej: "Heals 39". Por defecto ninguna.
+        /// </summary>
+        public virtual void DescribeEffect(float power, System.Collections.Generic.List<string> lines) { }
 
         public abstract void Execute(AbilityExecutor executor, in AbilityCastContext context);
     }

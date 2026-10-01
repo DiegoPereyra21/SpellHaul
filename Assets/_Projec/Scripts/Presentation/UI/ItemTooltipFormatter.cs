@@ -17,8 +17,16 @@ namespace Game.Presentation.UI
 
         public static (string type, List<StatLine> stats) Build(ItemSO def)
         {
-            string type = def is EquipmentItemSO eq ? SlotDisplayName(eq.Slot) : def.Category.ToString();
             var stats = new List<StatLine>();
+
+            // Guante: escuela + habilidad del clic derecho con la potencia de su rareza.
+            if (def is GloveItemSO glove)
+            {
+                BuildGlove(glove, stats);
+                return ($"{glove.School} Glove", stats);
+            }
+
+            string type = def is EquipmentItemSO eq ? SlotDisplayName(eq.Slot) : def.Category.ToString();
 
             if (def is EquipmentItemSO equip)
             {
@@ -30,6 +38,37 @@ namespace Game.Presentation.UI
             }
 
             return (type, stats);
+        }
+
+        private static readonly List<string> _effectLines = new List<string>();
+
+        private static void BuildGlove(GloveItemSO glove, List<StatLine> stats)
+        {
+            var ability = glove.Ability;
+            if (ability == null)
+            {
+                stats.Add(new StatLine { Text = "No ability", Sign = 0 });
+                return;
+            }
+
+            stats.Add(new StatLine { Text = $"RMB: {ability.DisplayName}", Sign = 0 });
+
+            // Rareza por encima de la base: las líneas de efecto se marcan como mejora.
+            int powerSign = glove.AbilityPower > 1.001f ? 1 : (glove.AbilityPower < 0.999f ? -1 : 0);
+            _effectLines.Clear();
+            ability.DescribeEffect(glove.AbilityPower, _effectLines);
+            foreach (string line in _effectLines)
+                stats.Add(new StatLine { Text = line, Sign = powerSign });
+
+            float cooldown = ability.Cooldown * glove.CooldownMultiplier;
+            int cdSign = glove.CooldownMultiplier < 0.999f ? 1 : (glove.CooldownMultiplier > 1.001f ? -1 : 0);
+            stats.Add(new StatLine { Text = $"Cooldown {cooldown:0.#}s", Sign = cdSign });
+            if (ability.ResourceCost > 0f)
+                stats.Add(new StatLine { Text = $"Mana {ability.ResourceCost:0}", Sign = 0 });
+
+            // Un guante puede tener además modificadores pasivos (hoy ninguno los usa).
+            foreach (var mod in glove.Modifiers)
+                stats.Add(FormatModifier(mod));
         }
 
         /// <summary>Clase CSS de color según rareza. Común = color por defecto (sin clase especial).</summary>

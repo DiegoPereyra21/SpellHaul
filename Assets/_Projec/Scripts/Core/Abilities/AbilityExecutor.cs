@@ -20,8 +20,5 @@ namespace Game.Core.Abilities
 
         /// <summary>Spawnea un orbe cargado con trayectoria balística hacia el punto de mira.</summary>
         void SpawnChargedOrb(GameObject orbPrefab, Vector3 origin, Vector3 aimPoint, float damage, float explosionRadius, float visualScale, float launchSpeed, float gravity, int casterNetworkId, int slot);
-
-        /// <summary>Arranca las fases del parry en el caster.</summary>
-        void StartParry(Game.Core.Abilities.Abilities.ParryAbilitySO data, in AbilityCastContext context);
     }
 }

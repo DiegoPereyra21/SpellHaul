@@ -49,7 +49,6 @@ namespace Game.Presentation.Player
                 _abilities.CancelActiveCasts();
                 _abilities.enabled = false;
             }
-            if (TryGetComponent(out ParryHandler parry)) parry.CancelParry();
 
             if (_extraToDisable != null)
                 foreach (var c in _extraToDisable)

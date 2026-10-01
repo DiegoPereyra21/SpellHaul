@@ -15,7 +15,7 @@ namespace Game.Core.Abilities.Abilities
 
         public override void Execute(AbilityExecutor executor, in AbilityCastContext context)
         {
-            float finalDamage = _damage * context.DamageMultiplier;
+            float finalDamage = _damage * context.DamageMultiplier * context.AbilityPower;
 
             // Sale del SpellOrigin autoritativo (context.Origin) y converge hacia el punto de mira.
             Vector3 toAim = context.AimPoint - context.Origin;
@@ -32,6 +32,11 @@ namespace Game.Core.Abilities.Abilities
                 context.Tick,       // tick de disparo del cliente (lag comp)
                 context.Slot        // para resolver el clip de audio localmente en cada cliente
             );
+        }
+
+        public override void DescribeEffect(float power, System.Collections.Generic.List<string> lines)
+        {
+            lines.Add($"Damage {_damage * power:0}");
         }
 
         public override bool TryGetCosmeticProjectile(out GameObject prefab, out float speed)

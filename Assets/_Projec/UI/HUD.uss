@@ -157,6 +157,32 @@
 .icon-gold   { background-color: rgb(228, 183, 80); }
 .icon-cyan   { background-color: rgb(62, 204, 226); }
 
+/* Color del ícono del slot del guante según su escuela (GloveSchool). */
+.icon-gold.school-destruction { background-color: rgb(232, 112, 76); }
+.icon-gold.school-restoration { background-color: rgb(103, 210, 131); }
+
+/* Nombre de la habilidad del guante (o "No Glove"). */
+.slot-name {
+    position: absolute;
+    top: 34px;
+    left: 0;
+    right: 0;
+    -unity-text-align: middle-center;
+    color: rgb(210, 211, 219);
+    font-size: 11px;
+    white-space: normal;
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* Sin guante: slot apagado. */
+.ability-slot--empty {
+    opacity: 0.45;
+}
+
+.ability-slot--empty .ability-icon {
+    background-color: rgb(90, 92, 108);
+}
+
 .slot-key {
     color: rgb(210, 211, 219);
     font-size: 15px;

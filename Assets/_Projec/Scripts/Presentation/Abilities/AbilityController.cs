@@ -15,10 +15,21 @@ namespace Game.Presentation.Abilities
     /// Lee input de casteo, valida cooldown localmente (feedback inmediato de UI/anim) y
     /// pide ejecución real al servidor vía ServerRpc. El servidor es quien valida cooldown
     /// "de verdad" y ejecuta el efecto — el cliente nunca es fuente de verdad de daño/loot.
+    ///
+    /// Slots (ver AbilitySlots): Primary (clic izq.) y Mobility (Shift) son fijos del personaje;
+    /// Glove (clic der.) es la habilidad del guante equipado en RunInventory, con la potencia y
+    /// el cooldown de su rareza. Sin guante, el clic derecho no hace nada. El cooldown es del
+    /// slot, no del guante: cambiar de guante no lo reinicia.
     /// </summary>
     public class AbilityController : NetworkBehaviour
     {
-        [SerializeField] private AbilitySO[] _equippedAbilities = new AbilitySO[5];
+        [Header("Habilidades fijas")]
+        [Tooltip("Clic izquierdo: ataque básico, siempre disponible.")]
+        [SerializeField] private AbilitySO _primaryAbility;
+        [Tooltip("Shift: dash.")]
+        [SerializeField] private AbilitySO _mobilityAbility;
+
+        [Header("Puntería")]
         [SerializeField] private Transform _aimOrigin;
         [SerializeField] private Transform _spellOrigin; // punto de salida del hechizo (báculo, mano, etc.)
         [SerializeField] private LayerMask _aimMask;
@@ -29,22 +40,28 @@ namespace Game.Presentation.Abilities
         // Cooldowns en ticks de red (TimeManager.Tick), no Time.time: evita el degrade de
         // precisión de un float acumulando desde el boot del proceso, y usa el mismo reloj
         // que ya gobierna prediction/lag-comp en vez de uno paralelo.
-        private readonly uint[] _localCooldownEndTick = new uint[5];
-        private readonly uint[] _serverCooldownEndTick = new uint[5];
+        private readonly uint[] _localCooldownEndTick = new uint[AbilitySlots.Count];
+        private readonly uint[] _serverCooldownEndTick = new uint[AbilitySlots.Count];
         // Aim más reciente recibido durante un windup en curso (re-apuntado en tiempo real).
-        private readonly Vector3[] _pendingAimDirection = new Vector3[5];
-        private readonly Vector3[] _pendingAimPoint = new Vector3[5];
-        private readonly bool[] _hasPendingAim = new bool[5];
+        private readonly Vector3[] _pendingAimDirection = new Vector3[AbilitySlots.Count];
+        private readonly Vector3[] _pendingAimPoint = new Vector3[AbilitySlots.Count];
+        private readonly bool[] _hasPendingAim = new bool[AbilitySlots.Count];
 
         // Carga sostenida (habilidades chargeable). El tiempo real lo mide el SERVIDOR:
         // el cliente solo avisa "empecé" y "solté"; nunca manda cuánto cargó.
-        private readonly uint[] _serverChargeStartTick = new uint[5];
-        private readonly bool[] _serverCharging = new bool[5];
-        private readonly bool[] _localCharging = new bool[5];
+        private readonly uint[] _serverChargeStartTick = new uint[AbilitySlots.Count];
+        private readonly bool[] _serverCharging = new bool[AbilitySlots.Count];
+        private readonly bool[] _localCharging = new bool[AbilitySlots.Count];
         // Reloj LOCAL, solo para el preview de trayectoria (aproximado, no autoritativo).
-        private readonly uint[] _localChargeStartTick = new uint[5];
+        private readonly uint[] _localChargeStartTick = new uint[AbilitySlots.Count];
+
+        // Habilidad con la que empezó cada carga: si al soltar el slot tiene otra (cambió el
+        // guante), la carga se descarta en vez de disparar la habilidad nueva.
+        private readonly AbilitySO[] _serverChargeAbility = new AbilitySO[AbilitySlots.Count];
+        private readonly AbilitySO[] _localChargeAbility = new AbilitySO[AbilitySlots.Count];
 
         private Mana _mana;
+        private RunInventory _inventory;
         private PlayerMovementController _movement;
         private PlayerAvatarState _avatar;
         [SerializeField] private Game.Presentation.Combat.PlayerStats _stats;
@@ -90,6 +107,8 @@ namespace Game.Presentation.Abilities
             {
                 _localCharging[i] = false;
                 _serverCharging[i] = false;
+                _localChargeAbility[i] = null;
+                _serverChargeAbility[i] = null;
                 _hasPendingAim[i] = false;
             }
             _trajectoryPreview?.Hide();
@@ -122,11 +141,38 @@ namespace Game.Presentation.Abilities
             return tick;
         }
 
-        private uint CooldownTicks(AbilitySO ability)
+        // ---------- Habilidades por slot ----------
+
+        /// <summary>Guante equipado (null si no hay). Vale en servidor y en todos los clientes.</summary>
+        public Game.Core.Items.GloveItemSO CurrentGlove => _inventory != null ? _inventory.EquippedGlove : null;
+
+        /// <summary>Habilidad del slot ahora mismo. Glove: la del guante equipado (null sin guante).</summary>
+        public AbilitySO GetAbility(int slot) => slot switch
         {
-            float castSpeed = _stats != null ? _stats.CastSpeedMultiplier : 1f;
-            return base.TimeManager.TimeToTicks(ability.Cooldown / Mathf.Max(0.1f, castSpeed));
+            AbilitySlots.Primary => _primaryAbility,
+            AbilitySlots.Mobility => _mobilityAbility,
+            AbilitySlots.Glove => CurrentGlove != null ? CurrentGlove.Ability : null,
+            _ => null
+        };
+
+        /// <summary>Potencia que aporta el guante al slot Glove (rareza). 1 en los demás slots.</summary>
+        private float AbilityPowerFor(int slot)
+        {
+            var glove = slot == AbilitySlots.Glove ? CurrentGlove : null;
+            return glove != null ? glove.AbilityPower : 1f;
         }
+
+        /// <summary>Cooldown efectivo en segundos: base de la habilidad x rareza del guante / velocidad de casteo.</summary>
+        private float EffectiveCooldown(int slot, AbilitySO ability)
+        {
+            if (ability == null) return 0f;
+            var glove = slot == AbilitySlots.Glove ? CurrentGlove : null;
+            float gloveMul = glove != null ? glove.CooldownMultiplier : 1f;
+            float castSpeed = _stats != null ? _stats.CastSpeedMultiplier : 1f;
+            return ability.Cooldown * gloveMul / Mathf.Max(0.1f, castSpeed);
+        }
+
+        private uint CooldownTicks(int slot, AbilitySO ability) => base.TimeManager.TimeToTicks(EffectiveCooldown(slot, ability));
 
         // ---------- Maná predicho (cliente) ----------
 
@@ -180,17 +226,24 @@ namespace Game.Presentation.Abilities
         {
             if (slot < 0 || slot >= _localCooldownEndTick.Length) return 0f;
 
-            AbilitySO ability = _equippedAbilities[slot];
-            if (ability == null || ability.Cooldown <= 0f) return 0f;
+            float cooldown = EffectiveCooldown(slot, GetAbility(slot));
+            if (cooldown <= 0f) return 0f;
 
             float remaining = RemainingSeconds(_localCooldownEndTick[slot]);
             if (remaining <= 0f) return 0f;
 
-            return Mathf.Clamp01(remaining / ability.Cooldown);
+            return Mathf.Clamp01(remaining / cooldown);
         }
 
         /// <summary>Progreso de cooldown del slot (0 = listo, 1 = recién usado). Usa la predicción local del owner.</summary>
         public float GetCooldownProgress(int slot) => GetCooldownRemainingNormalized(slot);
+
+        /// <summary>Segundos de cooldown que le quedan al slot (predicción local del owner).</summary>
+        public float GetCooldownRemainingSeconds(int slot)
+        {
+            if (slot < 0 || slot >= _localCooldownEndTick.Length) return 0f;
+            return RemainingSeconds(_localCooldownEndTick[slot]);
+        }
 
         private void Awake()
         {
@@ -198,15 +251,15 @@ namespace Game.Presentation.Abilities
             _movement = GetComponent<PlayerMovementController>();
             _avatar = GetComponent<PlayerAvatarState>();
             _stats = GetComponent<Game.Presentation.Combat.PlayerStats>();
+            _inventory = GetComponent<RunInventory>();
 
             _controls = new PlayerControls();
-            _castActions = new InputAction[5]
+            // Indexado por AbilitySlots: CastSlot0 = clic izq., CastSlot1 = Shift, CastSlot2 = clic der.
+            _castActions = new InputAction[AbilitySlots.Count]
             {
                 _controls.Player.CastSlot0,
                 _controls.Player.CastSlot1,
                 _controls.Player.CastSlot2,
-                _controls.Player.CastSlot3,
-                _controls.Player.CastSlot4,
             };
         }
 
@@ -240,7 +293,9 @@ namespace Game.Presentation.Abilities
 
             for (int i = 0; i < _castActions.Length; i++)
             {
-                AbilitySO ability = _equippedAbilities[i];
+                AbilitySO ability = GetAbility(i);
+                // La habilidad del slot cambió (o desapareció) en medio de una carga: se descarta.
+                if (_localCharging[i] && ability != _localChargeAbility[i]) AbortLocalCharge(i);
                 if (ability == null) continue;
 
                 if (ability.IsChargeable)
@@ -266,7 +321,7 @@ namespace Game.Presentation.Abilities
 
             for (int i = 0; i < _castActions.Length; i++)
             {
-                AbilitySO ability = _equippedAbilities[i];
+                AbilitySO ability = _localChargeAbility[i];
                 if (ability == null || !_localCharging[i] || !ability.ShowTrajectoryPreview) continue;
 
                 float held = (float)base.TimeManager.TicksToTime(base.TimeManager.Tick - _localChargeStartTick[i]);
@@ -284,7 +339,7 @@ namespace Game.Presentation.Abilities
 
         private void TryCast(int slot)
         {
-            AbilitySO ability = _equippedAbilities[slot];
+            AbilitySO ability = GetAbility(slot);
             if (ability == null) return;
 
             // Chequeos locales (feedback inmediato, no autoritativos).
@@ -329,7 +384,7 @@ namespace Game.Presentation.Abilities
 
         private void BeginCharge(int slot)
         {
-            AbilitySO ability = _equippedAbilities[slot];
+            AbilitySO ability = GetAbility(slot);
             if (ability == null) return;
 
             // Chequeos locales (feedback inmediato, no autoritativos). El cooldown de esta
@@ -339,6 +394,7 @@ namespace Game.Presentation.Abilities
 
             RecordLocalManaSpend(ability.ResourceCost);
             _localCharging[slot] = true;
+            _localChargeAbility[slot] = ability;
             _localChargeStartTick[slot] = base.TimeManager.Tick;
             _chargeVfx?.BeginCharge(ability.MaxChargeDuration); // telegrafía local instantánea
             BeginChargeServerRpc(slot);
@@ -351,7 +407,8 @@ namespace Game.Presentation.Abilities
             _trajectoryPreview?.Hide();
             _chargeVfx?.EndCharge();
 
-            AbilitySO ability = _equippedAbilities[slot];
+            AbilitySO ability = _localChargeAbility[slot];
+            _localChargeAbility[slot] = null;
             if (ability == null) return;
 
             // Recién ahora arranca el cooldown local predicho (coincide con el servidor, que
@@ -366,12 +423,31 @@ namespace Game.Presentation.Abilities
                 PlayLocalFireFeedback(ability, aimDirection, aimPoint);
         }
 
+        /// <summary>Owner. Corta una carga local sin disparar (la habilidad del slot cambió) y avisa al servidor.</summary>
+        private void AbortLocalCharge(int slot)
+        {
+            _localCharging[slot] = false;
+            _localChargeAbility[slot] = null;
+            _trajectoryPreview?.Hide();
+            _chargeVfx?.EndCharge();
+            AbortChargeServerRpc(slot);
+        }
+
+        [ServerRpc]
+        private void AbortChargeServerRpc(int slot)
+        {
+            if (slot < 0 || slot >= AbilitySlots.Count || !_serverCharging[slot]) return;
+            _serverCharging[slot] = false;
+            _serverChargeAbility[slot] = null;
+            StopChargeVfxObserversRpc();
+        }
+
         [ServerRpc]
         private void BeginChargeServerRpc(int slot)
         {
             if (!CanActServer) return;
-            if (slot < 0 || slot >= _equippedAbilities.Length) return;
-            AbilitySO ability = _equippedAbilities[slot];
+            if (slot < 0 || slot >= AbilitySlots.Count) return;
+            AbilitySO ability = GetAbility(slot);
             if (ability == null || !ability.IsChargeable) return;
             if (_serverCharging[slot]) return; // ya estaba cargando
 
@@ -392,6 +468,7 @@ namespace Game.Presentation.Abilities
             // El cooldown NO arranca acá: arranca al soltar (ver ReleaseChargeServerRpc),
             // para que cargar más tiempo no "regale" cooldown gratis.
             _serverCharging[slot] = true;
+            _serverChargeAbility[slot] = ability;
             _serverChargeStartTick[slot] = base.TimeManager.Tick; // reloj del SERVIDOR: el cliente no decide la carga
 
             PlayChargeVfxObserversRpc(ability.MaxChargeDuration); // telegrafía para los demás
@@ -401,16 +478,18 @@ namespace Game.Presentation.Abilities
         private void ReleaseChargeServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick)
         {
             if (!CanActServer) return;
-            if (slot < 0 || slot >= _equippedAbilities.Length) return;
+            if (slot < 0 || slot >= AbilitySlots.Count) return;
             if (!_serverCharging[slot]) return; // soltó sin haber empezado (o el begin fue rechazado)
 
-            AbilitySO ability = _equippedAbilities[slot];
+            AbilitySO ability = _serverChargeAbility[slot];
             _serverCharging[slot] = false;
+            _serverChargeAbility[slot] = null;
             StopChargeVfxObserversRpc(); // cortar la telegrafía para los demás, coincidiendo con el disparo
-            if (ability == null) return;
+            // Si el guante cambió durante la carga, la carga se pierde (el maná ya se cobró).
+            if (ability == null || ability != GetAbility(slot)) return;
 
             // Cooldown arranca al disparar (tick de disparo del cliente), no cuando empezó a cargar.
-            _serverCooldownEndTick[slot] = ClampFireTick(fireTick) + CooldownTicks(ability);
+            _serverCooldownEndTick[slot] = ClampFireTick(fireTick) + CooldownTicks(slot, ability);
 
             // Carga medida contra el reloj del servidor y acotada a [0..1].
             float held = (float)base.TimeManager.TicksToTime(base.TimeManager.Tick - _serverChargeStartTick[slot]);
@@ -424,8 +503,7 @@ namespace Game.Presentation.Abilities
 
         private void PredictCooldownLocally(int slot, AbilitySO ability)
         {
-            float castSpeed = _stats != null ? _stats.CastSpeedMultiplier : 1f;
-            _localCooldownEndTick[slot] = TicksFromNow(ability.Cooldown / Mathf.Max(0.1f, castSpeed));
+            _localCooldownEndTick[slot] = TicksFromNow(EffectiveCooldown(slot, ability));
         }
 
         private System.Collections.IEnumerator PlayLocalFireFeedbackDelayed(AbilitySO ability, float delay)
@@ -503,9 +581,9 @@ namespace Game.Presentation.Abilities
         private void CastServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick)
         {
             if (!CanActServer) return;
-            if (slot < 0 || slot >= _equippedAbilities.Length) return;
-            AbilitySO ability = _equippedAbilities[slot];
-            if (ability == null) return;
+            if (slot < 0 || slot >= AbilitySlots.Count) return;
+            AbilitySO ability = GetAbility(slot);
+            if (ability == null) return; // sin guante: el clic derecho no hace nada
             if (ability.TryGetOwnerDash(Vector3.forward, out _, out _, out _)) return; // el dash va por el input de movimiento
 
             uint fire = ClampFireTick(fireTick);
@@ -521,7 +599,7 @@ namespace Game.Presentation.Abilities
                 return;
             }
 
-            _serverCooldownEndTick[slot] = fire + CooldownTicks(ability);
+            _serverCooldownEndTick[slot] = fire + CooldownTicks(slot, ability);
 
             if (ability.WindupDuration > 0f)
             {
@@ -546,8 +624,10 @@ namespace Game.Presentation.Abilities
                 aimPoint = _pendingAimPoint[slot];
             }
 
-            ExecuteCast(ability, slot, aimDirection, aimPoint, fireTick);
             StopChargeVfxObserversRpc(); // cortar la telegrafía para los demás, coincidiendo con el disparo
+            // Si el guante cambió durante el windup, no se ejecuta la habilidad de otro guante.
+            if (ability != GetAbility(slot)) yield break;
+            ExecuteCast(ability, slot, aimDirection, aimPoint, fireTick);
         }
 
         [Server]
@@ -575,7 +655,8 @@ namespace Game.Presentation.Abilities
                 tick: adjustedFireTick,
                 damageMultiplier: dmgMul,
                 slot: slot,
-                chargeNormalized: charge
+                chargeNormalized: charge,
+                abilityPower: AbilityPowerFor(slot)
             );
 
             ability.Execute(_executor, in context);
@@ -595,8 +676,7 @@ namespace Game.Presentation.Abilities
         public bool TryGetDashParams(int slot, out float speed, out float duration)
         {
             speed = 0f; duration = 0f;
-            if (slot < 0 || slot >= _equippedAbilities.Length) return false;
-            AbilitySO ability = _equippedAbilities[slot];
+            AbilitySO ability = GetAbility(slot);
             return ability != null && ability.TryGetOwnerDash(Vector3.forward, out _, out speed, out duration);
         }
 
@@ -611,7 +691,7 @@ namespace Game.Presentation.Abilities
             if (!CanActServer) return false;
             if (!TryGetDashParams(slot, out speed, out duration)) return false;
 
-            AbilitySO ability = _equippedAbilities[slot];
+            AbilitySO ability = GetAbility(slot);
             uint endTick = _serverCooldownEndTick[slot];
             bool onCooldown = endTick > DashCooldownToleranceTicks && base.TimeManager.Tick + DashCooldownToleranceTicks < endTick;
             if (onCooldown || (_mana != null && !_mana.TrySpend(ability.ResourceCost)))
@@ -620,8 +700,7 @@ namespace Game.Presentation.Abilities
                 return false;
             }
 
-            float castSpeed = _stats != null ? _stats.CastSpeedMultiplier : 1f;
-            _serverCooldownEndTick[slot] = TicksFromNow(ability.Cooldown / Mathf.Max(0.1f, castSpeed));
+            _serverCooldownEndTick[slot] = TicksFromNow(EffectiveCooldown(slot, ability));
 
             Vector3 origin = _spellOrigin != null ? _spellOrigin.position : transform.position;
             if (ability.MuzzlePrefab != null) PlayMuzzleObserversRpc(origin, direction);
@@ -639,6 +718,7 @@ namespace Game.Presentation.Abilities
             if (_localCharging[slot])
             {
                 _localCharging[slot] = false;
+                _localChargeAbility[slot] = null;
                 _trajectoryPreview?.Hide();
                 _chargeVfx?.EndCharge();
             }
@@ -680,7 +760,7 @@ namespace Game.Presentation.Abilities
         [ObserversRpc(ExcludeOwner = true)]
         private void PlayCastSfxObserversRpc(Vector3 point, int slot)
         {
-            AbilitySO ability = (slot >= 0 && slot < _equippedAbilities.Length) ? _equippedAbilities[slot] : null;
+            AbilitySO ability = GetAbility(slot);
             if (ability != null && ability.CastClip != null)
                 VFXManager.PlaySfx(ability.CastClip, point);
         }
@@ -705,7 +785,7 @@ namespace Game.Presentation.Abilities
         [ObserversRpc]
         private void PlayImpactSfxObserversRpc(Vector3 point, int slot, bool wallHit)
         {
-            AbilitySO ability = (slot >= 0 && slot < _equippedAbilities.Length) ? _equippedAbilities[slot] : null;
+            AbilitySO ability = GetAbility(slot);
             if (ability == null) return;
 
             AudioClip clip = wallHit ? ability.SurfaceImpactClip : ability.ImpactClip;
@@ -716,13 +796,7 @@ namespace Game.Presentation.Abilities
 
         public void SetInputBlocked(bool blocked) => _inputBlocked = blocked;
 
-        public int AbilitySlotCount => _equippedAbilities.Length;
-
-        public AbilitySO GetAbility(int slot)
-        {
-            if (slot < 0 || slot >= _equippedAbilities.Length) return null;
-            return _equippedAbilities[slot];
-        }
+        public int AbilitySlotCount => AbilitySlots.Count;
 
         public float GetCooldownNormalized(int slot) => GetCooldownRemainingNormalized(slot);
     }

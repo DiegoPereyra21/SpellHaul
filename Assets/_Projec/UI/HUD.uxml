@@ -46,22 +46,11 @@
                 <ui:Label name="slot-1-key" text="Shift" class="slot-key" />
             </ui:VisualElement>
             <ui:VisualElement name="slot-2" class="ability-slot">
-                <ui:VisualElement class="ability-icon icon-circle icon-gold" />
+                <ui:VisualElement name="slot-glove-icon" class="ability-icon icon-circle icon-gold" />
+                <ui:Label name="slot-glove-name" text="No Glove" class="slot-name" />
                 <ui:VisualElement name="slot-2-cd" class="slot-cooldown" />
                 <ui:Label name="slot-2-cd-text" class="slot-cd-text" />
                 <ui:Label name="slot-2-key" text="RMB" class="slot-key" />
-            </ui:VisualElement>
-            <ui:VisualElement name="slot-3" class="ability-slot">
-                <ui:VisualElement class="ability-icon icon-square icon-cyan" />
-                <ui:VisualElement name="slot-3-cd" class="slot-cooldown" />
-                <ui:Label name="slot-3-cd-text" class="slot-cd-text" />
-                <ui:Label name="slot-3-key" text="Q" class="slot-key" />
-            </ui:VisualElement>
-            <ui:VisualElement name="slot-4" class="ability-slot">
-                <ui:VisualElement class="ability-icon icon-diamond icon-gold" />
-                <ui:VisualElement name="slot-4-cd" class="slot-cooldown" />
-                <ui:Label name="slot-4-cd-text" class="slot-cd-text" />
-                <ui:Label name="slot-4-key" text="F" class="slot-key" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:Label name="interact-prompt" text="" class="interact-prompt" />

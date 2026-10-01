@@ -10,7 +10,12 @@ namespace Game.Core.Abilities.Abilities
 
         public override void Execute(AbilityExecutor executor, in AbilityCastContext context)
         {
-            executor.ApplySelfEffect(context.CasterNetworkId, _healAmount);
+            executor.ApplySelfEffect(context.CasterNetworkId, _healAmount * context.AbilityPower);
+        }
+
+        public override void DescribeEffect(float power, System.Collections.Generic.List<string> lines)
+        {
+            lines.Add($"Heals {_healAmount * power:0}");
         }
     }
 }

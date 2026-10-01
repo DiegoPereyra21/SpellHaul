@@ -74,10 +74,10 @@ Todo el código está en `Assets/_Projec/Scripts/` (la carpeta se llama `_Projec
 
 ```
 Core/                      lógica pura, sin depender de Presentation
-  Abilities/               AbilitySO, AbilityCastContext, AbilityExecutor (puerto), IDamageable, habilidades concretas
+  Abilities/               AbilitySO, AbilitySlots, AbilityCastContext, AbilityExecutor (puerto), IDamageable, habilidades concretas
   Items/                   ItemSO, EquipmentItemSO, GloveItemSO, ItemStack, InventorySnapshot, StashData,
                            ItemDatabase, LootTableSO, StartingKitSO, enums (EquipmentSlot, ItemCategory, Rarity,
-                           StatType, GloveType), ItemSorting (ItemSortMode), StatModifier
+                           StatType, GloveSchool), ItemSorting (ItemSortMode), StatModifier
   Pooling/                 ObjectPool
   Run/                     ActiveRunInfo, IPlayerLoadoutStorage, IStashStorage, IRunInventory, PlayerRunStatus, RunPhase
 Presentation/
@@ -87,7 +87,7 @@ Presentation/
   Player/                  PlayerMovementController (Prediction v2), CameraLookController, CameraEffects,
                            LookSettings, PlayerAvatarState, PlayerRegistry
   Abilities/               AbilityController, NetworkAbilityExecutor, Projectile, ChargedOrbProjectile,
-                           ParryHandler, CosmeticProjectile(+Manager), TrajectoryPreviewController, ChargeVFXController
+                           CosmeticProjectile(+Manager), TrajectoryPreviewController, ChargeVFXController
   Combat/                  Health, Mana, PlayerStats, RunInventory, LootContainer, WorldItem, LootDropper,
                            ChestSpawner/Point, EnemySpawner/Point, EnemyAI, RangedEnemyAI, PlantGuardianAI,
                            LobProjectile, ExtractionZone, PlayerExtractionState, PlayerDeathHandler,
@@ -284,7 +284,7 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 ### Definiciones
 - `ItemSO` tiene: id, nombre, categoría, rareza, apilable, stack máximo y `WorldPrefab`.
 - `EquipmentItemSO` agrega slot, `StatModifier[]` (aditivos) y `_pocketSlots`.
-- `GloveItemSO` agrega `GloveType` (Swift / Heavy / Focus).
+- `GloveItemSO` (categoría `Glove`, slot Glove) agrega `GloveSchool`, la `AbilitySO` del clic derecho, `_abilityPower` y `_cooldownMultiplier` (ver §8).
 - `Rarity`: Common / Rare / Epic.
 
 ### Enums serializados (los valores nuevos van al final)
@@ -292,7 +292,8 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 | Enum | Valores |
 |---|---|
 | `EquipmentSlot` | Boots, Hat, Robe, Glove, PocketL, PocketR |
-| `ItemCategory`, `Rarity`, `StatType`, `GloveType`, `RunPhase`, `PlayerRunStatus`, `RunOutcome` | (sin detallar) |
+| `GloveSchool` | Destruction, Restoration |
+| `ItemCategory`, `Rarity`, `StatType`, `RunPhase`, `PlayerRunStatus`, `RunOutcome` | (sin detallar) |
 
 - El orden visual de los slots no es el orden del enum. Lo definen las extensiones de `EquipmentSlotExtensions` (`DisplayOrder`: Hat, Robe, Glove, Boots, PocketL, PocketR), `DisplayRank`, `DisplayIndices` y `DisplayName`.
 
@@ -349,11 +350,11 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 - **Pisos:** Damage ≥ 0.1, CastSpeed ≥ 0.1, MoveSpeed ≥ 0.5, JumpForce ≥ 0, ManaRegen ≥ 0. Protection queda en [0, 0.6].
 
 ### Patrón de arquetipos
-- Se aplica a Boots, Hat, Robe y Glove, cada uno en 3 rarezas.
+- Se aplica a Boots, Hat y Robe, cada uno en 3 rarezas. Los guantes no siguen este patrón (ver Guantes).
 - **Swift:** un stat ofensivo o de movilidad, sin penalidad.
 - **Heavy:** ese mismo stat en negativo, más Protection.
 - **Focus:** un stat de utilidad (ManaRegen o JumpForce).
-- **Glove** define el build con el eje Damage/CastSpeed. Hat y Robe aportan una fracción menor del mismo eje.
+- Damage y CastSpeed solo vienen de Hat y Robe (los guantes ya no dan stats pasivos).
 
 ### Catálogo (deltas; Common / Rare / Epic)
 
@@ -362,35 +363,54 @@ PlayFab/cloudscript.js     (en la raíz del repo) CloudScript Legacy
 | Boots | MoveSpeed +0.75 / +1.2 / +1.8 | MoveSpeed −0.5/−0.8/−1.2 · Prot +0.08/+0.12/+0.18 | JumpForce +1.3 / +2 / +3 |
 | Hat | CastSpeed +0.05 / +0.08 / +0.12 | CastSpeed −0.03/−0.05/−0.08 · Prot +0.08/+0.12/+0.18 | ManaRegen +1.3 / +2 / +3 |
 | Robe | Damage +0.05 / +0.08 / +0.12 | Damage −0.03/−0.05/−0.08 · Prot +0.08/+0.12/+0.18 | ManaRegen +1.3 / +2 / +3 |
-| Glove | Damage −0.2/−0.3/−0.45 · CastSpeed +0.25/+0.4/+0.6 | Damage +0.3/+0.5/+0.75 · CastSpeed −0.2/−0.3/−0.45 | ManaRegen +0.15 / +0.2 / +0.3 |
 | Pocket | Pocket_1: 6 slots, Pocket_2: 9 slots, Pocket_3: 12 slots | | |
 
-- **ItemId:** `arquetipo_slot_rareza` en snake_case (por ejemplo `swift_gloves_rare`, `heavy_boots_epic`).
+- **ItemId:** `arquetipo_slot_rareza` en snake_case (por ejemplo `swift_hat_rare`, `heavy_boots_epic`).
 - **DisplayName:** "Rareza Arquetipo Slot".
 - **Kit inicial:** `StartingKitSO` (`_startingItems`, con `[FormerlySerializedAs("_backpack")]`). Para PlayFab se exporta a Title Data.
-- **Pendiente:** que el guante defina las habilidades disponibles. Hoy hay 5 habilidades fijas.
+
+### Guantes
+- Son una categoría propia (`ItemCategory.Glove`), ocupan el slot Glove y **definen la habilidad del clic derecho**. Sin guante equipado el clic derecho no hace nada.
+- No dan stats pasivos. Tienen:
+  - una **escuela** (`GloveSchool`), que se muestra en el tooltip ("Destruction Glove") y como color del ícono en el HUD;
+  - una `AbilitySO`, compartida por todas las rarezas de esa familia;
+  - **potencia** (`_abilityPower`, multiplica daño o curación) y **cooldown** (`_cooldownMultiplier`). Ambos mejoran con la rareza.
+- `AbilityController` resuelve la habilidad con `RunInventory.EquippedGlove`. Funciona en el servidor y en todos los clientes, porque el equipo se sincroniza a todos.
+- La potencia viaja en `AbilityCastContext.AbilityPower`. El cooldown efectivo es `Cooldown × CooldownMultiplier / CastSpeed`.
+- El cooldown es del slot, no del guante: cambiar de guante no lo reinicia. Si el guante cambia en medio de una carga o un windup, el cast se descarta.
+- **Tooltip:** `AbilitySO.DescribeEffect(power, lines)` arma las líneas de efecto ya escaladas (por ejemplo "Heals 39").
+
+| Familia | ItemId | Escuela | Habilidad (`AbilityId`) | Potencia C/R/E | Cooldown C/R/E |
+|---|---|---|---|---|---|
+| Orb Gloves | `orb_gloves_<rareza>` | Destruction | Orbe cargado (`id_chargedorb`) | ×1.0 / ×1.2 / ×1.45 | ×1.0 / ×0.9 / ×0.8 |
+| Mending Gloves | `mending_gloves_<rareza>` | Restoration | Cura instantánea (`id_heal`) | ×1.0 / ×1.3 / ×1.6 | ×1.0 / ×0.9 / ×0.8 |
+
+- **Guante nuevo:**
+  1. Si hace falta, crear la `AbilitySO` con un `AbilityId` único.
+  2. Si es una escuela nueva, agregarla al **final** de `GloveSchool`, con su color `.school-<nombre>` en `HUD.uss`.
+  3. Agregar la familia en `ItemCatalogGenerator.BuildGloves()`.
+  4. Correr **Game > Items > Generate Equipment Catalog** y después **Generate Loot Tables**.
+- **Guantes retirados** (Swift/Heavy/Focus): CloudScript `EnsureProfile` los migra con `LEGACY_ITEM_IDS`. Swift y Heavy pasan a Orb y Focus pasa a Mending, con la misma rareza.
 
 ## 9. Combate
 
-### Habilidades (5 slots, `AbilityController`)
+### Habilidades (3 slots, `AbilityController` + `AbilitySlots`)
 
-| Input | Habilidad | Notas |
-|---|---|---|
-| Clic izquierdo | Proyectil básico | Windup de telegrafía opcional |
-| Shift | Dash direccional | Predicho y reconciliado. Ease-out, en la dirección de mirada (permite dash vertical) |
-| Clic derecho | Orbe cargado | Ver abajo |
-| Q | Auto-cura | |
-| F | Parry | Ver abajo |
+El índice de slot viaja por red y define el binding (`CastSlot0..2`): no reordenar.
+
+| Slot | Input | Habilidad | Notas |
+|---|---|---|---|
+| `Primary` (0) | Clic izquierdo | Proyectil básico (`_primaryAbility`) | Fijo. Windup de telegrafía opcional |
+| `Mobility` (1) | Shift | Dash (`_mobilityAbility`) | Fijo. Predicho y reconciliado. Ease-out, en la dirección de mirada (permite dash vertical) |
+| `Glove` (2) | Clic derecho | La del guante equipado | Vacío sin guante. Hoy: orbe cargado o cura instantánea |
+
+El parry fue eliminado.
 
 **Orbe cargado**
 - El servidor mide la carga.
 - El maná se cobra al empezar a cargar y el cooldown arranca al soltar.
 - Trayectoria balística. El preview se dibuja con un LineRenderer en `LateUpdate`.
 - Al terminar, `ChargedOrbProjectile` suma el daño hecho.
-
-**Parry**
-- Tiene fases startup, active y recovery.
-- En la fase active destruye los proyectiles que tiene enfrente y devuelve maná.
 
 **Otros sistemas de combate**
 - **Salud** (`Health`): SyncVar server-authoritative, implementa `IDamageable` (daño positivo, cura negativa) y expone el evento `OnDied`. Lo usan jugadores y enemigos. Protection reduce el daño.
@@ -445,7 +465,7 @@ Todo con UI Toolkit. El orden entre paneles se maneja con `sortingOrder` de cada
   - expone `IsOpen` y `Close`.
 - **`HUDController`.** Muestra:
   - vida y maná;
-  - cooldowns de las 5 habilidades;
+  - cooldowns de los 3 slots, con el del guante mostrando el nombre de la habilidad o "No Glove";
   - aro de cooldown del dash;
   - hitmarker y kill marker;
   - aviso de daño direccional;
@@ -533,7 +553,7 @@ CMD ["/game/SpellHaul-LinuxServer.x86_64", "-server", "-batchmode", "-nographics
 ## 14. Estado y pendientes
 
 **Implementado y probado**
-- Movimiento predicho, 5 habilidades, lag compensation híbrida.
+- Movimiento predicho, ataque básico, dash y habilidades por guante; lag compensation híbrida.
 - Proyectiles simulados en el cliente.
 - 3 tipos de enemigo, loot, cofres, extracción y fase de peligro simplificada.
 - Inventario de run y stash con orden y apilado.
@@ -549,7 +569,7 @@ CMD ["/game/SpellHaul-LinuxServer.x86_64", "-server", "-batchmode", "-nographics
 - Íconos de items (faltan los assets; hoy son placeholders).
 - Brillo, que requiere habilitar post-processing.
 - Contenido de la fase de peligro (hunters y noche) y generación procedural del mapa (seed del servidor).
-- Que el guante determine las habilidades.
+- Más guantes y escuelas (Control, Movilidad…).
 - Qué son los "usables".
 - `LoginWithSteam` (falta el AppID) y QoS real para la latencia del matchmaking.
 - CI/CD del servidor.

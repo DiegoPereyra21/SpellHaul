@@ -47,11 +47,17 @@ namespace Game.Core.Abilities.Abilities
             gravity = _gravity; // fija: solo la velocidad cambia con la carga
         }
 
+        public override void DescribeEffect(float power, System.Collections.Generic.List<string> lines)
+        {
+            lines.Add($"Damage {_minDamage * power:0}-{_maxDamage * power:0} (charge)");
+            lines.Add($"Blast radius {_minExplosionRadius:0.#}-{_maxExplosionRadius:0.#} m");
+        }
+
         public override void Execute(AbilityExecutor executor, in AbilityCastContext context)
         {
             float t = Mathf.Clamp01(context.ChargeNormalized);
 
-            float damage = Mathf.Lerp(_minDamage, _maxDamage, t) * context.DamageMultiplier;
+            float damage = Mathf.Lerp(_minDamage, _maxDamage, t) * context.DamageMultiplier * context.AbilityPower;
             float radius = Mathf.Lerp(_minExplosionRadius, _maxExplosionRadius, t);
             float scale = Mathf.Lerp(_minVisualScale, _maxVisualScale, t);
             GetLaunchForCharge(t, out float launchSpeed, out float gravity);

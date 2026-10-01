@@ -11,6 +11,8 @@
 //   estuviera: por cada ItemId, la cantidad y la durabilidad no pueden subir. Con una run en
 //   curso no se puede tocar nada. La marca de run en curso la maneja solo el servidor.
 // - AbandonActiveRun: dar por perdida la run en curso (el equipo que se llevó se pierde).
+// - Migración de ItemIds: EnsureProfile reemplaza ids retirados por su equivalente
+//   (LEGACY_ITEM_IDS) en el loadout y el stash. Para retirar un item en el futuro, agregarlo ahí.
 //
 // Todas devuelven un string JSON: {"ok":true} o {"ok":false,"reason":"..."}.
 
@@ -23,6 +25,20 @@ var MAX_EQUIPMENT_SLOTS = 32;   // holgado: EquipmentSlot puede crecer al final
 var MAX_POCKET_ENTRIES = 12;    // RunInventory.MaxSnapshotPocketEntries
 var MAX_QUANTITY = 9999;
 var EPS = 0.0001;
+
+// ItemId retirado -> ItemId que lo reemplaza. Guantes Swift/Heavy/Focus (stats pasivos) ->
+// guantes con habilidad: ofensivos al Orb, Focus al Mending, misma rareza.
+var LEGACY_ITEM_IDS = {
+    "swift_gloves_common": "orb_gloves_common",
+    "swift_gloves_rare": "orb_gloves_rare",
+    "swift_gloves_epic": "orb_gloves_epic",
+    "heavy_gloves_common": "orb_gloves_common",
+    "heavy_gloves_rare": "orb_gloves_rare",
+    "heavy_gloves_epic": "orb_gloves_epic",
+    "focus_gloves_common": "mending_gloves_common",
+    "focus_gloves_rare": "mending_gloves_rare",
+    "focus_gloves_epic": "mending_gloves_epic"
+};
 
 function result(ok, reason) {
     return JSON.stringify({ ok: ok, reason: reason || "" });
@@ -121,9 +137,38 @@ function conserves(before, after) {
     return null;
 }
 
+// Reemplaza en el lugar los ItemIds retirados. Devuelve true si cambió algo.
+function migrateList(list) {
+    var changed = false;
+    if (!list) return false;
+    for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        if (s && s.ItemId && LEGACY_ITEM_IDS.hasOwnProperty(s.ItemId)) {
+            s.ItemId = LEGACY_ITEM_IDS[s.ItemId];
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+function migrateProfile(cur) {
+    var loadoutChanged = false, stashChanged = false;
+    if (cur.loadout) {
+        if (migrateList(cur.loadout.Equipment)) loadoutChanged = true;
+        if (migrateList(cur.loadout.PocketL)) loadoutChanged = true;
+        if (migrateList(cur.loadout.PocketR)) loadoutChanged = true;
+    }
+    if (cur.stash && migrateList(cur.stash.Slots)) stashChanged = true;
+    if (loadoutChanged || stashChanged) {
+        writeProfile(loadoutChanged ? cur.loadout : null, stashChanged ? cur.stash : null);
+        log.info("Perfil de " + currentPlayerId + " migrado (ItemIds retirados).");
+    }
+}
+
 handlers.EnsureProfile = function (args, context) {
     var cur = readProfile();
     if (cur.loadout) {
+        migrateProfile(cur);
         if (!cur.stash) writeProfile(null, emptyStash());
         return result(true);
     }

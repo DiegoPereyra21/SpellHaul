@@ -72,19 +72,5 @@ namespace Game.Presentation.Abilities
             if (nob.TryGetComponent(out IDamageable damageable))
                 damageable.ApplyDamage(-healAmount, casterNetworkId);
         }
-
-        public void StartParry(Game.Core.Abilities.Abilities.ParryAbilitySO data, in AbilityCastContext context)
-        {
-            if (!InstanceFinder.IsServerStarted) return;
-
-            if (!InstanceFinder.ServerManager.Objects.Spawned.TryGetValue(context.CasterNetworkId, out NetworkObject casterNob))
-            {
-                Debug.LogWarning($"[NetworkAbilityExecutor] Caster no encontrado. ID: {context.CasterNetworkId}");
-                return;
-            }
-
-            if (casterNob.TryGetComponent(out ParryHandler handler))
-                handler.StartParry(data, context.CasterNetworkId, context.AimDirection, context.Slot);
-        }
     }
 }

@@ -77,26 +77,6 @@
                     "priority": 0
                 },
                 {
-                    "name": "CastSlot3",
-                    "type": "Button",
-                    "id": "89160e8f-c81b-4369-8351-ff7a661812fa",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false,
-                    "priority": 0
-                },
-                {
-                    "name": "CastSlot4",
-                    "type": "Button",
-                    "id": "edce1668-7617-467d-8bc4-e28e7c4fdb53",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false,
-                    "priority": 0
-                },
-                {
                     "name": "Interact",
                     "type": "Button",
                     "id": "40b2670c-255b-4315-826d-8a7031d91a6f",
@@ -137,17 +117,6 @@
                     "processors": "",
                     "groups": "",
                     "action": "Interact",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "bcc52c31-d305-4cb7-9626-89c1ebbfe30e",
-                    "path": "<Keyboard>/f",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "CastSlot4",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -269,17 +238,6 @@
                     "processors": "",
                     "groups": "",
                     "action": "CastSlot2",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "c52dd921-994e-422a-aba1-98dbef40e107",
-                    "path": "<Keyboard>/q",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "CastSlot3",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

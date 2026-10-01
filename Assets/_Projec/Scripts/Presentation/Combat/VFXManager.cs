@@ -19,12 +19,6 @@ namespace Game.Presentation.Combat
         [SerializeField] private ParticleSystem _projectileMuzzlePrefab;
         [SerializeField] private int _projectileMuzzlePoolSize = 8;
 
-        [Header("Parry")]
-        [SerializeField] private ParticleSystem _parryActivePrefab;
-        [SerializeField] private int _parryActivePoolSize = 4;
-        [SerializeField] private ParticleSystem _parrySuccessPrefab;
-        [SerializeField] private int _parrySuccessPoolSize = 4;
-
         [Header("Audio (SFX 3D genérico, pooleado)")]
         [Tooltip("Prefab con un AudioSource preconfigurado: Spatial Blend = 1 (3D), Play On Awake = false, Loop = false.")]
         [SerializeField] private AudioSource _sfxPrefab;
@@ -33,8 +27,6 @@ namespace Game.Presentation.Combat
         private ObjectPool<ParticleSystem> _projectileHitPool;
         private ObjectPool<ParticleSystem> _orbExplosionPool;
         private ObjectPool<ParticleSystem> _projectileMuzzlePool;
-        private ObjectPool<ParticleSystem> _parryActivePool;
-        private ObjectPool<ParticleSystem> _parrySuccessPool;
         private ObjectPool<AudioSource> _sfxPool;
 
         private void Awake()
@@ -49,10 +41,6 @@ namespace Game.Presentation.Combat
                 _orbExplosionPool = new ObjectPool<ParticleSystem>(_orbExplosionPrefab, _orbExplosionPoolSize, transform);
             if (_projectileMuzzlePrefab != null)
                 _projectileMuzzlePool = new ObjectPool<ParticleSystem>(_projectileMuzzlePrefab, _projectileMuzzlePoolSize, transform);
-            if (_parryActivePrefab != null)
-                _parryActivePool = new ObjectPool<ParticleSystem>(_parryActivePrefab, _parryActivePoolSize, transform);
-            if (_parrySuccessPrefab != null)
-                _parrySuccessPool = new ObjectPool<ParticleSystem>(_parrySuccessPrefab, _parrySuccessPoolSize, transform);
             if (_sfxPrefab != null)
                 _sfxPool = new ObjectPool<AudioSource>(_sfxPrefab, _sfxPoolSize, transform);
         }
@@ -65,12 +53,6 @@ namespace Game.Presentation.Combat
 
         public static void PlayProjectileMuzzle(Vector3 point, Quaternion rotation)
             => _instance?.PlayVFX(_instance._projectileMuzzlePool, point, rotation);
-
-        public static void PlayParryActive(Vector3 point, float scale = 1f)
-            => _instance?.PlayVFXScaled(_instance._parryActivePool, point, Quaternion.identity, scale);
-
-        public static void PlayParrySuccess(Vector3 point, float scale = 1f)
-            => _instance?.PlayVFXScaled(_instance._parrySuccessPool, point, Quaternion.identity, scale);
 
         /// <summary>Reproduce un clip 3D pooleado en un punto del mundo. clip null = no-op (habilidad sin audio configurado).</summary>
         public static void PlaySfx(AudioClip clip, Vector3 point, float volume = 1f)

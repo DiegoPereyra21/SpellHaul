@@ -35,6 +35,30 @@ namespace Game.Presentation.Combat
 
         public event System.Action OnInventoryChanged;
 
+        // Cache del guante equipado: se resuelve por ItemId solo cuando cambia.
+        private string _cachedGloveId;
+        private GloveItemSO _cachedGlove;
+
+        /// <summary>
+        /// Guante equipado, o null. Vale en el servidor y en todos los clientes (el equipo se
+        /// sincroniza a todos los observadores): lo usa AbilityController para la habilidad del
+        /// botón secundario.
+        /// </summary>
+        public GloveItemSO EquippedGlove
+        {
+            get
+            {
+                int index = (int)EquipmentSlot.Glove;
+                string id = index < _equipment.Count && !_equipment[index].IsEmpty ? _equipment[index].ItemId : null;
+                if (id != _cachedGloveId)
+                {
+                    _cachedGloveId = id;
+                    _cachedGlove = id != null && _database != null ? _database.GetById(id) as GloveItemSO : null;
+                }
+                return _cachedGlove;
+            }
+        }
+
         public override void OnStartServer()
         {
             // Inicializar los slots de equipamiento (uno por cada EquipmentSlot, vacío).

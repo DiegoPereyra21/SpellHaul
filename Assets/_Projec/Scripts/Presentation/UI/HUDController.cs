@@ -34,9 +34,16 @@ namespace Game.Presentation.UI
         private Label _runCounter;
         private PlayerInteraction _interaction;
         private Label _interactPrompt;
-        private readonly VisualElement[] _cooldownOverlays = new VisualElement[5];
+        private readonly VisualElement[] _cooldownOverlays = new VisualElement[Game.Core.Abilities.AbilitySlots.Count];
 
-        private readonly Label[] _cooldownTexts = new Label[5];
+        private readonly Label[] _cooldownTexts = new Label[Game.Core.Abilities.AbilitySlots.Count];
+
+        // Slot del guante (clic derecho): nombre de la habilidad o "No Glove", color por escuela.
+        private VisualElement _gloveSlot;
+        private VisualElement _gloveIcon;
+        private Label _gloveName;
+        private Game.Core.Items.GloveItemSO _shownGlove;
+        private bool _gloveShownOnce;
         private VisualElement _dangerFrame;
 
         // Últimos valores mostrados: los textos solo se reescriben cuando cambia lo que muestran
@@ -45,7 +52,7 @@ namespace Game.Presentation.UI
         private int _lastMana = int.MinValue, _lastManaMax = int.MinValue;
         private int _lastTimerSeconds = int.MinValue;
         private int _lastAlive = -1, _lastExtracted = -1, _lastDead = -1;
-        private readonly int[] _lastCooldownKey = { int.MinValue, int.MinValue, int.MinValue, int.MinValue, int.MinValue }; // MinValue = sin dibujar aún, -1 = oculto
+        private readonly int[] _lastCooldownKey = { int.MinValue, int.MinValue, int.MinValue }; // por AbilitySlots. MinValue = sin dibujar aún, -1 = oculto
 
         private VisualElement _dashRing;
         private float _dashRingProgress; // 0 = vacío (en cooldown), 1 = lleno (listo)
@@ -168,6 +175,10 @@ namespace Game.Presentation.UI
             for (int i = 0; i < _cooldownTexts.Length; i++)
                 _cooldownTexts[i] = root.Q<Label>($"slot-{i}-cd-text");
 
+            _gloveSlot = root.Q<VisualElement>($"slot-{Game.Core.Abilities.AbilitySlots.Glove}");
+            _gloveIcon = root.Q<VisualElement>("slot-glove-icon");
+            _gloveName = root.Q<Label>("slot-glove-name");
+
             _dangerFrame = root.Q<VisualElement>("danger-frame");
 
             // Menú de pausa (Esc), solo para el dueño.
@@ -183,6 +194,30 @@ namespace Game.Presentation.UI
             if (extras == null) extras = gameObject.AddComponent<HudExtras>();
             extras.Init(root, _abilities, _cam);
         }
+
+        /// <summary>Owner. Actualiza el slot del clic derecho solo cuando cambia el guante equipado.</summary>
+        private void RefreshGloveSlot()
+        {
+            if (_abilities == null || _gloveSlot == null) return;
+            var glove = _abilities.CurrentGlove;
+            if (_gloveShownOnce && glove == _shownGlove) return;
+            _gloveShownOnce = true;
+            _shownGlove = glove;
+
+            bool hasAbility = glove != null && glove.Ability != null;
+            _gloveSlot.EnableInClassList("ability-slot--empty", !hasAbility);
+            if (_gloveName != null)
+                _gloveName.text = hasAbility ? glove.Ability.DisplayName : "No Glove";
+
+            if (_gloveIcon != null)
+            {
+                foreach (Game.Core.Items.GloveSchool school in System.Enum.GetValues(typeof(Game.Core.Items.GloveSchool)))
+                    _gloveIcon.EnableInClassList(GloveSchoolClass(school), hasAbility && glove.School == school);
+            }
+        }
+
+        /// <summary>Clase USS de color por escuela de guante (HUD.uss).</summary>
+        public static string GloveSchoolClass(Game.Core.Items.GloveSchool school) => "school-" + school.ToString().ToLowerInvariant();
 
         public override void OnStopClient()
         {
@@ -229,6 +264,8 @@ namespace Game.Presentation.UI
                 }
             }
             
+            RefreshGloveSlot();
+
             // Cooldowns
             if (_abilities != null)
             {
@@ -241,8 +278,7 @@ namespace Game.Presentation.UI
                     if (_cooldownTexts[i] == null) continue;
                     if (cd > 0f)
                     {
-                        var ability = _abilities.GetAbility(i);
-                        float remaining = ability != null ? cd * ability.Cooldown : 0f;
+                        float remaining = _abilities.GetCooldownRemainingSeconds(i);
                         // Clave de lo que se muestra: segundos enteros (≥1 s) o décimas (<1 s).
                         int key = remaining >= 1f ? 1000 + Mathf.RoundToInt(remaining) : Mathf.RoundToInt(remaining * 10f);
                         if (key != _lastCooldownKey[i])
@@ -327,7 +363,7 @@ namespace Game.Presentation.UI
 
             if (_dashRing != null && _abilities != null)
             {
-                float newProgress = 1f - _abilities.GetCooldownProgress(1); // slot 1 = dash
+                float newProgress = 1f - _abilities.GetCooldownProgress(Game.Core.Abilities.AbilitySlots.Mobility);
                 if (!Mathf.Approximately(newProgress, _dashRingProgress))
                 {
                     _dashRingProgress = newProgress;
