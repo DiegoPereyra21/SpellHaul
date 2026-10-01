@@ -47,6 +47,8 @@ namespace Game.Presentation.Combat
 
         private void TryRegisterInRunManager()
         {
+            if (Game.Presentation.Run.PracticeSession.Active) return; // el campo de práctica no tiene RunManager
+
             if (Game.Presentation.Run.RunManager.Instance != null)
             {
                 Game.Presentation.Run.RunManager.Instance.RegisterPlayer(base.ObjectId);

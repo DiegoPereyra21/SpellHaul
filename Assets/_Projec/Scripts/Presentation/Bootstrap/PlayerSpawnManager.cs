@@ -53,6 +53,22 @@ namespace Game.Presentation.Bootstrap
             _networkManager.SceneManager.OnClientLoadedStartScenes += OnClientLoadedStartScenes;
             _networkManager.SceneManager.OnClientPresenceChangeEnd += OnClientPresenceChangeEnd;
             _networkManager.ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
+            _networkManager.ServerManager.OnServerConnectionState += OnServerConnectionState;
+        }
+
+        /// <summary>
+        /// Este componente vive con el NetworkManager (persiste entre escenas). Al apagar el servidor
+        /// se olvida todo lo de esa partida: si no, la segunda vez que se levanta un host en el mismo
+        /// proceso (ej. volver a entrar al campo de práctica) el jugador "ya tenía" un personaje de la
+        /// sesión anterior (despawneado) y se lo rechazaba como si hubiera abandonado la run.
+        /// </summary>
+        private void OnServerConnectionState(ServerConnectionStateArgs args)
+        {
+            if (args.ConnectionState != LocalConnectionState.Stopped) return;
+            _bodiesByKey.Clear();
+            _pending.Clear();
+            _bag.Clear();
+            StopAllCoroutines(); // respawns de práctica pendientes
         }
 
         private void OnDestroy()
@@ -62,6 +78,7 @@ namespace Game.Presentation.Bootstrap
             _networkManager.SceneManager.OnClientLoadedStartScenes -= OnClientLoadedStartScenes;
             _networkManager.SceneManager.OnClientPresenceChangeEnd -= OnClientPresenceChangeEnd;
             _networkManager.ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
+            _networkManager.ServerManager.OnServerConnectionState -= OnServerConnectionState;
         }
 
         /// <summary>
