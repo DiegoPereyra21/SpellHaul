@@ -360,3 +360,10 @@
     font-size: 13px;
     margin-left: 12px;
 }
+
+.tooltip-source {
+    margin-top: 6px;
+    font-size: 13px;
+    -unity-font-style: italic;
+    color: rgb(150, 152, 168);
+}

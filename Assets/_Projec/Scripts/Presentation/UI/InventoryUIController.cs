@@ -522,6 +522,7 @@ namespace Game.Presentation.UI
                 var line = new Label(stat.Text);
                 line.AddToClassList("tooltip-stat-line");
                 line.AddToClassList(stat.Sign > 0 ? "tooltip-stat-positive" : stat.Sign < 0 ? "tooltip-stat-negative" : "tooltip-stat-neutral");
+                if (stat.IsSource) line.AddToClassList("tooltip-source");
                 _tooltipStats.Add(line);
             }
 

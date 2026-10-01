@@ -13,9 +13,25 @@ namespace Game.Presentation.UI
         {
             public string Text;
             public int Sign; // 1 = positivo (buff), -1 = negativo (debuff), 0 = neutro
+            public bool IsSource; // línea "dónde se consigue" (estilo aparte)
         }
 
+        /// <summary>
+        /// Texto de "dónde se consigue" para el tooltip (lo provee EconomyPanel según recetas,
+        /// vendedor y loot). Null = no se muestra.
+        /// </summary>
+        public static System.Func<ItemSO, string> SourceProvider;
+
         public static (string type, List<StatLine> stats) Build(ItemSO def)
+        {
+            var result = BuildCore(def);
+            string source = def != null ? SourceProvider?.Invoke(def) : null;
+            if (!string.IsNullOrEmpty(source))
+                result.stats.Add(new StatLine { Text = source, Sign = 0, IsSource = true });
+            return result;
+        }
+
+        private static (string type, List<StatLine> stats) BuildCore(ItemSO def)
         {
             var stats = new List<StatLine>();
 

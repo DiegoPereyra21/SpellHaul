@@ -64,9 +64,37 @@ namespace Game.Presentation.UI
             Bind(root, "tab-trader", Tab.Trader);
 
             EconomyService.OnChanged += HandleEconomyChanged;
+            _config = EconomyConfigSO.Load();
+            ItemTooltipFormatter.SourceProvider = DescribeSource;
         }
 
-        public void Dispose() => EconomyService.OnChanged -= HandleEconomyChanged;
+        /// <summary>"Dónde se consigue" para el tooltip: el texto propio del item o uno armado con el
+        /// loot, las recetas y el vendedor.</summary>
+        private string DescribeSource(ItemSO item)
+        {
+            if (!string.IsNullOrEmpty(item.ObtainHint)) return item.ObtainHint;
+
+            var parts = new List<string>();
+            bool crafted = false, sold = false;
+            if (_config != null)
+            {
+                foreach (var r in _config.Recipes) if (r.Output == item) { crafted = true; break; }
+                foreach (var o in _config.Offers) if (o.Item == item) { sold = true; break; }
+            }
+            parts.Add(item.Category is ItemCategory.Material or ItemCategory.Resource
+                ? "Dropped by enemies and found in chests"
+                : "Found in chests and on enemies");
+            if (crafted) parts.Add("craftable");
+            if (sold) parts.Add("sold by the Trader");
+            return "Source: " + string.Join(" · ", parts);
+        }
+
+        public void Dispose()
+        {
+            EconomyService.OnChanged -= HandleEconomyChanged;
+            if (ItemTooltipFormatter.SourceProvider == (System.Func<ItemSO, string>)DescribeSource)
+                ItemTooltipFormatter.SourceProvider = null;
+        }
 
         private void Bind(VisualElement root, string name, Tab tab)
         {
@@ -167,10 +195,7 @@ namespace Game.Presentation.UI
                 int have = Count(stash, input.Item.ItemId);
                 bool enough = have >= input.Quantity;
                 canCraft &= enough;
-                var l = new Label($"{input.Item.DisplayName} {have}/{input.Quantity}");
-                l.AddToClassList("recipe-input");
-                l.AddToClassList(enough ? "recipe-input--ok" : "recipe-input--missing");
-                inputs.Add(l);
+                inputs.Add(BuildIngredient(input.Item, have, input.Quantity, enough));
             }
             if (recipe.Gold > 0)
             {
@@ -199,6 +224,35 @@ namespace Game.Presentation.UI
             };
             row.Add(button);
             return row;
+        }
+
+        /// <summary>
+        /// Ingrediente: nombre en el color de su rareza (con la rareza escrita si es equipo o
+        /// consumible: "Rare Flare Gloves") y la cantidad tenida/necesaria en verde o rojo. Al pasar
+        /// el mouse muestra el tooltip del item, con dónde se consigue.
+        /// </summary>
+        private VisualElement BuildIngredient(ItemSO item, int have, int need, bool enough)
+        {
+            var chip = new VisualElement();
+            chip.AddToClassList("recipe-ingredient");
+
+            bool showRarity = item.IsEquipment || item is ConsumableItemSO;
+            var name = new Label(showRarity ? $"{item.Rarity} {item.DisplayName}" : item.DisplayName);
+            name.AddToClassList("recipe-input");
+            name.AddToClassList(ItemTooltipFormatter.RarityClass(item));
+            name.pickingMode = PickingMode.Ignore;
+            chip.Add(name);
+
+            var count = new Label($"{have}/{need}");
+            count.AddToClassList("recipe-input");
+            count.AddToClassList("recipe-count");
+            count.AddToClassList(enough ? "recipe-input--ok" : "recipe-input--missing");
+            count.pickingMode = PickingMode.Ignore;
+            chip.Add(count);
+
+            chip.RegisterCallback<PointerEnterEvent>(_ => _showTooltip(chip, item));
+            chip.RegisterCallback<PointerLeaveEvent>(_ => _hideTooltip());
+            return chip;
         }
 
         // ---------- Trader ----------

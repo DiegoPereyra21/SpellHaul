@@ -740,3 +740,48 @@
 .economy-status {
     margin-top: 6px;
 }
+
+/* Barra de pestañas y textos fijos de la columna: no se aplastan cuando la vista de abajo
+   (Crafting / Trader, con scroll) ocupa todo el alto. */
+.economy-tabs,
+.economy-tab,
+.stash-header-row,
+.economy-status {
+    flex-shrink: 0;
+}
+
+.recipe-row {
+    flex-shrink: 0;
+}
+
+/* Ingrediente: nombre (color de rareza) + cantidad; con tooltip al pasar el mouse. */
+.recipe-ingredient {
+    flex-direction: row;
+    align-items: center;
+    margin: 2px 10px 2px 0;
+    padding: 2px 8px;
+    border-radius: 5px;
+    background-color: rgba(25, 26, 36, 0.7);
+    border-width: 1px;
+    border-color: rgba(68, 70, 88, 0.5);
+}
+
+.recipe-ingredient:hover {
+    border-color: rgba(181, 139, 249, 0.7);
+}
+
+.recipe-ingredient .recipe-input {
+    margin-right: 0;
+}
+
+.recipe-count {
+    margin-left: 6px;
+    -unity-font-style: bold;
+}
+
+.tooltip-source {
+    margin-top: 6px;
+    font-size: 13px;
+    -unity-font-style: italic;
+    color: rgb(150, 152, 168);
+}

@@ -26,6 +26,9 @@ namespace Game.Core.Items
         [Tooltip("Valor en oro (el vendedor paga una fracción). 0 = automático según rareza y categoría (EconomyConfig).")]
         [SerializeField, Min(0)] private int _baseValue = 0;
 
+        [Tooltip("Dónde se consigue (se ve en el tooltip). Vacío = automático (loot / crafteo / vendedor).")]
+        [SerializeField] private string _obtainHint;
+
         [Header("Mundo")]
         [Tooltip("Prefab 3D que aparece en el suelo al dropearse. Si está vacío usa el prefab genérico.")]
         [SerializeField] public GameObject WorldPrefab;
@@ -39,6 +42,7 @@ namespace Game.Core.Items
         public ItemCategory Category => _category;
         public Rarity Rarity => _rarity;
         public int BaseValue => _baseValue;
+        public string ObtainHint => _obtainHint;
         /// <summary>True si este item se puede equipar (los EquipmentItemSO lo sobrescriben).</summary>
         public virtual bool IsEquipment => false;
     }
