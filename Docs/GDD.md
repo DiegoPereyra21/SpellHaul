@@ -455,6 +455,17 @@ Apilan hasta 5. Aparecen en el loot con chances propias por rareza (perfil `Poti
 | Flare Gloves | `flare_gloves_<rareza>` | Light | Orbe de destello (`id_flashorb`) | ×1.0 / ×1.2 / ×1.4 (duración del cegado) | ×1.0 / ×0.9 / ×0.8 |
 | Stone Gloves | `stone_gloves_<rareza>` | Earth | Muro de tierra (`id_earthwall`) | ×1.0 / ×1.3 / ×1.6 (vida y duración) | ×1.0 / ×0.9 / ×0.8 |
 
+**Pasiva de escuela:** mientras el guante está equipado aplica un modificador de stat (en `_modifiers` del guante, que suma `PlayerStats` como el resto del equipo). La define `ItemCatalogGenerator.PassiveFor`; volver a correr el generador la actualiza también en los guantes que ya existen.
+
+| Escuela | Pasiva | Common / Rare / Epic |
+|---|---|---|
+| Earth | Protection | +5% / +8% / +12% |
+| Nature | Vida máxima (`StatType.MaxHealth`, nuevo al final del enum) | +10 / +15 / +25 |
+| Fire | Daño | +5% / +8% / +12% |
+| Light | Regeneración de maná | +1 / +1.5 / +2.5 |
+
+**Vida máxima:** `Health` la sincroniza por red (`_syncedMax`). La base es la del prefab más `PlayerStats.MaxHealthBonus`. Al cambiar de equipo, la vida actual conserva el mismo porcentaje.
+
 **Escuelas como elementos:** Fire (daño), Nature (curación), Light (control y visión) y Earth (defensa). Las habilidades nuevas se agrupan por esa temática.
 
 **Muro de tierra** (`EarthWallAbilitySO` + `EarthWall`)

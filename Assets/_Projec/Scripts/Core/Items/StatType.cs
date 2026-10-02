@@ -8,6 +8,7 @@ namespace Game.Core.Items
         MoveSpeed,
         Protection,        // porcentaje de reducción de daño (con cap aplicado en PlayerStats)
         DamageMultiplier,  // afecta el daño de las habilidades (eje propio de Glove)
-        CastSpeedMultiplier
+        CastSpeedMultiplier,
+        MaxHealth          // vida máxima extra (plana). Agregado al final: no reordenar.
     }
 }

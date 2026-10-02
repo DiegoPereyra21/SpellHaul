@@ -25,23 +25,57 @@ namespace Game.Presentation.Combat
         // Cada tick (por defecto FishNet junta cambios cada 0,1 s): la vida tiene que verse al instante.
         private readonly SyncVar<float> _current = new SyncVar<float>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
 
+        // Vida máxima real (base + equipo): sincronizada para que el HUD de cada cliente la muestre.
+        // 0 = todavía no la fijó el servidor (se usa la del prefab).
+        private readonly SyncVar<float> _syncedMax = new SyncVar<float>(new SyncTypeSettings(Game.Presentation.Combat.NetSyncRates.EveryTick));
+        private float _baseMax;
+
         public float Current => _current.Value;
-        public float Max => _maxHealth;
+        public float Max => _syncedMax.Value > 0f ? _syncedMax.Value : _maxHealth;
         public bool IsDead => _current.Value <= 0f;
 
         private bool _invulnerable;
 
         public override void OnStartServer()
         {
+            if (_baseMax <= 0f) _baseMax = _maxHealth; // con pooling, OnStartServer se repite: la base es la del prefab
+            _maxHealth = _baseMax;
+            _syncedMax.Value = _maxHealth;
             _current.Value = _maxHealth;
+            if (_stats != null)
+            {
+                _stats.OnStatsChanged += ApplyStatsMax;
+                ApplyStatsMax();
+            }
+        }
+
+        public override void OnStopServer()
+        {
+            if (_stats != null) _stats.OnStatsChanged -= ApplyStatsMax;
+        }
+
+        /// <summary>Server. El equipo cambió (ej. un guante de Nature): nueva vida máxima, manteniendo
+        /// el mismo porcentaje de vida actual.</summary>
+        private void ApplyStatsMax()
+        {
+            if (!base.IsServerStarted || _stats == null) return;
+            float newMax = Mathf.Max(1f, _baseMax + _stats.MaxHealthBonus);
+            float oldMax = _maxHealth;
+            if (Mathf.Approximately(newMax, oldMax)) return;
+            _maxHealth = newMax;
+            _syncedMax.Value = newMax;
+            if (!IsDead && oldMax > 0f)
+                _current.Value = Mathf.Clamp(_current.Value / oldMax * newMax, 1f, newMax);
         }
 
         /// <summary>Server-only. Cambia la vida máxima y la llena (ej. muro de tierra según la rareza del guante).
-        /// La vida máxima no se sincroniza: en clientes Max sigue siendo la del prefab.</summary>
+        /// Se sincroniza a los clientes (Max).</summary>
         public void ServerSetMaxHealth(float max)
         {
             if (!base.IsServerStarted || max <= 0f) return;
             _maxHealth = max;
+            _baseMax = max;
+            _syncedMax.Value = max;
             _current.Value = max;
         }
 

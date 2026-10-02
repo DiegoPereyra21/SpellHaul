@@ -40,6 +40,8 @@ namespace Game.Presentation.Combat
         public float DamageMultiplier { get; private set; }
         public float CastSpeedMultiplier { get; private set; }
         public float ProtectionPercent { get; private set; } // 0..cap
+        /// <summary>Vida máxima extra del equipo (plana; la usa Health).</summary>
+        public float MaxHealthBonus { get; private set; }
 
         public event System.Action OnStatsChanged;
 
@@ -68,6 +70,7 @@ namespace Game.Presentation.Combat
             DamageMultiplier = _baseDamageMultiplier;
             CastSpeedMultiplier = _baseCastSpeedMultiplier;
             ProtectionPercent = 0f;
+            MaxHealthBonus = 0f;
         }
 
         private void Recalculate()
@@ -78,6 +81,7 @@ namespace Game.Presentation.Combat
             float dmgMul = _baseDamageMultiplier;
             float castMul = _baseCastSpeedMultiplier;
             float protectionSum = 0f;
+            float maxHealth = 0f;
 
             foreach (ItemStack eq in _inventory.Equipment)
             {
@@ -100,6 +104,8 @@ namespace Game.Presentation.Combat
                             castMul += mod.Value; break;
                         case StatType.Protection:
                             protectionSum += mod.Value; break; // protección: suma de %
+                        case StatType.MaxHealth:
+                            maxHealth += mod.Value; break;
                     }
                 }
             }
@@ -113,6 +119,7 @@ namespace Game.Presentation.Combat
             DamageMultiplier = Mathf.Max(_minDamageMultiplier, dmgMul);
             CastSpeedMultiplier = Mathf.Max(_minCastSpeedMultiplier, castMul);
             ProtectionPercent = Mathf.Clamp(protectionSum, 0f, _protectionCap);
+            MaxHealthBonus = Mathf.Max(0f, maxHealth);
 
             OnStatsChanged?.Invoke();
         }
@@ -137,6 +144,8 @@ namespace Game.Presentation.Combat
 
             if (ProtectionPercent > 0.001f)
                 result.Add(($"Protection +{ProtectionPercent * 100f:0}%", true));
+            if (MaxHealthBonus > 0.001f)
+                result.Add(($"Max Health +{MaxHealthBonus:0}", true));
 
             return result;
         }

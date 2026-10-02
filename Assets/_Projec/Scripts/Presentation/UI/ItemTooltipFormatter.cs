@@ -106,9 +106,13 @@ namespace Game.Presentation.UI
             if (ability.ResourceCost > 0f)
                 stats.Add(new StatLine { Text = $"Mana {ability.ResourceCost:0}", Sign = 0 });
 
-            // Un guante puede tener además modificadores pasivos (hoy ninguno los usa).
+            // Pasiva de la escuela (stat mientras está equipado).
             foreach (var mod in glove.Modifiers)
-                stats.Add(FormatModifier(mod));
+            {
+                var line = FormatModifier(mod);
+                line.Text = "Passive: " + line.Text;
+                stats.Add(line);
+            }
         }
 
         /// <summary>Clase CSS de color según rareza. Común = color por defecto (sin clase especial).</summary>
@@ -128,7 +132,8 @@ namespace Game.Presentation.UI
             string statName = StatDisplayName(mod.Stat);
 
             // Protection se guarda como fracción (0..1); el resto de los stats son valores planos.
-            bool isPercent = mod.Stat == StatType.Protection;
+            // Damage y Cast Speed son multiplicadores (0.05 = +5%): también se muestran en porcentaje.
+            bool isPercent = mod.Stat is StatType.Protection or StatType.DamageMultiplier or StatType.CastSpeedMultiplier;
             float displayValue = isPercent ? mod.Value * 100f : mod.Value;
 
             string sign = displayValue >= 0 ? "+" : "";
@@ -145,6 +150,7 @@ namespace Game.Presentation.UI
             StatType.Protection => "Protection",
             StatType.DamageMultiplier => "Damage",
             StatType.CastSpeedMultiplier => "Cast Speed",
+            StatType.MaxHealth => "Max Health",
             _ => stat.ToString()
         };
 

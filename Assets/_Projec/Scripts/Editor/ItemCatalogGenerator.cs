@@ -101,7 +101,31 @@ namespace Game.EditorTools.Items
             Debug.Log($"[ItemCatalogGenerator] Creados: {created}, ya existían (salteados): {skipped}.");
         }
 
-        /// <summary>Crea los guantes de BuildGloves() que falten. Devuelve cuántos creó.</summary>
+        /// <summary>
+        /// Pasiva de escuela de un guante (modificador de stat mientras está equipado), por rareza:
+        /// Earth = Protection, Nature = vida máxima, Fire = daño, Light = regeneración de maná.
+        /// </summary>
+        private static (StatType stat, float[] byRarity) PassiveFor(GloveSchool school) => school switch
+        {
+            GloveSchool.Earth => (StatType.Protection, new[] { 0.05f, 0.08f, 0.12f }),
+            GloveSchool.Nature => (StatType.MaxHealth, new[] { 10f, 15f, 25f }),
+            GloveSchool.Fire => (StatType.DamageMultiplier, new[] { 0.05f, 0.08f, 0.12f }),
+            GloveSchool.Light => (StatType.ManaRegen, new[] { 1f, 1.5f, 2.5f }),
+            _ => (StatType.ManaRegen, new[] { 0f, 0f, 0f }),
+        };
+
+        private static void WritePassive(SerializedProperty modifiers, GloveSchool school, Rarity rarity)
+        {
+            var (stat, values) = PassiveFor(school);
+            float value = values[Mathf.Clamp((int)rarity, 0, values.Length - 1)];
+            modifiers.arraySize = value != 0f ? 1 : 0;
+            if (value == 0f) return;
+            var el = modifiers.GetArrayElementAtIndex(0);
+            el.FindPropertyRelative("Stat").enumValueIndex = (int)stat;
+            el.FindPropertyRelative("Value").floatValue = value;
+        }
+
+        /// <summary>Crea los guantes de BuildGloves() que falten (y actualiza la pasiva de los que ya existen). Devuelve cuántos creó.</summary>
         private static int GenerateGloves(ref int skipped)
         {
             string folderPath = $"{ItemsRoot}/Gloves";
@@ -122,11 +146,18 @@ namespace Game.EditorTools.Items
             foreach (var def in BuildGloves())
             {
                 string assetPath = $"{folderPath}/{def.ItemId}.asset";
-                if (AssetDatabase.LoadAssetAtPath<ItemSO>(assetPath) != null)
+                var existing = AssetDatabase.LoadAssetAtPath<GloveItemSO>(assetPath);
+                if (existing != null)
                 {
+                    // Ya existe: solo se le actualiza la pasiva de escuela (puede haber cambiado).
+                    var eso = new SerializedObject(existing);
+                    WritePassive(eso.FindProperty("_modifiers"), def.School, def.Rarity);
+                    eso.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(existing);
                     skipped++;
                     continue;
                 }
+                if (AssetDatabase.LoadAssetAtPath<ItemSO>(assetPath) != null) { skipped++; continue; }
 
                 if (!abilities.TryGetValue(def.AbilityId, out var abilityAsset))
                 {
@@ -145,7 +176,7 @@ namespace Game.EditorTools.Items
                 so.FindProperty("_maxStack").intValue = 1;
                 so.FindProperty("_slot").enumValueIndex = (int)EquipmentSlot.Glove;
                 so.FindProperty("_pocketSlots").intValue = 0;
-                so.FindProperty("_modifiers").arraySize = 0;
+                WritePassive(so.FindProperty("_modifiers"), def.School, def.Rarity);
                 so.FindProperty("_school").enumValueIndex = (int)def.School;
                 so.FindProperty("_ability").objectReferenceValue = abilityAsset;
                 so.FindProperty("_abilityPower").floatValue = def.Power;
