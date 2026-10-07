@@ -11,7 +11,7 @@ namespace Game.Presentation.Abilities
     /// Radio, daño y tamaño vienen definidos por cuánto se cargó. Server-authoritative;
     /// la escala visual se replica a los clientes por SyncVar.
     /// </summary>
-    public class ChargedOrbProjectile : NetworkBehaviour
+    public class ChargedOrbProjectile : ClientFlightBehaviour
     {
         [SerializeField] private float _lifetime = 8f;
         [Tooltip("Radio del sweep de colisión en vuelo.")]
@@ -100,6 +100,8 @@ namespace Game.Presentation.Abilities
             _initialized = true;
             _exploded = false; // instancia reutilizada del pool
             _firstFrame = true;
+
+            BroadcastFlight(transform.position, _velocity, _gravity);
         }
 
         private void Update()

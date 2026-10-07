@@ -16,7 +16,7 @@ namespace Game.Presentation.Abilities
     ///   hacia dónde mira y si lo ve (FlashOverlay). El caster también puede cegarse.
     /// Los clientes ven el vuelo por el NetworkTransform del prefab.
     /// </summary>
-    public class FlashProjectile : NetworkBehaviour, IRecastable
+    public class FlashProjectile : ClientFlightBehaviour, IRecastable
     {
         [Tooltip("Radio del sweep de colisión en vuelo.")]
         [SerializeField] private float _castRadius = 0.25f;
@@ -102,6 +102,7 @@ namespace Game.Presentation.Abilities
             if (direction.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(direction);
 
             RecastRegistry.Register(casterNetworkId, slot, this);
+            BroadcastFlight(transform.position, _velocity, 0f);
         }
 
         public override void OnStopServer()

@@ -10,7 +10,7 @@ namespace Game.Presentation.Combat
     /// Ballistic projectile: follows a parabolic arc toward a target point,
     /// explodes on impact (small area damage). Server-authoritative.
     /// </summary>
-    public class LobProjectile : NetworkBehaviour
+    public class LobProjectile : ClientFlightBehaviour
     {
         [Header("Explosion")]
         [SerializeField] private float _explosionRadius = 2f;
@@ -67,6 +67,8 @@ namespace Game.Presentation.Combat
             _initialized = true;
             _exploded = false; // instancia reutilizada del pool
             _firstFrame = true;
+
+            BroadcastFlight(transform.position, _velocity, _gravity);
         }
 
         private void Update()
@@ -145,5 +147,6 @@ namespace Game.Presentation.Combat
         {
             VFXManager.PlayOrbExplosion(point);
         }
+
     }
 }
