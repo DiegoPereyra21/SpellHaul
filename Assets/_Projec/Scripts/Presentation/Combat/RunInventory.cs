@@ -191,16 +191,34 @@ namespace Game.Presentation.Combat
 
         public override void OnStartClient()
         {
-            _pocketL.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
-            _pocketR.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
-            _equipment.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
-            _usables.OnChange += (op, index, oldItem, newItem, asServer) => OnInventoryChanged?.Invoke();
             if (base.IsOwner)
             {
                 Game.Presentation.UI.RunSummary.BeginRun(_database);
                 _ = ClientPushLoadoutAsync();
             }
         }
+        // En OnStartNetwork (servidor Y cliente): un servidor dedicado no ejecuta OnStartClient,
+        // y sin esto PlayerStats nunca recalculaba con el equipo cargado desde PlayFab.
+        public override void OnStartNetwork()
+        {
+            base.OnStartNetwork();
+            _pocketL.OnChange += OnSyncListChanged;
+            _pocketR.OnChange += OnSyncListChanged;
+            _equipment.OnChange += OnSyncListChanged;
+            _usables.OnChange += OnSyncListChanged;
+        }
+
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+            _pocketL.OnChange -= OnSyncListChanged;
+            _pocketR.OnChange -= OnSyncListChanged;
+            _equipment.OnChange -= OnSyncListChanged;
+            _usables.OnChange -= OnSyncListChanged;
+        }
+
+        private void OnSyncListChanged(SyncListOperation op, int index, ItemStack oldItem, ItemStack newItem, bool asServer)
+            => OnInventoryChanged?.Invoke();
 
         /// <summary>Client-only (dueño). Asegura el loadout persistente cargado (PlayFab/local)
         /// y se lo empuja al servidor para que arme el inventario de esta run.</summary>

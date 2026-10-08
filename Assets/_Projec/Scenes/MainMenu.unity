@@ -630,6 +630,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Presentation.Bootstrap.DevConnectionStarter
   _runSceneName: Run
+  _practiceSceneName: PracticeRange
+  _practicePort: 7790
   _editorRole: 0
   _editorAddress: 127.0.0.1
   _editorPort: 7770

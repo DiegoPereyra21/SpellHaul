@@ -370,9 +370,9 @@ namespace Game.Presentation.Abilities
 
             // El dash no va por CastServerRpc: viaja como input predicho del movimiento, así
             // cliente y servidor lo aplican en el mismo tick (el servidor valida cooldown y maná ahí).
-            if (_movement != null && ability.TryGetOwnerDash(aimDirection, out Vector3 dashDir, out _, out _))
+            if (_movement != null && ability.TryGetOwnerDash(aimDirection, out _, out _, out _))
             {
-                _movement.QueueDashInput(slot, dashDir);
+                _movement.QueueDashInput(slot, _movement.GetDashDirection());
                 PlayLocalFireFeedback(ability, aimDirection, aimPoint);
                 return;
             }

@@ -51,7 +51,24 @@ namespace Game.Presentation.Player
         // saltos que no salían y gravedad de más → tirones al despegar y al aterrizar. Se guarda
         // acá y viaja en el ReconcileData.
         private bool _grounded;
-        
+
+        // Jugadores remotos (espectadores): NO se simulan. El input del otro llega con la latencia
+        // de dos tramos (owner -> server -> yo), así que simularlo "en vivo" obligaba a re-simular
+        // ~14 ticks de golpe cuando llegaba (pop de 2,5 m en saltos, 5-6 m en dashes). Ahora se
+        // guardan los estados del servidor y se interpola entre ellos unos ticks en el pasado.
+        private struct RemoteSnap
+        {
+            public float Tick;
+            public Vector3 Position;
+            public Quaternion Rotation;
+            public bool Dashing;
+        }
+        private const float RemoteDelayTicks = 4f;   // ~100 ms a 60 Hz
+        private const float RemoteTeleportDistance = 8f;
+        private readonly System.Collections.Generic.List<RemoteSnap> _remoteSnaps = new System.Collections.Generic.List<RemoteSnap>(32);
+        private float _remoteRenderTick;
+        private bool _remoteRenderInit;
+
         [Header("Mirada")]
         [SerializeField] private float _mouseSensitivity = 0.65f;
         [SerializeField] private CameraLookController _cameraLook;
@@ -171,6 +188,8 @@ namespace Game.Presentation.Player
         public override void OnStartClient()
         {
             base.OnStartClient();
+            _remoteSnaps.Clear();
+            _remoteRenderInit = false;
             ApplyOwnershipClient();
         }
 
@@ -189,7 +208,8 @@ namespace Game.Presentation.Player
 
             // Cámara e input solo para el personaje propio.
             if (_cameraRoot != null) _cameraRoot.SetActive(owner);
-            enabled = owner;
+            // El componente queda activo también en remotos: LateUpdate interpola su posición.
+            // Update ya ignora a los que no son owner.
             if (!owner) return;
 
             // Solo el personaje propio bloquea el cursor. Antes lo hacía OnEnable en cualquier
@@ -270,9 +290,21 @@ namespace Game.Presentation.Player
         [Replicate]
         private void RunInputs(ReplicateData data, ReplicateState state = ReplicateState.Invalid, FishNet.Transporting.Channel channel = FishNet.Transporting.Channel.Unreliable)
         {
+            // Remotos: no se simulan (ver RemoteSnap). Solo owner (predicción) y servidor (autoridad).
+            if (!base.IsOwner && !base.IsServerStarted)
+                return;
+
             float delta = (float)base.TimeManager.TickDelta;
             if (!_controller.enabled)
                 return;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (data.Jump || data.Dash)
+            {
+                string diagRole = base.IsServerStarted ? "SERVER" : (base.IsOwner ? "OWNER" : "SPECTATOR");
+                Debug.Log($"[InputDiag] role={diagRole} jump={data.Jump} dash={data.Dash} state={state} grounded={_grounded} tick={data.GetTick()}");
+            }
+#endif
 
             // La dirección de movimiento sale SIEMPRE del yaw del input, no del transform.
             // Servidor y espectadores además aplican esa rotación al cuerpo. El owner NO: su
@@ -341,6 +373,11 @@ namespace Game.Presentation.Player
             _controller.Move((horizontal + _verticalVelocity + dashStep) * delta);
             _grounded = _controller.isGrounded;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (!base.IsServerStarted && !state.ContainsReplayed())
+                DiagRecord(data.GetTick());
+#endif
+
             // Trail visible mientras dura el dash (en todos los clientes, dash es estado replicado).
             if (_dashTrail != null)
                 _dashTrail.emitting = _dashTimeRemaining > 0f;
@@ -355,6 +392,15 @@ namespace Game.Presentation.Player
         [Reconcile]
         private void ReconcileState(ReconcileData data, FishNet.Transporting.Channel channel = FishNet.Transporting.Channel.Unreliable)
         {
+            if (!base.IsOwner && !base.IsServerStarted)
+            {
+                PushRemoteSnapshot(data);
+                return;
+            }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DiagReconcile(data);
+#endif
             _controller.enabled = false;
 
             if (base.IsOwner)
@@ -414,6 +460,113 @@ namespace Game.Presentation.Player
                 Game.Presentation.Combat.ScreenShake.Shake(0.35f, 0.2f);
             }
         }
+
+        private void PushRemoteSnapshot(ReconcileData data)
+        {
+            float tick = data.GetTick();
+            if (_remoteSnaps.Count > 0 && tick <= _remoteSnaps[_remoteSnaps.Count - 1].Tick)
+                return; // fuera de orden o repetido (canal unreliable)
+
+            _remoteSnaps.Add(new RemoteSnap
+            {
+                Tick = tick,
+                Position = data.Position,
+                Rotation = data.Rotation,
+                Dashing = data.DashTimeRemaining > 0f
+            });
+            if (_remoteSnaps.Count > 64)
+                _remoteSnaps.RemoveRange(0, _remoteSnaps.Count - 64);
+        }
+
+        private void LateUpdate()
+        {
+            if (base.IsOwner || base.IsServerStarted || _remoteSnaps.Count == 0) return;
+
+            float target = _remoteSnaps[_remoteSnaps.Count - 1].Tick - RemoteDelayTicks;
+            if (!_remoteRenderInit || Mathf.Abs(target - _remoteRenderTick) > 4f)
+            {
+                _remoteRenderTick = target;
+                _remoteRenderInit = true;
+            }
+            else
+            {
+                _remoteRenderTick += Time.deltaTime * base.TimeManager.TickRate;
+                _remoteRenderTick = Mathf.Lerp(_remoteRenderTick, target, 0.05f);
+            }
+
+            // Tramo [a, b] que contiene el tick de render; sin extrapolar más allá del último estado.
+            int b = 0;
+            while (b < _remoteSnaps.Count - 1 && _remoteSnaps[b].Tick < _remoteRenderTick) b++;
+            int a = Mathf.Max(0, b - 1);
+            RemoteSnap sa = _remoteSnaps[a];
+            RemoteSnap sb = _remoteSnaps[b];
+
+            Vector3 pos;
+            Quaternion rot;
+            if (sb.Tick <= sa.Tick || (sb.Position - sa.Position).sqrMagnitude > RemoteTeleportDistance * RemoteTeleportDistance)
+            {
+                pos = sb.Position;
+                rot = sb.Rotation;
+            }
+            else
+            {
+                float t = Mathf.Clamp01((_remoteRenderTick - sa.Tick) / (sb.Tick - sa.Tick));
+                pos = Vector3.Lerp(sa.Position, sb.Position, t);
+                rot = Quaternion.Slerp(sa.Rotation, sb.Rotation, t);
+            }
+
+            // CharacterController activo = colisiona con el owner; para mover el transform hay que apagarlo un instante.
+            _controller.enabled = false;
+            transform.SetPositionAndRotation(pos, rot);
+            _controller.enabled = true;
+
+            if (_dashTrail != null)
+                _dashTrail.emitting = sb.Dashing;
+
+            if (a > 0)
+                _remoteSnaps.RemoveRange(0, a);
+        }
+
+        /// <summary>Owner. Dirección horizontal del dash: hacia donde te movés; sin input, hacia adelante.</summary>
+        public Vector3 GetDashDirection()
+        {
+            Vector2 move = _inputBlocked ? Vector2.zero : _moveAction.ReadValue<Vector2>();
+            Quaternion yaw = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+            Vector3 dir = yaw * new Vector3(move.x, 0f, move.y);
+            if (dir.sqrMagnitude < 0.0001f) dir = yaw * Vector3.forward;
+            return dir.normalized;
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private const int DiagSize = 128;
+        private readonly uint[] _diagTick = new uint[DiagSize];
+        private readonly Vector3[] _diagPos = new Vector3[DiagSize];
+        private readonly float[] _diagVy = new float[DiagSize];
+
+        private void DiagRecord(uint tick)
+        {
+            int i = (int)(tick % DiagSize);
+            _diagTick[i] = tick;
+            _diagPos[i] = transform.position;
+            _diagVy[i] = _verticalVelocity.y;
+        }
+
+        private void DiagReconcile(ReconcileData data)
+        {
+            if (base.IsServerStarted) return;
+            uint tick = data.GetTick();
+            int i = (int)(tick % DiagSize);
+            if (_diagTick[i] != tick) return;
+
+            float err = Vector3.Distance(_diagPos[i], data.Position);
+            float errY = data.Position.y - _diagPos[i].y;
+            float minErr = base.IsOwner ? 0.03f : 0.3f;
+            if (err < minErr) return;
+
+            string role = base.IsOwner ? "OWNER" : "SPECTATOR";
+            Debug.Log($"[ReconcileDiag] {role} tick={tick} err={err:F3} errY={errY:F3} vyPred={_diagVy[i]:F2} vySrv={data.VerticalVelocity.y:F2} groundedSrv={data.Grounded} rtt={base.TimeManager.RoundTripTime}ms");
+        }
+#endif
 
         /// <summary>Server-only. Solicita un dash fuera del input; se inicia en el próximo tick replicado.</summary>
         public void StartDash(Vector3 direction, float speed, float duration)

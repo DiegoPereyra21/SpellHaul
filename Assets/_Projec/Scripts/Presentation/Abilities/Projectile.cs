@@ -68,7 +68,8 @@ namespace Game.Presentation.Abilities
             // Se setea en cada spawn por el pooling de Fish-Net (no basta con desactivar una vez).
             if (_visual != null)
                 _visual.SetActive(!base.IsOwner);
-            _clientFlying = false;
+            // _clientFlying NO se resetea acá: el RPC de vuelo (BufferLast) puede llegar antes que
+            // OnStartClient y esto lo cancelaría. Se resetea en OnStopClient.
         }
 
         public override void OnStopClient()
