@@ -9,8 +9,11 @@ namespace Game.Core.Abilities
     /// </summary>
     public interface AbilityExecutor
     {
-        /// <summary>Spawnea un proyectil de red desde el pool (server-authoritative). slot: para resolver audio localmente en cada cliente.</summary>
-        void SpawnProjectile(GameObject projectilePrefab, Vector3 origin, Vector3 direction, float speed, float damage, float radius, int casterNetworkId, uint fireTick, int slot);
+        /// <summary>
+        /// Spawnea un proyectil de red desde el pool (server-authoritative). slot: para resolver audio localmente en cada cliente.
+        /// playerViewTick / aiViewTick: ticks del servidor en que el tirador veía a jugadores / IA (lag comp; 0 = sin dato).
+        /// </summary>
+        void SpawnProjectile(GameObject projectilePrefab, Vector3 origin, Vector3 direction, float speed, float damage, float radius, int casterNetworkId, uint fireTick, int slot, uint playerViewTick = 0, uint aiViewTick = 0);
 
         /// <summary>Aplica un impulso de movimiento al caster fuera de su input (el dash del jugador viaja como input predicho; ver PlayerMovementController).</summary>
         void StartDash(int casterNetworkId, Vector3 direction, float speed, float duration);

@@ -74,7 +74,6 @@ GameObject:
   - component: {fileID: 4937824281593786330}
   - component: {fileID: 4387372629207907042}
   - component: {fileID: 7800704485703209974}
-  - component: {fileID: 8359655012915496218}
   m_Layer: 11
   m_Name: EnemyAI
   m_TagString: Untagged
@@ -296,7 +295,7 @@ MonoBehaviour:
   - {fileID: 811073443594022513}
   - {fileID: 4937824281593786330}
   - {fileID: 4387372629207907042}
-  - {fileID: 8359655012915496218}
+  - {fileID: 0}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -357,6 +356,7 @@ MonoBehaviour:
   _stats: {fileID: 0}
   _maxHealth: 100
   _damageFlash: {fileID: 7800704485703209974}
+  _countsAsKill: 1
 --- !u!114 &4387372629207907042
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -395,23 +395,3 @@ MonoBehaviour:
   _duration: 0.12
   _baseColorProperty: _BaseColor
   _emissionProperty: _EmissionColor
---- !u!114 &8359655012915496218
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2052082940192421505}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 01a271dd97d875347b0cea860df29a9d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.ColliderRollback.ColliderRollback
-  _componentIndexCache: 4
-  _addedNetworkObject: {fileID: 2819803591878320542}
-  _networkObjectCache: {fileID: 2819803591878320542}
-  _boundingBox: 0
-  _physicsType: 1
-  _boundingBoxSize: {x: 3, y: 3, z: 3}
-  _colliderParents:
-  - {fileID: 1736724471987986127}

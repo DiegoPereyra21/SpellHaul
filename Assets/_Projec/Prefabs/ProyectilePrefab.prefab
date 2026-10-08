@@ -29395,7 +29395,7 @@ MonoBehaviour:
     m_Bits: 576
   _maxCatchUpTicks: 12
   _maxRewindTicks: 20
-  _maxPlayerRewindTicks: 7
+  _maxPlayerRewindTicks: 18
   _coverMask:
     serializedVersion: 2
     m_Bits: 64

@@ -377,9 +377,11 @@ namespace Game.Presentation.Abilities
                 return;
             }
 
-            // Tick de disparo del cliente para lag compensation (el server rebobina a este tick).
+            // Tick de disparo (catch-up del proyectil) + ticks en que este cliente VEÍA a los demás
+            // (lag compensation: el servidor rebobina las hitboxes a esos momentos).
             PreciseTick fireTick = base.TimeManager.GetPreciseTick(TickType.Tick);
-            CastServerRpc(slot, aimDirection, aimPoint, fireTick);
+            GetViewTicks(out uint playerViewTick, out uint aiViewTick);
+            CastServerRpc(slot, aimDirection, aimPoint, fireTick, playerViewTick, aiViewTick);
 
             if (base.IsOwner)
             {
@@ -434,7 +436,8 @@ namespace Game.Presentation.Abilities
 
             ResolveAim(out Vector3 aimDirection, out Vector3 aimPoint);
             PreciseTick fireTick = base.TimeManager.GetPreciseTick(TickType.Tick);
-            ReleaseChargeServerRpc(slot, aimDirection, aimPoint, fireTick);
+            GetViewTicks(out uint playerViewTick, out uint aiViewTick);
+            ReleaseChargeServerRpc(slot, aimDirection, aimPoint, fireTick, playerViewTick, aiViewTick);
 
             if (base.IsOwner)
                 PlayLocalFireFeedback(ability, aimDirection, aimPoint);
@@ -493,7 +496,7 @@ namespace Game.Presentation.Abilities
         }
 
         [ServerRpc]
-        private void ReleaseChargeServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick)
+        private void ReleaseChargeServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick, uint playerViewTick, uint aiViewTick)
         {
             if (!CanActServer) return;
             if (slot < 0 || slot >= AbilitySlots.Count) return;
@@ -514,7 +517,7 @@ namespace Game.Presentation.Abilities
             float maxCharge = Mathf.Max(0.01f, ability.MaxChargeDuration);
             float charge = Mathf.Clamp01(held / maxCharge);
 
-            ExecuteCast(ability, slot, aimDirection, aimPoint, fireTick, charge);
+            ExecuteCast(ability, slot, aimDirection, aimPoint, fireTick, playerViewTick, aiViewTick, charge);
         }
 
         // ---------- Helpers de cliente ----------
@@ -583,6 +586,21 @@ namespace Game.Presentation.Abilities
             }
         }
 
+        // NetworkTransform de la IA: interpolación 2 + 1 tick de envío.
+        private const uint AiViewDelayTicks = 3;
+
+        /// <summary>
+        /// Owner. Ticks del SERVIDOR en que este cliente está viendo a los otros jugadores (los
+        /// remotos se dibujan atrasados, ver PlayerMovementController.RemoteSnap) y a la IA
+        /// (NetworkTransform interpolado). 0 = sin dato (el servidor usa el tick de disparo).
+        /// </summary>
+        private void GetViewTicks(out uint playerViewTick, out uint aiViewTick)
+        {
+            uint serverNow = base.TimeManager.LastPacketTick.Value(base.TimeManager);
+            aiViewTick = serverNow > AiViewDelayTicks ? serverNow - AiViewDelayTicks : 0u;
+            playerViewTick = PlayerMovementController.TryGetRemoteViewTick(out uint remoteTick) ? remoteTick : aiViewTick;
+        }
+
         private void ResolveAim(out Vector3 aimDirection, out Vector3 aimPoint)
         {
             Vector3 cameraOrigin = _aimOrigin.position;
@@ -596,7 +614,7 @@ namespace Game.Presentation.Abilities
         }
 
         [ServerRpc]
-        private void CastServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick)
+        private void CastServerRpc(int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick, uint playerViewTick, uint aiViewTick)
         {
             if (!CanActServer) return;
             if (slot < 0 || slot >= AbilitySlots.Count) return;
@@ -623,16 +641,16 @@ namespace Game.Presentation.Abilities
             if (ability.WindupDuration > 0f)
             {
                 PlayChargeVfxObserversRpc(ability.WindupDuration); // telegrafía para los demás
-                StartCoroutine(ExecuteAfterWindup(ability, slot, aimDirection, aimPoint, fireTick, ability.WindupDuration));
+                StartCoroutine(ExecuteAfterWindup(ability, slot, aimDirection, aimPoint, fireTick, playerViewTick, aiViewTick, ability.WindupDuration));
             }
             else
             {
-                ExecuteCast(ability, slot, aimDirection, aimPoint, fireTick);
+                ExecuteCast(ability, slot, aimDirection, aimPoint, fireTick, playerViewTick, aiViewTick);
             }
         }
 
         [Server]
-        private System.Collections.IEnumerator ExecuteAfterWindup(AbilitySO ability, int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick, float delay)
+        private System.Collections.IEnumerator ExecuteAfterWindup(AbilitySO ability, int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick, uint playerViewTick, uint aiViewTick, float delay)
         {
             _hasPendingAim[slot] = false;
             yield return new WaitForSeconds(delay);
@@ -646,11 +664,11 @@ namespace Game.Presentation.Abilities
             StopChargeVfxObserversRpc(); // cortar la telegrafía para los demás, coincidiendo con el disparo
             // Si el guante cambió durante el windup, no se ejecuta la habilidad de otro guante.
             if (ability != GetAbility(slot)) yield break;
-            ExecuteCast(ability, slot, aimDirection, aimPoint, fireTick);
+            ExecuteCast(ability, slot, aimDirection, aimPoint, fireTick, playerViewTick, aiViewTick);
         }
 
         [Server]
-        private void ExecuteCast(AbilitySO ability, int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick, float charge = 0f)
+        private void ExecuteCast(AbilitySO ability, int slot, Vector3 aimDirection, Vector3 aimPoint, PreciseTick fireTick, uint playerViewTick, uint aiViewTick, float charge = 0f)
         {
             if (!CanActServer) return; // red de seguridad: murió/extrajo durante un windup
             float dmgMul = _stats != null ? _stats.DamageMultiplier : 1f;
@@ -665,6 +683,10 @@ namespace Game.Presentation.Abilities
             double tickDelta = base.TimeManager.TickDelta;
             uint windupTicks = tickDelta > 0 ? (uint)Mathf.RoundToInt(ability.WindupDuration / (float)tickDelta) : 0;
             uint adjustedFireTick = fireTick.Tick + windupTicks;
+            // Con windup el disparo sale más tarde: lo que el tirador ve también avanza esos ticks.
+            // (El Projectile acota estos valores contra el reloj del servidor: el cliente no decide cuánto se rebobina.)
+            uint adjustedPlayerViewTick = playerViewTick != 0 ? playerViewTick + windupTicks : 0u;
+            uint adjustedAiViewTick = aiViewTick != 0 ? aiViewTick + windupTicks : 0u;
 
             var context = new AbilityCastContext(
                 casterNetworkId: base.ObjectId,
@@ -675,7 +697,9 @@ namespace Game.Presentation.Abilities
                 damageMultiplier: dmgMul,
                 slot: slot,
                 chargeNormalized: charge,
-                abilityPower: AbilityPowerFor(slot)
+                abilityPower: AbilityPowerFor(slot),
+                playerViewTick: adjustedPlayerViewTick,
+                aiViewTick: adjustedAiViewTick
             );
 
             ability.Execute(_executor, in context);

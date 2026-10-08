@@ -107,7 +107,6 @@ GameObject:
   - component: {fileID: 2765869109636165105}
   - component: {fileID: -7344314472633128359}
   - component: {fileID: 6910067746919599885}
-  - component: {fileID: 8444895048984694296}
   m_Layer: 11
   m_Name: PlantGuardian
   m_TagString: Untagged
@@ -150,6 +149,7 @@ MonoBehaviour:
   _stats: {fileID: 0}
   _maxHealth: 100
   _damageFlash: {fileID: 6910067746919599885}
+  _countsAsKill: 1
 --- !u!114 &3536709759041560106
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -200,7 +200,7 @@ MonoBehaviour:
   - {fileID: 4297230460876061587}
   - {fileID: 3771095809241588230}
   - {fileID: -7344314472633128359}
-  - {fileID: 8444895048984694296}
+  - {fileID: 0}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -355,26 +355,6 @@ MonoBehaviour:
   _duration: 0.12
   _baseColorProperty: _BaseColor
   _emissionProperty: _EmissionColor
---- !u!114 &8444895048984694296
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6363106951221882465}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 01a271dd97d875347b0cea860df29a9d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.ColliderRollback.ColliderRollback
-  _componentIndexCache: 4
-  _addedNetworkObject: {fileID: 3536709759041560106}
-  _networkObjectCache: {fileID: 3536709759041560106}
-  _boundingBox: 0
-  _physicsType: 1
-  _boundingBoxSize: {x: 3, y: 3, z: 3}
-  _colliderParents:
-  - {fileID: 6827330491951913886}
 --- !u!1 &6827330491951913886
 GameObject:
   m_ObjectHideFlags: 0

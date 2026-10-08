@@ -1,7 +1,6 @@
 using FishNet;
 using FishNet.Object;
 using FishNet.Managing.Timing;
-using FishNet.Component.ColliderRollback;
 using Game.Core.Abilities;
 using Game.Presentation.Combat;
 using Game.Presentation.Player;
@@ -19,10 +18,10 @@ namespace Game.Presentation.Abilities
 
         [Tooltip("Techo de ticks de catch-up (lag comp). A 60 Hz, 12 ≈ 200 ms de ping. Evita teleports enormes.")]
         [SerializeField] private int _maxCatchUpTicks = 12;
-        [Tooltip("Techo de ticks de rewind (lag comp). El tick de disparo lo manda el cliente: sin techo, un cliente podía pedir impactos contra posiciones de hasta 1,25 s atrás (máximo del RollbackManager). A 60 Hz, 20 ≈ 333 ms (latencia + interpolación).")]
+        [Tooltip("Techo de rewind contra la IA (lag comp). Cuánto atrás se rebobina lo dice el cliente (lo que veía), acotado acá para que nadie pida impactos contra posiciones muy viejas. A 60 Hz, 20 ≈ 333 ms.")]
         [SerializeField] private int _maxRewindTicks = 20;
-        [Tooltip("Techo de rewind contra JUGADORES (contra enemigos de la IA se usa _maxRewindTicks). Cubre el ping normal sin estirarse a latencias altas. A 60 Hz, 7 ≈ 117 ms. Además, un jugador que en el presente ya está detrás de una pared no recibe el golpe.")]
-        [SerializeField] private int _maxPlayerRewindTicks = 7;
+        [Tooltip("Techo de rewind contra JUGADORES. Tiene que cubrir lo que el tirador ve atrasado al otro (ping + buffer de interpolación de remotos, 3-8 ticks). A 60 Hz, 18 ≈ 300 ms. Además rige la regla de la cobertura: si en el presente la víctima ya está detrás de una pared, el golpe no cuenta.")]
+        [SerializeField] private int _maxPlayerRewindTicks = 18;
         [Tooltip("Qué cuenta como cobertura para la regla de la cobertura. Si queda vacío se usa Ground.")]
         [SerializeField] private LayerMask _coverMask;
         [Tooltip("Hijo visual (mesh/trail) que se oculta al tirador (él ve su cosmético local).")]
@@ -43,10 +42,13 @@ namespace Game.Presentation.Abilities
         private bool _caughtUp;
 
         // Lag compensation durante TODO el vuelo: el proyectil choca contra las posiciones que el
-        // tirador veía (presente - _viewDelayTicks), no contra las del servidor. Antes solo se
-        // rebobinaba en el primer tick: contra un enemigo moviéndose de costado, el cliente veía
-        // el impacto (su proyectil cosmético pegaba donde él lo veía) y el real pasaba de largo.
-        private uint _viewDelayTicks;
+        // tirador veía (presente - atraso), no contra las del servidor. El atraso sale de lo que el
+        // cliente dice que estaba viendo (jugadores e IA se dibujan con distinta interpolación),
+        // acotado por los techos de arriba. Ver LagCompHistory.
+        private uint _playerViewTick;   // lo que mandó el cliente (0 = sin dato → se usa _fireTick)
+        private uint _aiViewTick;
+        private uint _playerViewDelay;  // atraso efectivo en ticks, fijo durante el vuelo
+        private uint _aiViewDelay;
 
         private static readonly RaycastHit[] _castBuffer = new RaycastHit[16];
 
@@ -170,7 +172,7 @@ namespace Game.Presentation.Abilities
                 base.TimeManager.OnTick -= OnTick;
         }
 
-        public void Initialize(Vector3 direction, float speed, float damage, float radius, int casterNetworkId, uint fireTick = 0, int slot = -1)
+        public void Initialize(Vector3 direction, float speed, float damage, float radius, int casterNetworkId, uint fireTick = 0, int slot = -1, uint playerViewTick = 0, uint aiViewTick = 0)
         {
             _direction = direction.normalized;
             _speed = speed;
@@ -181,7 +183,10 @@ namespace Game.Presentation.Abilities
             _slot = slot;
             _aliveTime = 0f;
             _caughtUp = false;
-            _viewDelayTicks = 0;
+            _playerViewTick = playerViewTick;
+            _aiViewTick = aiViewTick;
+            _playerViewDelay = 0;
+            _aiViewDelay = 0;
             _initialized = true;
         }
 
@@ -221,14 +226,10 @@ namespace Game.Presentation.Abilities
 
             float tickDelta = (float)base.TimeManager.TickDelta;
 
-            // Acotar el tick que dijo el cliente a [ahora - _maxRewindTicks, ahora].
+            // Cuánto atrasado veía el tirador a jugadores y a la IA (acotado): se mantiene todo el vuelo.
             uint now = base.TimeManager.Tick;
-            uint maxRewind = (uint)Mathf.Max(0, _maxRewindTicks);
-            uint oldestAllowed = now > maxRewind ? now - maxRewind : 0u;
-            uint rewindTick = _fireTick < oldestAllowed ? oldestAllowed : (_fireTick > now ? now : _fireTick);
-
-            // Cuánto atrasado ve el mundo el tirador: se mantiene todo el vuelo.
-            _viewDelayTicks = now - rewindTick;
+            _aiViewDelay = ViewDelay(_aiViewTick != 0 ? _aiViewTick : _fireTick, now, _maxRewindTicks);
+            _playerViewDelay = ViewDelay(_playerViewTick != 0 ? _playerViewTick : _fireTick, now, _maxPlayerRewindTicks);
 
             // Overlap en el cañón al tick de disparo (objetivo point-blank / cruzando al disparar).
             if (TryImpactCompensated(transform.position, 0f)) return true;
@@ -246,40 +247,32 @@ namespace Game.Presentation.Abilities
             return false;
         }
 
+        /// <summary>Atraso en ticks entre el presente y lo que veía el cliente, acotado a [0, max].</summary>
+        private static uint ViewDelay(uint viewTick, uint now, int max)
+        {
+            if (viewTick == 0 || viewTick >= now) return 0u;
+            uint delay = now - viewTick;
+            uint cap = (uint)Mathf.Max(0, max);
+            return delay > cap ? cap : delay;
+        }
+
         /// <summary>
-        /// Lag compensation híbrida (ver _maxPlayerRewindTicks):
-        /// - Contra enemigos de la IA (y paredes) se usa todo el atraso del tirador: si en su
-        ///   pantalla le pegó, cuenta.
-        /// - Contra jugadores el atraso se acota a _maxPlayerRewindTicks (ping normal) y además rige
-        ///   la regla de la cobertura: si en el presente la víctima ya está detrás de una pared, el
-        ///   golpe no cuenta. Nadie recibe un hechizo después de haberse cubierto.
-        /// El daño y el despawn se resuelven después de volver al presente.
+        /// Lag compensation en dos "mundos":
+        /// - IA (y paredes): rebobinada a donde la veía el tirador (_aiViewDelay).
+        /// - Jugadores: rebobinados a donde los veía el tirador (_playerViewDelay, con techo), y
+        ///   además rige la regla de la cobertura: si en el presente la víctima ya está detrás de una
+        ///   pared, el golpe no cuenta. Nadie recibe un hechizo después de haberse cubierto.
+        /// Gana el impacto más cercano. Daño y despawn se resuelven ya de vuelta en el presente.
         /// </summary>
         private bool TryImpactCompensated(Vector3 fromPos, float stepDistance)
         {
-            RollbackManager rbm = base.NetworkManager != null ? base.NetworkManager.RollbackManager : null;
-            if (_fireTick == 0 || _viewDelayTicks == 0 || rbm == null)
+            if (_fireTick == 0 || (_playerViewDelay == 0 && _aiViewDelay == 0))
                 return TryImpact(fromPos, stepDistance);
 
-            uint fullDelay = _viewDelayTicks;
-            uint playerDelay = (uint)Mathf.Clamp(_maxPlayerRewindTicks, 0, (int)fullDelay);
-
-            bool found;
-            ImpactInfo impact;
-            if (playerDelay == fullDelay)
-            {
-                found = FindImpactAt(rbm, fullDelay, fromPos, stepDistance, HitFilter.Any, out impact);
-            }
-            else
-            {
-                // Dos mundos: enemigos donde los veía el tirador; jugadores con el atraso acotado.
-                bool e = FindImpactAt(rbm, fullDelay, fromPos, stepDistance, HitFilter.NonPlayers, out ImpactInfo ie);
-                bool pl = FindImpactAt(rbm, playerDelay, fromPos, stepDistance, HitFilter.PlayersAndGeometry, out ImpactInfo ip);
-                found = e || pl;
-                impact = e && pl ? (ip.Distance < ie.Distance ? ip : ie) : (pl ? ip : ie);
-            }
-
-            if (!found) return false;
+            bool e = FindImpactAt(_aiViewDelay, fromPos, stepDistance, HitFilter.NonPlayers, out ImpactInfo ie);
+            bool pl = FindImpactAt(_playerViewDelay, fromPos, stepDistance, HitFilter.PlayersAndGeometry, out ImpactInfo ip);
+            if (!e && !pl) return false;
+            ImpactInfo impact = e && pl ? (ip.Distance < ie.Distance ? ip : ie) : (pl ? ip : ie);
 
             // Regla de la cobertura (en el presente): si la víctima ya se cubrió, sigue de largo; el
             // proyectil continúa y, si corresponde, choca con la pared en su propio recorrido.
@@ -289,17 +282,24 @@ namespace Game.Presentation.Abilities
             return true;
         }
 
-        /// <summary>FindImpact con los objetivos rebobinados delay ticks (0 = presente). Siempre restaura.</summary>
-        private bool FindImpactAt(RollbackManager rbm, uint delay, Vector3 fromPos, float stepDistance, HitFilter filter, out ImpactInfo impact)
+        /// <summary>FindImpact con los objetivos del filtro rebobinados delay ticks (0 = presente). Siempre restaura.</summary>
+        private bool FindImpactAt(uint delay, Vector3 fromPos, float stepDistance, HitFilter filter, out ImpactInfo impact)
         {
             if (delay == 0) return FindImpact(fromPos, stepDistance, filter, out impact);
 
             uint now = base.TimeManager.Tick;
             uint viewTick = now > delay ? now - delay : 0u;
-            rbm.Rollback(new PreciseTick(viewTick), RollbackPhysicsType.Physics, false);
-            bool found = FindImpact(fromPos, stepDistance, filter, out impact);
-            rbm.Return();
-            return found;
+            LagCompHistory.Rewind(viewTick,
+                players: filter != HitFilter.NonPlayers,
+                nonPlayers: filter != HitFilter.PlayersAndGeometry);
+            try
+            {
+                return FindImpact(fromPos, stepDistance, filter, out impact);
+            }
+            finally
+            {
+                LagCompHistory.Restore();
+            }
         }
 
         /// <summary>True si entre el proyectil y la víctima (posición actual) hay geometría.</summary>

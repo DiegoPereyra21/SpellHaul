@@ -30,7 +30,9 @@ namespace Game.Core.Abilities.Abilities
                 _radius,
                 context.CasterNetworkId,
                 context.Tick,       // tick de disparo del cliente (lag comp)
-                context.Slot        // para resolver el clip de audio localmente en cada cliente
+                context.Slot,       // para resolver el clip de audio localmente en cada cliente
+                context.PlayerViewTick, // dónde veía el tirador a los otros jugadores (lag comp)
+                context.AiViewTick      // dónde veía a la IA (lag comp)
             );
         }
 

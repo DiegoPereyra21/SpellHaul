@@ -47,11 +47,13 @@ namespace Game.Presentation.Combat
                 _stats.OnStatsChanged += ApplyStatsMax;
                 ApplyStatsMax();
             }
+            LagCompHistory.EnsureOn(this); // historial de posiciones para lag compensation de los proyectiles
         }
 
         public override void OnStopServer()
         {
             if (_stats != null) _stats.OnStatsChanged -= ApplyStatsMax;
+            LagCompHistory.StopOn(gameObject);
         }
 
         /// <summary>Server. El equipo cambió (ej. un guante de Nature): nueva vida máxima, manteniendo

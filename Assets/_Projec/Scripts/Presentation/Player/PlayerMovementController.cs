@@ -63,11 +63,42 @@ namespace Game.Presentation.Player
             public Quaternion Rotation;
             public bool Dashing;
         }
-        private const float RemoteDelayTicks = 4f;   // ~100 ms a 60 Hz
+        // Buffer adaptativo: el atraso se ajusta al jitter real de la conexión (3 ticks en redes
+        // estables, hasta 8 en redes malas) y cambia despacio para no notarse.
+        private const float RemoteMinDelayTicks = 3f;
+        private const float RemoteMaxDelayTicks = 8f;
+        private const float RemoteDelayChangePerSecond = 1f;   // ticks de atraso que puede cambiar por segundo
+        // Extrapolación corta: si dejan de llegar estados, sigue con su última velocidad hasta ~100 ms
+        // y después se queda quieto (en vez de congelarse en seco y saltar al volver los paquetes).
+        private const float RemoteMaxExtrapolationTicks = 6f;
+        // Reloj de render: se acelera/frena un poco para seguir al buffer; solo salta si se fue muy lejos.
+        private const float RemoteMaxTimeScaleAdjust = 0.25f;
+        private const float RemoteHardResyncTicks = 12f;
         private const float RemoteTeleportDistance = 8f;
         private readonly System.Collections.Generic.List<RemoteSnap> _remoteSnaps = new System.Collections.Generic.List<RemoteSnap>(32);
         private float _remoteRenderTick;
         private bool _remoteRenderInit;
+        private float _remoteDelayTicks = 4f;
+        private float _remoteJitter;              // desvío medio de llegada de estados, en segundos (EMA)
+        private float _remoteLastArrivalTime = -1f;
+        private float _remoteLastArrivalTick;
+
+        // Último tick del servidor en que se dibujó a algún jugador remoto (para lag compensation:
+        // el owner le dice al servidor dónde veía a los demás cuando disparó).
+        private static float _latestRemoteViewTick;
+        private static int _latestRemoteViewFrame = -100;
+
+        /// <summary>Cliente. Tick del servidor en que se están dibujando los jugadores remotos ahora. False si no hay remotos.</summary>
+        public static bool TryGetRemoteViewTick(out uint tick)
+        {
+            if (Time.frameCount - _latestRemoteViewFrame > 2 || _latestRemoteViewTick <= 0f)
+            {
+                tick = 0;
+                return false;
+            }
+            tick = (uint)_latestRemoteViewTick;
+            return true;
+        }
 
         [Header("Mirada")]
         [SerializeField] private float _mouseSensitivity = 0.65f;
@@ -190,6 +221,9 @@ namespace Game.Presentation.Player
             base.OnStartClient();
             _remoteSnaps.Clear();
             _remoteRenderInit = false;
+            _remoteDelayTicks = 4f;
+            _remoteJitter = 0f;
+            _remoteLastArrivalTime = -1f;
             ApplyOwnershipClient();
         }
 
@@ -467,6 +501,17 @@ namespace Game.Presentation.Player
             if (_remoteSnaps.Count > 0 && tick <= _remoteSnaps[_remoteSnaps.Count - 1].Tick)
                 return; // fuera de orden o repetido (canal unreliable)
 
+            // Jitter: cuánto se desvía la llegada real de lo esperado según los ticks transcurridos.
+            float now = Time.unscaledTime;
+            if (_remoteLastArrivalTime >= 0f)
+            {
+                float expected = (tick - _remoteLastArrivalTick) * (float)base.TimeManager.TickDelta;
+                float deviation = Mathf.Abs((now - _remoteLastArrivalTime) - expected);
+                _remoteJitter = Mathf.Lerp(_remoteJitter, Mathf.Min(deviation, 0.25f), 0.1f);
+            }
+            _remoteLastArrivalTime = now;
+            _remoteLastArrivalTick = tick;
+
             _remoteSnaps.Add(new RemoteSnap
             {
                 Tick = tick,
@@ -482,38 +527,75 @@ namespace Game.Presentation.Player
         {
             if (base.IsOwner || base.IsServerStarted || _remoteSnaps.Count == 0) return;
 
-            float target = _remoteSnaps[_remoteSnaps.Count - 1].Tick - RemoteDelayTicks;
-            if (!_remoteRenderInit || Mathf.Abs(target - _remoteRenderTick) > 4f)
+            float dt = Time.deltaTime;
+            float tickRate = base.TimeManager.TickRate;
+
+            // Atraso objetivo según el jitter (2 ticks base + 2 desvíos), acotado y suavizado.
+            float desiredDelay = Mathf.Clamp(2f + 2f * _remoteJitter * tickRate, RemoteMinDelayTicks, RemoteMaxDelayTicks);
+            _remoteDelayTicks = Mathf.MoveTowards(_remoteDelayTicks, desiredDelay, RemoteDelayChangePerSecond * dt);
+
+            RemoteSnap last = _remoteSnaps[_remoteSnaps.Count - 1];
+            float target = last.Tick - _remoteDelayTicks;
+            if (!_remoteRenderInit || Mathf.Abs(target - _remoteRenderTick) > RemoteHardResyncTicks)
             {
                 _remoteRenderTick = target;
                 _remoteRenderInit = true;
             }
             else
             {
-                _remoteRenderTick += Time.deltaTime * base.TimeManager.TickRate;
-                _remoteRenderTick = Mathf.Lerp(_remoteRenderTick, target, 0.05f);
+                // Atrasado → corre un poco más rápido; adelantado (no llegan estados) → más lento.
+                float drift = target - _remoteRenderTick;
+                float timeScale = 1f + Mathf.Clamp(drift * 0.1f, -RemoteMaxTimeScaleAdjust, RemoteMaxTimeScaleAdjust);
+                _remoteRenderTick += dt * tickRate * timeScale;
             }
-
-            // Tramo [a, b] que contiene el tick de render; sin extrapolar más allá del último estado.
-            int b = 0;
-            while (b < _remoteSnaps.Count - 1 && _remoteSnaps[b].Tick < _remoteRenderTick) b++;
-            int a = Mathf.Max(0, b - 1);
-            RemoteSnap sa = _remoteSnaps[a];
-            RemoteSnap sb = _remoteSnaps[b];
+            _remoteRenderTick = Mathf.Min(_remoteRenderTick, last.Tick + RemoteMaxExtrapolationTicks);
+            _latestRemoteViewTick = _remoteRenderTick;
+            _latestRemoteViewFrame = Time.frameCount;
 
             Vector3 pos;
             Quaternion rot;
-            if (sb.Tick <= sa.Tick || (sb.Position - sa.Position).sqrMagnitude > RemoteTeleportDistance * RemoteTeleportDistance)
+            bool dashing;
+            int a;
+
+            if (_remoteRenderTick > last.Tick && _remoteSnaps.Count >= 2)
             {
-                pos = sb.Position;
-                rot = sb.Rotation;
+                // Sin estado nuevo: extrapolar con la última velocidad (tramo corto, acotado arriba).
+                a = _remoteSnaps.Count - 2;
+                RemoteSnap prev = _remoteSnaps[a];
+                float span = last.Tick - prev.Tick;
+                Vector3 delta = last.Position - prev.Position;
+                bool teleported = delta.sqrMagnitude > RemoteTeleportDistance * RemoteTeleportDistance;
+                pos = (span > 0f && !teleported)
+                    ? last.Position + delta / span * (_remoteRenderTick - last.Tick)
+                    : last.Position;
+                rot = last.Rotation;
+                dashing = last.Dashing;
             }
             else
             {
-                float t = Mathf.Clamp01((_remoteRenderTick - sa.Tick) / (sb.Tick - sa.Tick));
-                pos = Vector3.Lerp(sa.Position, sb.Position, t);
-                rot = Quaternion.Slerp(sa.Rotation, sb.Rotation, t);
+                // Tramo [a, b] que contiene el tick de render.
+                int b = 0;
+                while (b < _remoteSnaps.Count - 1 && _remoteSnaps[b].Tick < _remoteRenderTick) b++;
+                a = Mathf.Max(0, b - 1);
+                RemoteSnap sa = _remoteSnaps[a];
+                RemoteSnap sb = _remoteSnaps[b];
+
+                if (sb.Tick <= sa.Tick || (sb.Position - sa.Position).sqrMagnitude > RemoteTeleportDistance * RemoteTeleportDistance)
+                {
+                    pos = sb.Position;
+                    rot = sb.Rotation;
+                }
+                else
+                {
+                    float t = Mathf.Clamp01((_remoteRenderTick - sa.Tick) / (sb.Tick - sa.Tick));
+                    pos = Vector3.Lerp(sa.Position, sb.Position, t);
+                    rot = Quaternion.Slerp(sa.Rotation, sb.Rotation, t);
+                }
+                dashing = sb.Dashing;
             }
+
+            // Red de seguridad: nunca aplicar un transform inválido (NaN/Infinity).
+            if (!IsFinite(pos) || !IsFinite(rot)) return;
 
             // CharacterController activo = colisiona con el owner; para mover el transform hay que apagarlo un instante.
             _controller.enabled = false;
@@ -521,11 +603,19 @@ namespace Game.Presentation.Player
             _controller.enabled = true;
 
             if (_dashTrail != null)
-                _dashTrail.emitting = sb.Dashing;
+                _dashTrail.emitting = dashing;
 
             if (a > 0)
                 _remoteSnaps.RemoveRange(0, a);
         }
+
+        private static bool IsFinite(Vector3 v) =>
+            !(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsNaN(v.z) ||
+              float.IsInfinity(v.x) || float.IsInfinity(v.y) || float.IsInfinity(v.z));
+
+        private static bool IsFinite(Quaternion q) =>
+            !(float.IsNaN(q.x) || float.IsNaN(q.y) || float.IsNaN(q.z) || float.IsNaN(q.w)) &&
+            (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w) > 0.0001f;
 
         /// <summary>Owner. Dirección horizontal del dash: hacia donde te movés; sin input, hacia adelante.</summary>
         public Vector3 GetDashDirection()
