@@ -16,14 +16,14 @@ MonoBehaviour:
   _displayName: Proyectile
   _icon: {fileID: 0}
   _cooldown: 1
-  _resourceCost: 13
+  _resourceCost: 15
   _windupDuration: 0
   _muzzlePrefab: {fileID: 69906001918393858, guid: e6dd55251f893294c9a27e9e669cd3a4, type: 3}
   _castClip: {fileID: 8300000, guid: 7629fbb5fca91854eb5742aa5b35df88, type: 3}
   _impactClip: {fileID: 8300000, guid: 22191b49535ef9a42b08d534cdb0d313, type: 3}
   _surfaceImpactClip: {fileID: 8300000, guid: b682355d1da598e4d88f89d9b5c33d88, type: 3}
   _projectilePrefab: {fileID: 9077845970666463845, guid: 007947feaa3cedf4b975548e3fa50a77, type: 3}
-  _speed: 190
-  _damage: 45
+  _speed: 100
+  _damage: 25
   _radius: 0.28
   _cosmeticProjectilePrefab: {fileID: 9077845970666463845, guid: 831a7a370bd5bf449b772dd337d168be, type: 3}

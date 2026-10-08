@@ -27,6 +27,8 @@ namespace Game.Presentation.Abilities
         [SerializeField] private LayerMask _coverMask;
         [Tooltip("Hijo visual (mesh/trail) que se oculta al tirador (él ve su cosmético local).")]
         [SerializeField] private GameObject _visual;
+        [Tooltip("Observadores: el visual sale de la mano del tirador y avanza a velocidad x este valor hasta alcanzar la posición real del proyectil. Sin esto, a alta velocidad aparecía ~35 m adelante y duraba pocos frames.")]
+        [SerializeField] private float _visualCatchUpMultiplier = 2.5f;
 
         private Vector3 _direction;
         private float _speed;
@@ -59,6 +61,7 @@ namespace Game.Presentation.Abilities
                 _hitMask = LayerMask.GetMask("Hitbox", "Ground");
             if (_coverMask.value == 0)
                 _coverMask = LayerMask.GetMask("Ground");
+            _trails = GetComponentsInChildren<TrailRenderer>(true);
         }
 
         public override void OnStartClient()
@@ -102,6 +105,8 @@ namespace Game.Presentation.Abilities
         private float _clientSpeed;
         private float _clientLead;
         private float _clientElapsed;
+        private float _clientVisualDist; // distancia recorrida por el visual (alcanza a la real)
+        private TrailRenderer[] _trails;
 
         [ObserversRpc(BufferLast = true, ExcludeServer = true)]
         private void FlightObserversRpc(Vector3 origin, Vector3 direction, float speed, uint spawnTick, float lead)
@@ -121,11 +126,18 @@ namespace Game.Presentation.Abilities
 
             _clientStopped = false;
             _clientFlying = true;
+            _clientVisualDist = 0f; // el visual arranca en la mano del tirador
             transform.rotation = Quaternion.LookRotation(_clientDirection);
-            transform.position = FlightPosition();
+            transform.position = _clientOrigin;
+
+            // Instancia reutilizada del pool: sin esto el trail dibuja una línea desde donde murió la anterior.
+            if (_trails != null)
+                foreach (var trail in _trails)
+                    if (trail != null) trail.Clear();
         }
 
-        private Vector3 FlightPosition() => _clientOrigin + _clientDirection * (_clientLead + _clientSpeed * _clientElapsed);
+        /// <summary>Distancia real recorrida en el servidor (adelanto por latencia incluido).</summary>
+        private float TrueFlightDistance() => _clientLead + _clientSpeed * _clientElapsed;
 
         private void Update()
         {
@@ -133,7 +145,11 @@ namespace Game.Presentation.Abilities
 
             Vector3 from = transform.position;
             _clientElapsed += Time.deltaTime;
-            Vector3 to = FlightPosition();
+
+            // El visual corre más rápido que el proyectil real hasta alcanzarlo; después lo sigue igual.
+            float catchUpSpeed = _clientSpeed * Mathf.Max(1f, _visualCatchUpMultiplier);
+            _clientVisualDist = Mathf.Min(TrueFlightDistance(), _clientVisualDist + catchUpSpeed * Time.deltaTime);
+            Vector3 to = _clientOrigin + _clientDirection * _clientVisualDist;
 
             // Frena visualmente en paredes; el despawn real (y el VFX de impacto) lo manda el servidor.
             if (Physics.Linecast(from, to, out RaycastHit hit, _coverMask, QueryTriggerInteraction.Ignore))
@@ -156,15 +172,15 @@ namespace Game.Presentation.Abilities
 
         public void Initialize(Vector3 direction, float speed, float damage, float radius, int casterNetworkId, uint fireTick = 0, int slot = -1)
         {
-            _direction   = direction.normalized;
-            _speed       = speed;
-            _damage      = damage;
-            _radius      = radius;
+            _direction = direction.normalized;
+            _speed = speed;
+            _damage = damage;
+            _radius = radius;
             _casterNetworkId = casterNetworkId;
-            _fireTick    = fireTick;
-            _slot        = slot;
-            _aliveTime   = 0f;
-            _caughtUp    = false;
+            _fireTick = fireTick;
+            _slot = slot;
+            _aliveTime = 0f;
+            _caughtUp = false;
             _viewDelayTicks = 0;
             _initialized = true;
         }

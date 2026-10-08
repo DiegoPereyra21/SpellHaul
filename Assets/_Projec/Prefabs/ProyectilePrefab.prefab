@@ -4917,7 +4917,7 @@ TrailRenderer:
   m_SortingLayer: 0
   m_SortingOrder: -1
   m_MaskInteraction: 0
-  m_Time: 0.4
+  m_Time: 0.6
   m_PreviewTimeScale: 1
   m_Parameters:
     serializedVersion: 3
@@ -4984,7 +4984,7 @@ TrailRenderer:
     shadowBias: 0.5
     generateLightingData: 0
   m_MinVertexDistance: 0.1
-  m_Autodestruct: 1
+  m_Autodestruct: 0
   m_Emitting: 1
   m_ApplyActiveColorSpace: 0
 --- !u!1 &6189037475648638175
@@ -29400,6 +29400,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   _visual: {fileID: 8942972072319118501}
+  _visualCatchUpMultiplier: 2.5
 --- !u!135 &6509815930719459171
 SphereCollider:
   m_ObjectHideFlags: 0
